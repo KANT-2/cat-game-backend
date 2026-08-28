@@ -1,0 +1,2 @@
+"""Catalog and atomic purchases."""
+
