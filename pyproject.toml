@@ -28,3 +28,6 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["tests*", "docs*", "infra*", "migrations*", "scripts*"]
