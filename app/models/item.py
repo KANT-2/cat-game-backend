@@ -1,5 +1,6 @@
-from sqlalchemy import String, Integer, CheckConstraint
+from sqlalchemy import CheckConstraint, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 
@@ -10,6 +11,4 @@ class Item(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     price: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    __table_args__ = (
-        CheckConstraint("price >= 0", name="ck_items_price_nonneg"),
-    )
+    __table_args__ = (CheckConstraint("price >= 0", name="ck_items_price_nonneg"),)

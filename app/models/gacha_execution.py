@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Integer, DateTime, ForeignKey, CheckConstraint, text
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 
@@ -23,6 +25,4 @@ class GachaExecution(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),
-    )
+    __table_args__ = (CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),)

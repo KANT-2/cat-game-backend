@@ -1,5 +1,6 @@
-from sqlalchemy import Integer, Boolean, ForeignKey, UniqueConstraint, CheckConstraint
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 
@@ -13,7 +14,9 @@ class AttendanceTask(Base):
 
     __table_args__ = (
         UniqueConstraint("attendance_id", "task_id", name="uq_attendance_tasks_attendance_task"),
-        UniqueConstraint("attendance_id", "task_order", name="uq_attendance_tasks_attendance_order"),
+        UniqueConstraint(
+            "attendance_id", "task_order", name="uq_attendance_tasks_attendance_order"
+        ),
         UniqueConstraint("id", "task_id", name="uq_attendance_tasks_id_task_id"),
         CheckConstraint("task_order > 0", name="ck_attendance_tasks_order_positive"),
     )

@@ -1,5 +1,6 @@
-from sqlalchemy import String, Integer, ForeignKey, CheckConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 

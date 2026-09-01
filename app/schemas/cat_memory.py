@@ -1,5 +1,6 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 from app.schemas.base import ReadSchema
 
 

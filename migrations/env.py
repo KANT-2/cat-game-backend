@@ -1,28 +1,9 @@
-import logging
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 from app.models.base import Base
-from app.models.user import User
-from app.models.concept import Concept
-from app.models.item import Item
-from app.models.cat import Cat
-from app.models.attendance import Attendance
-from app.models.attendance_task import AttendanceTask
-from app.models.task import Task
-from app.models.user_proficiency import UserProficiency
-from app.models.room import Room
-from app.models.room_participant import RoomParticipant
-from app.models.room_task import RoomTask
-from app.models.task_attempt import TaskAttempt
-from app.models.placed_object import PlacedObject
-from app.models.user_cat import UserCat
-from app.models.gacha_execution import GachaExecution
-from app.models.cat_memory import CatMemory
 
 config = context.config
 
@@ -53,9 +34,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
