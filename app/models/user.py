@@ -1,6 +1,8 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, DateTime, Index, CheckConstraint, ForeignKey, text
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import Base
 
 
@@ -19,13 +21,11 @@ class User(Base):
     floor_item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=text("now()"),
-        nullable=False
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
 
     __table_args__ = (
-        Index('uq_users_email_lower', text("lower(email)"), unique=True),
+        Index("uq_users_email_lower", text("lower(email)"), unique=True),
         CheckConstraint("balance >= 0", name="ck_users_balance_nonneg"),
         CheckConstraint("mileage >= 0", name="ck_users_mileage_nonneg"),
     )
