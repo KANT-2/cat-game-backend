@@ -278,3 +278,4 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - [ ] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
 - [ ] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
 - [ ] PostgreSQL 통합 테스트에서 동시 멱등 요청과 자산 잠금을 검증한다.
+
