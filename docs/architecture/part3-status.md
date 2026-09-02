@@ -2,7 +2,7 @@
 
 이 문서는 로컬 Codex와 Codex cloud가 같은 기준으로 Part 3 작업을 이어가기 위한 현재 상태 기록이다.
 
-2026-09-02 기준으로 `origin/main`의 Part 1 안정화 변경을 `feature/part3`에 병합한 뒤 다시 점검했다.
+2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반과 SQLAlchemy Repository 구현을 점검했다.
 
 ## 완료된 기반
 
@@ -75,7 +75,17 @@
 - Fake 실행 저장소는 신규 선점, 완료 결과 재사용, 사용자·해시 충돌을 재현한다.
 - 나머지 Fake는 공개 UUID 조회, 자산 지급·수량 합산, 배치 수 집계와 고양이 기억 누적을 지원한다.
 
-### 7. 계약 테스트
+### 7. SQLAlchemy Repository — 완료
+
+- `app/db/repositories.py`에 User, Item, Cat, Asset, PlacedObject, CatMemory, Execution Repository 구현체를 추가했다.
+- 공개 UUID 조회와 저장 동작을 분리하고, Repository 내부에서는 `commit()`하지 않는다.
+- 사용자와 아이템 자산 변경 조회는 `SELECT ... FOR UPDATE`를 사용한다.
+- 배치 개수 조회는 PostgreSQL에서 허용되지 않는 `COUNT(*) FOR UPDATE` 대신 대상 행을 잠근 뒤 Python에서 개수를 센다.
+- 실행 선점은 PostgreSQL `INSERT ... ON CONFLICT DO NOTHING RETURNING`을 사용하고, 기존 실행은 `FOR UPDATE`로 조회한다.
+- 같은 실행의 완료·진행 상태와 다른 사용자 또는 요청 해시 충돌을 `ClaimStatus`로 구분한다.
+- `tests/unit/db/test_sqlalchemy_repositories.py`의 20개 테스트가 조회, 저장, 잠금, 선점과 완료 동작을 검증한다.
+
+### 8. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -87,6 +97,7 @@
 - 요청 해시 정규화 및 충돌 구분
 - Repository 메서드 경계와 트랜잭션 책임 분리
 - Fake Repository의 선점·충돌·자산·배치·기억 동작
+- SQLAlchemy Repository의 공개 UUID 조회, 저장, 행 잠금과 멱등 실행 선점
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -97,7 +108,7 @@
 
 ## 권장 작업 순서
 
-1. SQLAlchemy Repository와 Unit of Work
+1. Unit of Work
 2. 구매 및 가챠 멱등성 서비스
 3. 하우징 배치와 표면 아이템 적용
 4. 고양이 기억 API

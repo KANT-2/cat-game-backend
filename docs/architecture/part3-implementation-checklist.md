@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-02): 1~4단계를 완료했다. 다음 작업은 **5. Unit of Work와 SQLAlchemy Repository**다.
+현재 진행 상태(2026-09-03): SQLAlchemy Repository 구현과 단위 검증을 완료했다. 다음 작업은 **5. Unit of Work 구현**이다.
 
 구현 기준은 다음 문서다.
 
@@ -130,10 +130,10 @@ git status
 
 ## 5. Unit of Work와 SQLAlchemy Repository
 
-- [ ] SQLAlchemy Repository 구현체를 작성한다.
-- [ ] 사용자 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
-- [ ] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
-- [ ] 멱등 실행 요청을 안전하게 `claim()`한다.
+- [x] SQLAlchemy Repository 구현체를 작성한다.
+- [x] 사용자 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
+- [x] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
+- [x] 멱등 실행 요청을 안전하게 `claim()`한다.
 - [ ] Unit of Work를 구현한다.
 - [ ] 서비스만 한 번 `commit()`하도록 구성한다.
 - [ ] 예외 발생 시 전체 rollback을 검증한다.
@@ -142,6 +142,13 @@ git status
 
 - Repository는 조회, 저장, 잠금만 담당한다.
 - 트랜잭션의 시작과 종료는 Unit of Work와 서비스가 담당한다.
+
+현재 Repository 검증 결과:
+
+- SQLAlchemy Repository 단위 테스트: `20 passed`
+- 전체 테스트: `42 passed, 11 skipped, 1 warning`
+- 전체 Ruff 검사: 통과
+- `git diff --check`: 통과
 
 커밋 확인:
 
