@@ -38,15 +38,13 @@
 - Alembic은 `app.models` 패키지를 통해 16개 모델을 모두 등록한다.
 - 단위 테스트가 Base 동일성과 정확히 16개 테이블 등록을 검증한다.
 
-### 3. 공개 UUID 응답 직렬화
+### 3. 공개 UUID 응답 직렬화 — 완료
 
-다음 응답 스키마는 `*_public_id`를 요구하지만 현재 ORM 모델에는 내부 FK만 있고 관계 또는 변환 속성이 없다.
-
-- `UserCatRead.cat_public_id`, `item_public_id`
-- `PlacedObjectRead.item_public_id`
-- `CatMemoryRead.user_cat_public_id`
-
-Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계/투영을 구현해야 한다.
+- `UserCatRead`는 `to_user_cat_read()`로 `cat_public_id`와 `item_public_id`를 명시적으로 변환한다.
+- `PlacedObjectRead`는 `to_placed_object_read()`로 `item_public_id`를 명시적으로 변환한다.
+- `CatMemoryRead`는 `to_cat_memory_read()`로 `user_cat_public_id`를 명시적으로 변환한다.
+- 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
+- `tests/unit/schemas/test_public_id_serialization.py`가 고양이·아이템·배치 객체·고양이 기억 변환을 검증한다.
 
 ### 4. 멱등성 claim과 비용 컬럼
 
@@ -60,10 +58,10 @@ Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계
 
 - Alembic 신규 설치, 전체 롤백 및 재설치
 - 5개 트리거의 대표 허용/거부 사례
+- 공개 UUID DTO 직렬화
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
-- 공개 UUID 직렬화
 - 동일 요청 재시도와 해시 충돌
 - 다른 사용자의 동일 `request_id` 사용
 - 동시 가구 배치 및 자산 행 잠금
@@ -71,14 +69,13 @@ Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계
 
 ## 권장 작업 순서
 
-1. 공개 UUID DTO 변환 방식 확정
-2. `balance_cost`와 `claim()` 계약 정리
-3. Repository Protocol과 Fake 기반 단위 테스트
-4. SQLAlchemy Repository와 Unit of Work
-5. 구매 및 가챠 멱등성 서비스
-6. 하우징 배치와 표면 아이템 적용
-7. 고양이 기억 API
-8. PostgreSQL 동시성 통합 테스트
+1. `balance_cost`와 `claim()` 계약 정리
+2. Repository Protocol과 Fake 기반 단위 테스트
+3. SQLAlchemy Repository와 Unit of Work
+4. 구매 및 가챠 멱등성 서비스
+5. 하우징 배치와 표면 아이템 적용
+6. 고양이 기억 API
+7. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 
