@@ -16,7 +16,17 @@
 
 ```bash
 python -m venv .venv
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
+
+## Codex cloud에서 작업
+
+웹에서는 GitHub 저장소를 Codex cloud 환경에 연결한 뒤 이 저장소를 선택한다. 환경의 Python 버전은 3.12로 지정하고 setup script에는 다음을 사용한다.
+
+```bash
+bash scripts/cloud_setup.sh
+```
+
+새 작업은 루트의 `AGENTS.md`와 `docs/architecture/part3-status.md`를 읽도록 요청하고, Part 3 상태 문서의 권장 순서를 한 항목씩 진행한다. 비밀값과 실제 `.env`는 Git에 올리지 말고 Codex cloud 환경 변수 또는 secrets로 설정한다.
 
