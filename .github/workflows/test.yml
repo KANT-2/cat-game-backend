@@ -27,6 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
+      - run: cp alembic.ini.example alembic.ini
       - run: alembic upgrade head
       - run: pytest
       - run: ruff check .
