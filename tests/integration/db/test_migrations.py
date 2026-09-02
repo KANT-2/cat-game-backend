@@ -102,3 +102,27 @@ def test_gacha_execution_balance_cost_nonnegative(db_session):
             ),
             {"user_id": user_id},
         )
+
+def test_gacha_execution_balance_cost_defaults_to_zero(db_session):
+    """claim 단계에서 비용을 생략하면 DB가 0을 사용한다."""
+    db_session.execute(
+        text(
+            "INSERT INTO users (email, username, role, balance, mileage, house_level) "
+            "VALUES ('gacha_default@example.com', 'gachadefault', 'STUDENT', 100, 0, 1)"
+        )
+    )
+    user_id = db_session.execute(
+        text("SELECT id FROM users WHERE email = 'gacha_default@example.com'")
+    ).scalar_one()
+
+    balance_cost = db_session.execute(
+        text(
+            "INSERT INTO gacha_executions "
+            "(user_id, request_id, request_payload, request_hash, operation_type, status) "
+            "VALUES (:user_id, gen_random_uuid(), '{}', 'hash-default', 'GACHA', 'ACQUIRED') "
+            "RETURNING balance_cost"
+        ),
+        {"user_id": user_id},
+    ).scalar_one()
+
+    assert balance_cost == 0

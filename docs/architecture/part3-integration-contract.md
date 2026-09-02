@@ -104,6 +104,8 @@ class CatMemoryRepository(Protocol):
 | `COMPLETED` | 기존 요청이 완료됐으며 저장된 `result_data`를 반환한다. |
 | `HASH_CONFLICT` | 같은 `request_id`가 다른 사용자 또는 다른 요청 내용으로 사용됐다. |
 
+신규 `ACQUIRED` 실행은 실제 비용을 계산하기 전에 요청을 선점할 수 있도록 `balance_cost=0`으로 생성한다. `balance_cost`는 DB와 ORM 모두 기본값 `0`을 사용하며 `NOT NULL`과 음수 방지 제약을 유지한다. 업무 처리가 성공하면 `complete()`가 실제 `balance_cost`와 `result_data`를 저장하고 상태를 `COMPLETED`로 변경한다.
+
 잠금이 필요한 Repository 메서드는 이름에 `for_update`를 포함한다. 구현체는 PostgreSQL 행 잠금이나 그와 동등한 동시성 제어를 제공해야 한다.
 
 ## 3. Unit of Work와 트랜잭션 책임

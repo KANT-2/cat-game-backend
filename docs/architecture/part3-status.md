@@ -38,21 +38,26 @@
 - Alembic은 `app.models` 패키지를 통해 16개 모델을 모두 등록한다.
 - 단위 테스트가 Base 동일성과 정확히 16개 테이블 등록을 검증한다.
 
-### 3. 공개 UUID 응답 직렬화
+### 3. 공개 UUID 응답 직렬화 — 완료
 
-다음 응답 스키마는 `*_public_id`를 요구하지만 현재 ORM 모델에는 내부 FK만 있고 관계 또는 변환 속성이 없다.
+- `UserCatRead`는 `to_user_cat_read()`로 `cat_public_id`와 `item_public_id`를 명시적으로 변환한다.
+- `PlacedObjectRead`는 `to_placed_object_read()`로 `item_public_id`를 명시적으로 변환한다.
+- `CatMemoryRead`는 `to_cat_memory_read()`로 `user_cat_public_id`를 명시적으로 변환한다.
+- 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
+- `tests/unit/schemas/test_public_id_serialization.py`가 고양이·아이템·배치 객체·고양이 기억 변환을 검증한다.
 
-- `UserCatRead.cat_public_id`, `item_public_id`
-- `PlacedObjectRead.item_public_id`
-- `CatMemoryRead.user_cat_public_id`
+### 4. 멱등성 claim과 비용 컬럼 — 완료
 
-Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계/투영을 구현해야 한다.
+통합 계약처럼 실행을 먼저 `claim()`한 뒤 비용을 계산할 수 있도록 `GachaExecution.balance_cost`에 ORM 기본값과 DB 서버 기본값 `0`을 적용했다. `NOT NULL`과 `balance_cost >= 0` 제약은 그대로 유지한다.
 
-### 4. 멱등성 claim과 비용 컬럼
+- `app/models/gacha_execution.py`에 `default=0`, `server_default=text("0")`을 추가했다.
+- `be8999b8f41e_add_balance_cost_default.py` 마이그레이션으로 기존 PostgreSQL 스키마에도 서버 기본값을 추가한다.
+- `tests/unit/models/test_gacha_execution.py`가 ORM 및 서버 기본값 메타데이터를 검증한다.
+- `tests/integration/db/test_migrations.py`가 비용을 생략한 실행 행의 값이 `0`인지 검증한다.
+- 새 마이그레이션은 `6e7f8a9b0c1d`를 잇는 유일한 Alembic head다.
+- 통합 계약에 `claim()` 시 초기 비용 `0`과 `complete()` 시 실제 비용 갱신 규칙을 명시했다.
 
-통합 계약은 실행을 먼저 `claim()`한 뒤 비용을 계산하도록 정의한다. 현재 `GachaExecution.balance_cost`는 NOT NULL이고 기본값이 없으며 `claim()` 계약에는 비용 인자가 없다.
-
-권장 방향은 신규 실행에 DB/ORM 기본값 `0`을 적용하고 `complete()`에서 실제 비용으로 갱신하는 것이다. 다른 방향을 선택하면 통합 계약도 함께 수정한다.
+모델 단위 테스트와 정적 검사는 통과했다. Docker의 PostgreSQL 16에 전체 마이그레이션을 적용한 뒤 `tests/integration/db/test_migrations.py`의 6개 테스트도 모두 통과했다. `complete()` 구현은 이후 멱등성 실행 엔진 단계에서 이 계약을 따른다.
 
 ### 5. 계약 테스트
 
@@ -60,10 +65,12 @@ Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계
 
 - Alembic 신규 설치, 전체 롤백 및 재설치
 - 5개 트리거의 대표 허용/거부 사례
+- 공개 UUID DTO 직렬화
+- `balance_cost`의 ORM/DB 기본값 메타데이터
+- PostgreSQL 16에서 비용을 생략한 실행 행의 DB 기본값 `0`
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
-- 공개 UUID 직렬화
 - 동일 요청 재시도와 해시 충돌
 - 다른 사용자의 동일 `request_id` 사용
 - 동시 가구 배치 및 자산 행 잠금
@@ -71,14 +78,12 @@ Repository 조회 결과를 명시적인 DTO로 변환하거나 필요한 관계
 
 ## 권장 작업 순서
 
-1. 공개 UUID DTO 변환 방식 확정
-2. `balance_cost`와 `claim()` 계약 정리
-3. Repository Protocol과 Fake 기반 단위 테스트
-4. SQLAlchemy Repository와 Unit of Work
-5. 구매 및 가챠 멱등성 서비스
-6. 하우징 배치와 표면 아이템 적용
-7. 고양이 기억 API
-8. PostgreSQL 동시성 통합 테스트
+1. Repository Protocol과 Fake 기반 단위 테스트
+2. SQLAlchemy Repository와 Unit of Work
+3. 구매 및 가챠 멱등성 서비스
+4. 하우징 배치와 표면 아이템 적용
+5. 고양이 기억 API
+6. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 
