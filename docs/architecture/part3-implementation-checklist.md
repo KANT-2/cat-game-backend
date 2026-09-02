@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-02): 공통 DB 기반 동기화와 **1. 공개 UUID DTO 변환**을 완료했다. **2. `balance_cost`와 `claim()` 계약 정리**의 모델·마이그레이션 작업을 진행 중이다.
+현재 진행 상태(2026-09-02): **1. 공개 UUID DTO 변환**과 **2. `balance_cost`와 `claim()` 계약 정리**를 완료했다. 다음 작업은 **3. 요청 해시 공통 함수**다.
 
 구현 기준은 다음 문서다.
 
@@ -62,16 +62,16 @@ git status
 
 - [x] 신규 실행을 먼저 저장할 수 있도록 `balance_cost` 초기값을 정한다.
 - [x] 권장안인 DB/ORM 기본값 `0` 적용 여부를 확정한다.
-- [ ] `claim()`에서 신규 실행 행을 생성할 수 있게 한다.
-- [ ] `complete()`에서 실제 비용으로 갱신하도록 계약을 맞춘다.
+- [x] `claim()`에서 신규 실행 행을 생성할 수 있게 한다.
+- [x] `complete()`에서 실제 비용으로 갱신하도록 계약을 맞춘다.
 - [x] 모델과 마이그레이션을 수정한다.
-- [ ] 선택한 방향을 `part3-integration-contract.md`에 반영한다.
+- [x] 선택한 방향을 `part3-integration-contract.md`에 반영한다.
 - [x] 초기 실행 생성과 음수 비용 거부 테스트를 작성한다.
 
 현재 검증 결과:
 
 - 모델 기본값 단위 테스트: `1 passed`
-- PostgreSQL 마이그레이션 테스트: 로컬 DB 연결이 없어 `6 skipped`
+- PostgreSQL 16 마이그레이션 테스트: `6 passed`
 - Ruff 대상 파일 검사: 통과
 - Alembic head: `be8999b8f41e`
 
@@ -82,7 +82,7 @@ git status
 
 커밋 확인:
 
-- [ ] 계약 문서, 모델, 마이그레이션과 테스트를 함께 커밋했다.
+- [x] 계약 문서, 모델, 마이그레이션과 테스트를 커밋했다.
 
 ## 3. 요청 해시 공통 함수
 
@@ -301,7 +301,7 @@ python -m ruff check .
 
 - [x] 0. 작업 브랜치 준비
 - [x] 1. 공개 UUID DTO 변환
-- [ ] 2. `balance_cost`와 `claim()` 계약 정리
+- [x] 2. `balance_cost`와 `claim()` 계약 정리
 - [ ] 3. 요청 해시 공통 함수
 - [ ] 4. Repository 계약과 Fake 구현
 - [ ] 5. Unit of Work와 SQLAlchemy Repository

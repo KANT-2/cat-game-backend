@@ -46,7 +46,7 @@
 - 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
 - `tests/unit/schemas/test_public_id_serialization.py`가 고양이·아이템·배치 객체·고양이 기억 변환을 검증한다.
 
-### 4. 멱등성 claim과 비용 컬럼 — 구현 진행 중
+### 4. 멱등성 claim과 비용 컬럼 — 완료
 
 통합 계약처럼 실행을 먼저 `claim()`한 뒤 비용을 계산할 수 있도록 `GachaExecution.balance_cost`에 ORM 기본값과 DB 서버 기본값 `0`을 적용했다. `NOT NULL`과 `balance_cost >= 0` 제약은 그대로 유지한다.
 
@@ -55,8 +55,9 @@
 - `tests/unit/models/test_gacha_execution.py`가 ORM 및 서버 기본값 메타데이터를 검증한다.
 - `tests/integration/db/test_migrations.py`가 비용을 생략한 실행 행의 값이 `0`인지 검증한다.
 - 새 마이그레이션은 `6e7f8a9b0c1d`를 잇는 유일한 Alembic head다.
+- 통합 계약에 `claim()` 시 초기 비용 `0`과 `complete()` 시 실제 비용 갱신 규칙을 명시했다.
 
-로컬에서는 모델 단위 테스트가 통과했지만 PostgreSQL 연결이 없어 DB 통합 테스트는 건너뛰었다. 실제 DB 마이그레이션 검증과 `complete()`의 실제 비용 갱신은 남아 있다.
+모델 단위 테스트와 정적 검사는 통과했다. Docker의 PostgreSQL 16에 전체 마이그레이션을 적용한 뒤 `tests/integration/db/test_migrations.py`의 6개 테스트도 모두 통과했다. `complete()` 구현은 이후 멱등성 실행 엔진 단계에서 이 계약을 따른다.
 
 ### 5. 계약 테스트
 
@@ -66,24 +67,23 @@
 - 5개 트리거의 대표 허용/거부 사례
 - 공개 UUID DTO 직렬화
 - `balance_cost`의 ORM/DB 기본값 메타데이터
+- PostgreSQL 16에서 비용을 생략한 실행 행의 DB 기본값 `0`
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
 - 동일 요청 재시도와 해시 충돌
-- 비용을 생략한 `claim()` 실행 행의 DB 기본값 `0`
 - 다른 사용자의 동일 `request_id` 사용
 - 동시 가구 배치 및 자산 행 잠금
 - 잔액, 마일리지, 자산, 실행 결과의 원자적 롤백
 
 ## 권장 작업 순서
 
-1. `balance_cost`와 `claim()` 계약 정리
-2. Repository Protocol과 Fake 기반 단위 테스트
-3. SQLAlchemy Repository와 Unit of Work
-4. 구매 및 가챠 멱등성 서비스
-5. 하우징 배치와 표면 아이템 적용
-6. 고양이 기억 API
-7. PostgreSQL 동시성 통합 테스트
+1. Repository Protocol과 Fake 기반 단위 테스트
+2. SQLAlchemy Repository와 Unit of Work
+3. 구매 및 가챠 멱등성 서비스
+4. 하우징 배치와 표면 아이템 적용
+5. 고양이 기억 API
+6. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 
