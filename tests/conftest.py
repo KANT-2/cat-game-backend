@@ -7,7 +7,14 @@ from app.core.config import settings
 
 @pytest.fixture(scope="session")
 def engine():
-    return create_engine(settings.database_url)
+    test_engine = create_engine(settings.database_url)
+    if test_engine.dialect.name != "postgresql":
+        test_engine.dispose()
+        pytest.skip("PostgreSQL integration tests require DATABASE_URL")
+
+    yield test_engine
+
+    test_engine.dispose()
 
 
 @pytest.fixture()

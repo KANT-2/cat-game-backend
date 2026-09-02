@@ -12,6 +12,16 @@ EXPECTED_TABLES = [
 ]
 
 
+def test_pgcrypto_extension_enabled(engine):
+    """최초 마이그레이션이 UUID 생성에 사용하는 확장을 활성화하는지 확인"""
+    with engine.connect() as conn:
+        installed = conn.execute(
+            text("SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto')")
+        ).scalar_one()
+
+    assert installed is True
+
+
 def test_all_16_tables_exist(engine):
     """16개 테이블이 실제 DB에 전부 존재하는지 확인"""
     with engine.connect() as conn:
