@@ -59,7 +59,14 @@
 
 모델 단위 테스트와 정적 검사는 통과했다. Docker의 PostgreSQL 16에 전체 마이그레이션을 적용한 뒤 `tests/integration/db/test_migrations.py`의 6개 테스트도 모두 통과했다. `complete()` 구현은 이후 멱등성 실행 엔진 단계에서 이 계약을 따른다.
 
-### 5. 계약 테스트
+### 5. 요청 해시 정규화 — 완료
+
+- `app/core/request_hash.py`의 `build_request_hash()`를 구매와 가챠가 함께 사용하는 단일 해시 함수로 구현했다.
+- JSON 키 정렬, 공백 제거, UTF-8, UUID 표준 문자열 변환과 SHA-256 규칙을 적용한다.
+- `operation_type`은 포함하고 `request_id`와 가격·잔액·마일리지 등 서버 결정값은 제외한다.
+- `tests/unit/core/test_request_hash.py`가 키 순서, 제외 필드, 업무 종류와 요청 내용 변경을 검증한다.
+
+### 6. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -68,6 +75,7 @@
 - 공개 UUID DTO 직렬화
 - `balance_cost`의 ORM/DB 기본값 메타데이터
 - PostgreSQL 16에서 비용을 생략한 실행 행의 DB 기본값 `0`
+- 요청 해시 정규화 및 충돌 구분
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 

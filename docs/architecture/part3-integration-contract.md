@@ -266,7 +266,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - [ ] 잠금이 필요한 Repository 메서드에 `for_update`가 명시돼 있다.
 - [ ] API 요청과 응답에는 UUID `public_id`만 사용한다.
 - [ ] 내부 정수 PK가 응답 스키마에서 제외돼 있다.
-- [ ] 정규 JSON과 SHA-256 생성 규칙이 단일 함수로 구현돼 있다.
+- [x] 정규 JSON과 SHA-256 생성 규칙이 단일 함수로 구현돼 있다.
 - [ ] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
 - [ ] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
 - [ ] PostgreSQL 통합 테스트에서 동시 멱등 요청과 자산 잠금을 검증한다.
