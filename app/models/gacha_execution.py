@@ -18,7 +18,12 @@ class GachaExecution(Base):
     operation_type: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="ACQUIRED")
     draw_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    balance_cost: Mapped[int] = mapped_column(Integer, nullable=False)
+    balance_cost: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
     result_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False

@@ -46,11 +46,17 @@
 - 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
 - `tests/unit/schemas/test_public_id_serialization.py`가 고양이·아이템·배치 객체·고양이 기억 변환을 검증한다.
 
-### 4. 멱등성 claim과 비용 컬럼
+### 4. 멱등성 claim과 비용 컬럼 — 구현 진행 중
 
-통합 계약은 실행을 먼저 `claim()`한 뒤 비용을 계산하도록 정의한다. 현재 `GachaExecution.balance_cost`는 NOT NULL이고 기본값이 없으며 `claim()` 계약에는 비용 인자가 없다.
+통합 계약처럼 실행을 먼저 `claim()`한 뒤 비용을 계산할 수 있도록 `GachaExecution.balance_cost`에 ORM 기본값과 DB 서버 기본값 `0`을 적용했다. `NOT NULL`과 `balance_cost >= 0` 제약은 그대로 유지한다.
 
-권장 방향은 신규 실행에 DB/ORM 기본값 `0`을 적용하고 `complete()`에서 실제 비용으로 갱신하는 것이다. 다른 방향을 선택하면 통합 계약도 함께 수정한다.
+- `app/models/gacha_execution.py`에 `default=0`, `server_default=text("0")`을 추가했다.
+- `be8999b8f41e_add_balance_cost_default.py` 마이그레이션으로 기존 PostgreSQL 스키마에도 서버 기본값을 추가한다.
+- `tests/unit/models/test_gacha_execution.py`가 ORM 및 서버 기본값 메타데이터를 검증한다.
+- `tests/integration/db/test_migrations.py`가 비용을 생략한 실행 행의 값이 `0`인지 검증한다.
+- 새 마이그레이션은 `6e7f8a9b0c1d`를 잇는 유일한 Alembic head다.
+
+로컬에서는 모델 단위 테스트가 통과했지만 PostgreSQL 연결이 없어 DB 통합 테스트는 건너뛰었다. 실제 DB 마이그레이션 검증과 `complete()`의 실제 비용 갱신은 남아 있다.
 
 ### 5. 계약 테스트
 
@@ -59,10 +65,12 @@
 - Alembic 신규 설치, 전체 롤백 및 재설치
 - 5개 트리거의 대표 허용/거부 사례
 - 공개 UUID DTO 직렬화
+- `balance_cost`의 ORM/DB 기본값 메타데이터
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
 - 동일 요청 재시도와 해시 충돌
+- 비용을 생략한 `claim()` 실행 행의 DB 기본값 `0`
 - 다른 사용자의 동일 `request_id` 사용
 - 동시 가구 배치 및 자산 행 잠금
 - 잔액, 마일리지, 자산, 실행 결과의 원자적 롤백
