@@ -16,7 +16,7 @@ class GachaExecution(Base):
     request_payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     operation_type: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="PENDING")
+    status: Mapped[str] = mapped_column(String, nullable=False, default="ACQUIRED")
     draw_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     balance_cost: Mapped[int] = mapped_column(Integer, nullable=False)
     result_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -25,4 +25,10 @@ class GachaExecution(Base):
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),)
+    __table_args__ = (
+    CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),
+    CheckConstraint(
+        "status IN ('ACQUIRED', 'COMPLETED', 'HASH_CONFLICT')",
+        name="ck_gacha_executions_status_valid",
+    ),
+)
