@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-02): **1. 공개 UUID DTO 변환**, **2. `balance_cost`와 `claim()` 계약 정리**, **3. 요청 해시 공통 함수**를 완료했다. 다음 작업은 **4. Repository 계약과 Fake 구현**이다.
+현재 진행 상태(2026-09-02): 1~4단계를 완료했다. 다음 작업은 **5. Unit of Work와 SQLAlchemy Repository**다.
 
 구현 기준은 다음 문서다.
 
@@ -108,16 +108,16 @@ git status
 
 ## 4. Repository 계약과 Fake 구현
 
-- [ ] `ExecutionRepository` Protocol을 작성한다.
-- [ ] `UserRepository` Protocol을 작성한다.
-- [ ] `ItemRepository` Protocol을 작성한다.
-- [ ] `CatRepository` Protocol을 작성한다.
-- [ ] `AssetRepository` Protocol을 작성한다.
-- [ ] `PlacedObjectRepository` Protocol을 작성한다.
-- [ ] `CatMemoryRepository` Protocol을 작성한다.
-- [ ] 테스트용 Fake Repository를 작성한다.
-- [ ] 잠금 조회 메서드 이름에 `for_update`를 사용한다.
-- [ ] Repository에 `commit()`이 없는지 확인한다.
+- [x] `ExecutionRepository` Protocol을 작성한다.
+- [x] `UserRepository` Protocol을 작성한다.
+- [x] `ItemRepository` Protocol을 작성한다.
+- [x] `CatRepository` Protocol을 작성한다.
+- [x] `AssetRepository` Protocol을 작성한다.
+- [x] `PlacedObjectRepository` Protocol을 작성한다.
+- [x] `CatMemoryRepository` Protocol을 작성한다.
+- [x] 테스트용 Fake Repository를 작성한다.
+- [x] 잠금 조회 메서드 이름에 `for_update`를 사용한다.
+- [x] Repository에 `commit()`이 없는지 확인한다.
 
 완료 기준:
 
@@ -126,7 +126,7 @@ git status
 
 커밋 확인:
 
-- [ ] Repository 계약, Fake 및 계약 테스트를 커밋했다.
+- [x] Repository 계약, Fake 및 계약 테스트를 커밋했다.
 
 ## 5. Unit of Work와 SQLAlchemy Repository
 
@@ -303,7 +303,7 @@ python -m ruff check .
 - [x] 1. 공개 UUID DTO 변환
 - [x] 2. `balance_cost`와 `claim()` 계약 정리
 - [x] 3. 요청 해시 공통 함수
-- [ ] 4. Repository 계약과 Fake 구현
+- [x] 4. Repository 계약과 Fake 구현
 - [ ] 5. Unit of Work와 SQLAlchemy Repository
 - [ ] 6. 멱등성 실행 엔진
 - [ ] 7. 아이템 구매 및 벽지·바닥 적용

@@ -66,7 +66,16 @@
 - `operation_type`은 포함하고 `request_id`와 가격·잔액·마일리지 등 서버 결정값은 제외한다.
 - `tests/unit/core/test_request_hash.py`가 키 순서, 제외 필드, 업무 종류와 요청 내용 변경을 검증한다.
 
-### 6. 계약 테스트
+### 6. Repository 계약과 Fake — 완료
+
+- `app/core/repository_contracts.py`에 Execution, User, Item, Cat, Asset, PlacedObject, CatMemory Repository Protocol을 정의했다.
+- `ClaimStatus`와 `ExecutionClaim`으로 멱등 요청 선점 결과를 표현한다.
+- 잠금 메서드는 `for_update` 이름을 사용하고 모든 Repository에서 `commit()`과 `rollback()`을 제외했다.
+- `tests/fakes/repositories.py`에 동일 계약을 따르는 7개 메모리 Fake를 구현했다.
+- Fake 실행 저장소는 신규 선점, 완료 결과 재사용, 사용자·해시 충돌을 재현한다.
+- 나머지 Fake는 공개 UUID 조회, 자산 지급·수량 합산, 배치 수 집계와 고양이 기억 누적을 지원한다.
+
+### 7. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -76,6 +85,8 @@
 - `balance_cost`의 ORM/DB 기본값 메타데이터
 - PostgreSQL 16에서 비용을 생략한 실행 행의 DB 기본값 `0`
 - 요청 해시 정규화 및 충돌 구분
+- Repository 메서드 경계와 트랜잭션 책임 분리
+- Fake Repository의 선점·충돌·자산·배치·기억 동작
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -86,12 +97,11 @@
 
 ## 권장 작업 순서
 
-1. Repository Protocol과 Fake 기반 단위 테스트
-2. SQLAlchemy Repository와 Unit of Work
-3. 구매 및 가챠 멱등성 서비스
-4. 하우징 배치와 표면 아이템 적용
-5. 고양이 기억 API
-6. PostgreSQL 동시성 통합 테스트
+1. SQLAlchemy Repository와 Unit of Work
+2. 구매 및 가챠 멱등성 서비스
+3. 하우징 배치와 표면 아이템 적용
+4. 고양이 기억 API
+5. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 
