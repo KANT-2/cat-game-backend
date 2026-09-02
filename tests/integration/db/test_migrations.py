@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-
 EXPECTED_TABLES = [
     "users", "cats", "cat_memories", "concepts", "items",
     "tasks", "task_attempts", "attendances", "attendance_tasks",

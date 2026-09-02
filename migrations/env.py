@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.models.base import Base
-import app.models  # 추가: 모든 모델을 등록시키기 위한 import
+
 config = context.config
 
 if config.config_file_name is not None:
