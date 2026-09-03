@@ -2,22 +2,22 @@ import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+from app.schemas.asset import to_asset_read
 from app.schemas.cat_memory import to_cat_memory_read
 from app.schemas.placed_object import to_placed_object_read
-from app.schemas.user_cat import to_user_cat_read
 
 
-def test_to_user_cat_read_uses_public_ids() -> None:
+def test_to_asset_read_uses_public_ids() -> None:
     asset_public_id = uuid.uuid4()
     cat_public_id = uuid.uuid4()
 
-    user_cat = SimpleNamespace(
+    asset = SimpleNamespace(
         public_id=asset_public_id,
         quantity=1,
     )
 
-    result = to_user_cat_read(
-        user_cat,
+    result = to_asset_read(
+        asset,
         cat_public_id=cat_public_id,
         item_public_id=None,
     )
@@ -29,17 +29,17 @@ def test_to_user_cat_read_uses_public_ids() -> None:
     assert "id" not in result.model_dump()
 
 
-def test_to_user_cat_read_maps_item_public_id() -> None:
+def test_to_asset_read_maps_item_public_id() -> None:
     asset_public_id = uuid.uuid4()
     item_public_id = uuid.uuid4()
 
-    user_cat = SimpleNamespace(
+    asset = SimpleNamespace(
         public_id=asset_public_id,
         quantity=3,
     )
 
-    result = to_user_cat_read(
-        user_cat,
+    result = to_asset_read(
+        asset,
         cat_public_id=None,
         item_public_id=item_public_id,
     )
@@ -57,7 +57,7 @@ def test_to_placed_object_read_uses_item_public_id() -> None:
     position_data = {
         "x": 120,
         "y": 80,
-        "rotation": 0,
+        "z": 0,
     }
 
     placed_object = SimpleNamespace(

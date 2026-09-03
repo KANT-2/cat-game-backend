@@ -1,3 +1,4 @@
+from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
 from app.models.base import Base
@@ -13,10 +14,10 @@ from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user import User
-from app.models.user_cat import UserCat
 from app.models.user_proficiency import UserProficiency
 
 __all__ = [
+    "Asset",
     "Attendance",
     "AttendanceTask",
     "Base",
@@ -32,6 +33,5 @@ __all__ = [
     "Task",
     "TaskAttempt",
     "User",
-    "UserCat",
     "UserProficiency",
 ]

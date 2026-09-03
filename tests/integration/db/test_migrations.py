@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 EXPECTED_TABLES = [
     "users", "cats", "cat_memories", "concepts", "items",
     "tasks", "task_attempts", "attendances", "attendance_tasks",
-    "rooms", "room_participants", "room_tasks", "user_cats",
+    "rooms", "room_participants", "room_tasks", "assets",
     "user_proficiency", "placed_objects", "gacha_executions",
 ]
 
@@ -35,6 +35,73 @@ def test_all_16_tables_exist(engine):
 
     missing = set(EXPECTED_TABLES) - actual_tables
     assert not missing, f"누락된 테이블: {missing}"
+
+
+def test_asset_naming_migration_is_applied(engine):
+    """보유 자산 테이블과 고양이 기억 FK가 새 이름을 사용하는지 확인"""
+    with engine.connect() as conn:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                )
+            )
+        }
+        memory_columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' "
+                    "AND table_name = 'cat_memories'"
+                )
+            )
+        }
+
+    assert "assets" in tables
+    assert "user_cats" not in tables
+    assert "user_cat_id" in memory_columns
+    assert "asset_id" not in memory_columns
+
+
+def test_placed_object_position_uses_xyz_coordinates(db_session):
+    """배치 위치 JSON이 x, y, z 계약으로 저장되는지 확인"""
+    user_id = db_session.execute(
+        text(
+            "INSERT INTO users "
+            "(email, username, role, balance, mileage, house_level) "
+            "VALUES ('xyz@example.com', 'xyz-user', 'STUDENT', 0, 0, 1) "
+            "RETURNING id"
+        )
+    ).scalar_one()
+    item_id = db_session.execute(
+        text(
+            "INSERT INTO items (category, name, price) "
+            "VALUES ('FURNITURE', 'XYZ Chair', 0) RETURNING id"
+        )
+    ).scalar_one()
+    db_session.execute(
+        text(
+            "INSERT INTO assets (user_id, item_id, quantity) "
+            "VALUES (:user_id, :item_id, 1)"
+        ),
+        {"user_id": user_id, "item_id": item_id},
+    )
+
+    position_data = db_session.execute(
+        text(
+            "INSERT INTO placed_objects (user_id, item_id, position_data) "
+            "VALUES (:user_id, :item_id, "
+            "'{\"x\": 10, \"y\": 20, \"z\": 30}'::jsonb) "
+            "RETURNING position_data"
+        ),
+        {"user_id": user_id, "item_id": item_id},
+    ).scalar_one()
+
+    assert position_data == {"x": 10, "y": 20, "z": 30}
+    assert "rotation" not in position_data
 
 
 def test_public_id_auto_generated(db_session):

@@ -10,7 +10,7 @@ class CatMemory(Base):
     __tablename__ = "cat_memories"
 
     user_cat_id: Mapped[int] = mapped_column(
-        ForeignKey("user_cats.id", ondelete="RESTRICT"), nullable=False
+        ForeignKey("assets.id", ondelete="RESTRICT"), nullable=False
     )
     context_summary: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

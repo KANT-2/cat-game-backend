@@ -9,13 +9,13 @@ from app.core.repository_contracts import (
     ClaimStatus,
     ExecutionClaim,
 )
+from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.cat_memory import CatMemory
 from app.models.gacha_execution import GachaExecution
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
-from app.models.user_cat import UserCat
 
 
 class SqlAlchemyUserRepository:
@@ -62,10 +62,10 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat | None:
-        statement = select(UserCat).where(
-            UserCat.user_id == user_id,
-            UserCat.cat_id == cat_id,
+    ) -> Asset | None:
+        statement = select(Asset).where(
+            Asset.user_id == user_id,
+            Asset.cat_id == cat_id,
         )
         return self._session.execute(statement).scalar_one_or_none()
 
@@ -73,12 +73,12 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         item_id: int,
-    ) -> UserCat | None:
+    ) -> Asset | None:
         statement = (
-            select(UserCat)
+            select(Asset)
             .where(
-                UserCat.user_id == user_id,
-                UserCat.item_id == item_id,
+                Asset.user_id == user_id,
+                Asset.item_id == item_id,
             )
             .with_for_update()
         )
@@ -89,7 +89,7 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         item_id: int,
         quantity: int,
-    ) -> UserCat:
+    ) -> Asset:
         if quantity <= 0:
             raise ValueError("quantity must be positive")
 
@@ -98,7 +98,7 @@ class SqlAlchemyAssetRepository:
             existing.quantity += quantity
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             user_id=user_id,
             cat_id=None,
             item_id=item_id,
@@ -111,12 +111,12 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat:
+    ) -> Asset:
         existing = self.get_cat_asset(user_id, cat_id)
         if existing is not None:
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             user_id=user_id,
             cat_id=cat_id,
             item_id=None,

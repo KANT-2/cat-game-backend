@@ -18,7 +18,7 @@ def test_placed_object_create_accepts_finite_position() -> None:
         position_data={
             "x": 120,
             "y": 80,
-            "rotation": 45,
+            "z": 45,
         },
     )
 
@@ -26,18 +26,18 @@ def test_placed_object_create_accepts_finite_position() -> None:
     assert request.position_data == PositionData(
         x=120,
         y=80,
-        rotation=45,
+        z=45,
     )
 
 
-@pytest.mark.parametrize("missing_field", ["x", "y", "rotation"])
+@pytest.mark.parametrize("missing_field", ["x", "y", "z"])
 def test_position_data_requires_every_field(
     missing_field: str,
 ) -> None:
     position_data = {
         "x": 120,
         "y": 80,
-        "rotation": 45,
+        "z": 45,
     }
     del position_data[missing_field]
 
@@ -56,5 +56,10 @@ def test_position_data_rejects_nonfinite_numbers(
         PositionData(
             x=invalid_value,
             y=80,
-            rotation=45,
+            z=45,
         )
+
+
+def test_position_data_rejects_legacy_rotation_field() -> None:
+    with pytest.raises(ValidationError):
+        PositionData(x=120, y=80, z=45, rotation=45)

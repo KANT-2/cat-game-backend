@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 if TYPE_CHECKING:
+    from app.models.asset import Asset
     from app.models.cat import Cat
     from app.models.cat_memory import CatMemory
     from app.models.gacha_execution import GachaExecution
     from app.models.item import Item
     from app.models.placed_object import PlacedObject
     from app.models.user import User
-    from app.models.user_cat import UserCat
 
 
 class ClaimStatus(StrEnum):
@@ -67,26 +67,26 @@ class AssetRepository(Protocol):
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat | None: ...
+    ) -> Asset | None: ...
 
     def get_item_asset_for_update(
         self,
         user_id: int,
         item_id: int,
-    ) -> UserCat | None: ...
+    ) -> Asset | None: ...
 
     def add_item_quantity(
         self,
         user_id: int,
         item_id: int,
         quantity: int,
-    ) -> UserCat: ...
+    ) -> Asset: ...
 
     def grant_cat(
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat: ...
+    ) -> Asset: ...
 
 
 class PlacedObjectRepository(Protocol):

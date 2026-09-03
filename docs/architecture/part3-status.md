@@ -11,7 +11,7 @@
 - 모든 업무 테이블의 UUID `public_id`
 - `uq_users_email_lower` 인덱스
 - `request_id` 전역 UNIQUE
-- `user_cats`의 고양이/아이템 XOR 및 수량 제약
+- `assets`의 고양이/아이템 XOR 및 수량 제약
 - 5개 교차 정합성 트리거
 - 응답 스키마에서 내부 INTEGER `id` 제외
 - 기본 `/health` 테스트와 Ruff 검사 통과
@@ -40,7 +40,7 @@
 
 ### 3. 공개 UUID 응답 직렬화 — 완료
 
-- `UserCatRead`는 `to_user_cat_read()`로 `cat_public_id`와 `item_public_id`를 명시적으로 변환한다.
+- `AssetRead`는 `to_asset_read()`로 `cat_public_id`와 `item_public_id`를 명시적으로 변환한다.
 - `PlacedObjectRead`는 `to_placed_object_read()`로 `item_public_id`를 명시적으로 변환한다.
 - `CatMemoryRead`는 `to_cat_memory_read()`로 `user_cat_public_id`를 명시적으로 변환한다.
 - 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
@@ -100,7 +100,7 @@
 - 공통 요청 해시로 실행을 claim하고 완료된 동일 요청은 저장된 결과를 그대로 반환한다.
 - 같은 요청 ID의 사용자 또는 내용이 다르면 `IdempotencyConflictError`로 거부한다.
 - DB의 아이템 가격으로 총비용을 계산하고 잠근 사용자 잔액에서 차감한다.
-- 신규 아이템 자산을 생성하거나 기존 `UserCat` 자산 수량을 합산한다.
+- 신규 아이템 자산을 생성하거나 기존 `Asset` 수량을 합산한다.
 - 잔액 부족, 0 이하 수량과 존재하지 않는 리소스는 변경과 commit 전에 거부한다.
 - 실행 완료, 잔액과 자산 변경을 하나의 UoW에서 처리하고 서비스가 한 번만 commit한다.
 - `tests/unit/modules/shop/test_purchase_service.py`의 10개 테스트가 정상·재시도·충돌·오류·재구매 경로를 검증한다.
@@ -112,7 +112,7 @@
 - 공통 요청 해시로 실행을 선점하고 완료된 동일 요청은 저장된 결과를 그대로 반환한다.
 - 같은 요청 ID의 사용자 또는 뽑기 횟수가 다르면 `IdempotencyConflictError`로 거부한다.
 - 사용자 행을 잠근 뒤 정책 비용과 잔액을 검증하고, 잔액이 충분할 때만 추첨한다.
-- 신규 고양이는 기존 `UserCat` 자산을 수량 1로 생성한다.
+- 신규 고양이는 `Asset`을 수량 1로 생성한다.
 - 중복 고양이는 자산 행이나 수량을 늘리지 않고 정책의 보상만 사용자 mileage에 더한다.
 - 비용·보상 개수·중복 마일리지 같은 정책 결과를 변경 전에 검증한다.
 - 잔액, mileage, 자산과 실행 결과를 하나의 UoW에서 변경하고 서비스가 한 번만 commit한다.
@@ -121,18 +121,35 @@
 
 ### 11. 하우징 가구 배치 서비스 — 단위 구현 완료
 
-- `PositionData`가 `x`, `y`, `rotation`을 필수 유한 숫자로 검증하고 알 수 없는 필드를 거부한다.
-- 실제 방 크기에 따른 좌표와 회전 범위는 아직 확정되지 않아 임의의 최솟값·최댓값을 하드코딩하지 않았다.
+- `PositionData`가 3축 위치 좌표 `x`, `y`, `z`를 필수 유한 숫자로 검증하고 알 수 없는 필드를 거부한다.
+- 이전 `rotation` 필드는 거부하며 기존 JSONB 데이터는 Alembic 마이그레이션으로 `z`에 옮긴다.
+- 실제 방 크기에 따른 `x`, `y`, `z` 범위는 아직 확정되지 않아 임의의 최솟값·최댓값을 하드코딩하지 않았다.
 - `place_furniture()`는 `FURNITURE` 카테고리와 사용자 소유 아이템 자산을 확인한다.
 - 아이템 자산 행을 먼저 잠그고 현재 배치 행도 잠금 조회한 뒤 보유 수량과 비교한다.
 - 보유 수량 이상이면 `PlacementLimitExceededError`로 새 배치를 거부한다.
 - 수정과 해제는 배치 공개 UUID로 행을 잠그며 다른 사용자의 객체는 존재하지 않는 것처럼 처리한다.
-- 해제는 `PlacedObject`만 삭제하고 기존 `UserCat.quantity`는 변경하지 않는다.
+- 해제는 `PlacedObject`만 삭제하고 기존 `Asset.quantity`는 변경하지 않는다.
 - Repository 계약, Fake와 SQLAlchemy 구현에 내부 아이템 조회, 배치 공개 UUID 잠금 조회와 삭제를 추가했다.
 - 전체 테스트는 `95 passed, 11 skipped, 1 warning`, Ruff와 `git diff --check`는 통과했다.
 - 실제 HTTP 404 변환, 좌표 정책 범위와 PostgreSQL 동시 배치 검증은 후속 단계에 남아 있다.
 
-### 12. 계약 테스트
+### 12. 통합 보유 자산 명칭 정리 — 완료
+
+- 고양이와 아이템을 함께 보관하는 테이블 이름을 `user_cats`에서 `assets`로 변경했다.
+- Python ORM과 응답 DTO는 `UserCat`/`UserCatRead` 대신 `Asset`/`AssetRead`를 사용한다.
+- 고양이 기억 FK는 범용 자산이 아니라 고양이 자산만 참조한다는 뜻을 보존하기 위해 `user_cat_id`를 유지한다.
+- 고양이 기억의 공개 응답 필드도 `user_cat_public_id`를 유지한다.
+- Alembic 마이그레이션은 기존 데이터와 FK를 보존한 채 테이블 및 관련 제약·트리거 이름을 변경한다.
+- 실제 PostgreSQL에서 upgrade와 관련 마이그레이션·트리거 통합 테스트 12개가 통과했다.
+
+### 13. 하우징 좌표 계약 변경 — 완료
+
+- `position_data`의 필수 좌표를 `x`, `y`, `rotation`에서 `x`, `y`, `z`로 변경했다.
+- Pydantic 입력 검증과 배치 생성·수정·직렬화·Repository 테스트 데이터를 모두 새 계약으로 통일했다.
+- `rotation` 키가 남은 기존 PostgreSQL JSONB 데이터는 값을 보존해 `z` 키로 변경하는 Alembic 마이그레이션을 추가했다.
+- downgrade 시에는 `z` 값을 다시 `rotation`으로 복구한다.
+
+### 14. 계약 테스트
 
 다음 검증은 추가됐다.
 
