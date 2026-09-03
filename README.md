@@ -20,6 +20,27 @@ python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
+## 기능 진행상황
+
+### Part 2 — 코딩 학습·채점
+
+채점 백엔드 MVP 구현과 로컬 검증을 완료했다.
+
+- [x] 코드 제출 및 채점 결과 조회 API
+- [x] 테스트 케이스 실행과 정답·오답·오류·시간 초과 판정
+- [x] PostgreSQL 마이그레이션 및 전체 테스트 `88 passed`
+- [x] Docker grader 이미지 빌드
+- [x] 실제 컨테이너의 ACCEPTED, WRONG_ANSWER, TIMEOUT 판정
+- [ ] 팀 로그인·인증 연결
+- [ ] DAILY/BATTLE 서비스 통합 검증
+- [ ] 프런트엔드 연결
+
+자세한 내용: [Part 2 코딩 학습·채점 진행상황](docs/features/part2-status.md)
+
+### Part 3 — 상점·가챠·하우징
+
+자세한 내용: [Part 3 진행상황](docs/architecture/part3-status.md)
+
 ## Codex cloud에서 작업
 
 웹에서는 GitHub 저장소를 Codex cloud 환경에 연결한 뒤 이 저장소를 선택한다. 환경의 Python 버전은 3.12로 지정하고 setup script에는 다음을 사용한다.
