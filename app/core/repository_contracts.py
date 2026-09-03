@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 if TYPE_CHECKING:
+    from app.models.asset import Asset
     from app.models.cat import Cat
     from app.models.cat_memory import CatMemory
     from app.models.gacha_execution import GachaExecution
     from app.models.item import Item
     from app.models.placed_object import PlacedObject
     from app.models.user import User
-    from app.models.user_cat import UserCat
 
 
 class ClaimStatus(StrEnum):
@@ -56,6 +56,7 @@ class UserRepository(Protocol):
 class ItemRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> Item | None: ...
 
+    def get_by_id(self, item_id: int) -> Item | None: ...
 
 class CatRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> Cat | None: ...
@@ -66,29 +67,34 @@ class AssetRepository(Protocol):
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat | None: ...
+    ) -> Asset | None: ...
 
     def get_item_asset_for_update(
         self,
         user_id: int,
         item_id: int,
-    ) -> UserCat | None: ...
+    ) -> Asset | None: ...
 
     def add_item_quantity(
         self,
         user_id: int,
         item_id: int,
         quantity: int,
-    ) -> UserCat: ...
+    ) -> Asset: ...
 
     def grant_cat(
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat: ...
+    ) -> Asset: ...
 
 
 class PlacedObjectRepository(Protocol):
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> PlacedObject | None: ...
+
     def count_for_update(
         self,
         user_id: int,
@@ -102,15 +108,20 @@ class PlacedObjectRepository(Protocol):
         position_data: dict[str, object],
     ) -> PlacedObject: ...
 
+    def remove(
+        self,
+        placed_object: PlacedObject,
+    ) -> None: ...
+
 
 class CatMemoryRepository(Protocol):
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]: ...
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory: ...

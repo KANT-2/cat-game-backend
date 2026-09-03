@@ -9,13 +9,13 @@ from app.core.repository_contracts import (
     ClaimStatus,
     ExecutionClaim,
 )
+from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.cat_memory import CatMemory
 from app.models.gacha_execution import GachaExecution
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
-from app.models.user_cat import UserCat
 
 
 class SqlAlchemyUserRepository:
@@ -42,6 +42,9 @@ class SqlAlchemyItemRepository:
         statement = select(Item).where(Item.public_id == public_id)
         return self._session.execute(statement).scalar_one_or_none()
 
+    def get_by_id(self, item_id: int) -> Item | None:
+        statement = select(Item).where(Item.id == item_id)
+        return self._session.execute(statement).scalar_one_or_none()
 
 class SqlAlchemyCatRepository:
     def __init__(self, session: Session) -> None:
@@ -59,10 +62,10 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat | None:
-        statement = select(UserCat).where(
-            UserCat.user_id == user_id,
-            UserCat.cat_id == cat_id,
+    ) -> Asset | None:
+        statement = select(Asset).where(
+            Asset.user_id == user_id,
+            Asset.cat_id == cat_id,
         )
         return self._session.execute(statement).scalar_one_or_none()
 
@@ -70,12 +73,12 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         item_id: int,
-    ) -> UserCat | None:
+    ) -> Asset | None:
         statement = (
-            select(UserCat)
+            select(Asset)
             .where(
-                UserCat.user_id == user_id,
-                UserCat.item_id == item_id,
+                Asset.user_id == user_id,
+                Asset.item_id == item_id,
             )
             .with_for_update()
         )
@@ -86,7 +89,7 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         item_id: int,
         quantity: int,
-    ) -> UserCat:
+    ) -> Asset:
         if quantity <= 0:
             raise ValueError("quantity must be positive")
 
@@ -95,7 +98,7 @@ class SqlAlchemyAssetRepository:
             existing.quantity += quantity
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             user_id=user_id,
             cat_id=None,
             item_id=item_id,
@@ -108,12 +111,12 @@ class SqlAlchemyAssetRepository:
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat:
+    ) -> Asset:
         existing = self.get_cat_asset(user_id, cat_id)
         if existing is not None:
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             user_id=user_id,
             cat_id=cat_id,
             item_id=None,
@@ -125,6 +128,17 @@ class SqlAlchemyAssetRepository:
 class SqlAlchemyPlacedObjectRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> PlacedObject | None:
+        statement = (
+            select(PlacedObject)
+            .where(PlacedObject.public_id == public_id)
+            .with_for_update()
+        )
+        return self._session.execute(statement).scalar_one_or_none()
 
     def count_for_update(
         self,
@@ -156,28 +170,34 @@ class SqlAlchemyPlacedObjectRepository:
         self._session.add(placed_object)
         return placed_object
 
+    def remove(
+        self,
+        placed_object: PlacedObject,
+    ) -> None:
+        self._session.delete(placed_object)
+
 class SqlAlchemyCatMemoryRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]:
         statement = (
             select(CatMemory)
-            .where(CatMemory.user_cat_id == user_cat_id)
+            .where(CatMemory.cat_asset_id == cat_asset_id)
             .order_by(CatMemory.created_at, CatMemory.id)
         )
         return list(self._session.execute(statement).scalars().all())
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory:
         memory = CatMemory(
-            user_cat_id=user_cat_id,
+            cat_asset_id=cat_asset_id,
             context_summary=context_summary,
         )
         self._session.add(memory)

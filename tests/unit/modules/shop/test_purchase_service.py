@@ -8,9 +8,9 @@ from app.core.exceptions import (
     IdempotencyConflictError,
     ResourceNotFoundError,
 )
+from app.models.asset import Asset
 from app.models.item import Item
 from app.models.user import User
-from app.models.user_cat import UserCat
 from app.modules.shop.service import purchase_item
 from tests.fakes.repositories import (
     FakeAssetRepository,
@@ -394,7 +394,7 @@ def test_purchase_item_adds_quantity_to_existing_asset() -> None:
         name="Cat Chair",
         price=150,
     )
-    existing_asset = UserCat(
+    existing_asset = Asset(
         id=20,
         public_id=uuid.uuid4(),
         user_id=user.id,

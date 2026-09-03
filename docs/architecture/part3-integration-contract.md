@@ -18,12 +18,12 @@
 | `users` | `User` | 잔액, 마일리지, 하우스 상태 |
 | `items` | `Item` | 아이템 원본 및 가격 |
 | `cats` | `Cat` | 고양이 원본, 페르소나 및 희귀도 |
-| `user_cats` | `UserAsset` | 고양이와 일반 아이템을 함께 저장하는 통합 보유 자산 |
+| `assets` | `Asset` | 고양이와 일반 아이템을 함께 저장하는 통합 보유 자산 |
 | `gacha_executions` | `GachaExecution` | 가챠와 구매 요청의 멱등성 및 결과 |
 | `placed_objects` | `PlacedObject` | 하우징에 배치된 가구 인스턴스 |
 | `cat_memories` | `CatMemory` | 보유 고양이별 대화 요약 기록 |
 
-`user_cats`는 아이템도 저장하므로 Python 모델명은 `UserAsset`을 사용한다. 다른 모듈과의 기존 합의로 `UserCat`이 먼저 확정된 경우에는 중복 모델을 만들지 않고 기존 이름을 따른다.
+고양이와 아이템을 함께 저장하는 의미를 정확히 표현하도록 DB 테이블은 `assets`, Python 모델은 `Asset`으로 통일한다. 고양이 기억은 범용 자산 중 고양이 자산만 참조한다는 의미가 드러나도록 내부 FK는 `cat_asset_id`, 외부 공개 식별자는 `cat_asset_public_id`를 사용한다.
 
 ## 2. Repository 계약
 
@@ -68,6 +68,7 @@ class UserRepository(Protocol):
 
 class ItemRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> "Item | None": ...
+    def get_by_id(self, item_id: int) -> "Item | None": ...
 
 
 class CatRepository(Protocol):
@@ -85,15 +86,22 @@ class AssetRepository(Protocol):
 
 
 class PlacedObjectRepository(Protocol):
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> "PlacedObject | None": ...
+
     def count_for_update(self, user_id: int, item_id: int) -> int: ...
 
     def add(self, user_id: int, item_id: int, position_data: dict) -> "PlacedObject": ...
 
+    def remove(self, placed_object: "PlacedObject") -> None: ...
+
 
 class CatMemoryRepository(Protocol):
-    def list_by_user_cat_id(self, user_cat_id: int) -> "list[CatMemory]": ...
+    def list_by_cat_asset_id(self, cat_asset_id: int) -> "list[CatMemory]": ...
 
-    def add(self, user_cat_id: int, context_summary: str) -> "CatMemory": ...
+    def add(self, cat_asset_id: int, context_summary: str) -> "CatMemory": ...
 ```
 
 `ExecutionRepository.claim()`의 결과는 다음 의미를 가진다.
@@ -145,7 +153,7 @@ Repository는 자체적으로 `commit()`하지 않는다. 가챠와 구매는 �
 
 - `USERS.balance` 차감
 - `USERS.mileage` 변경
-- `USER_CATS` 자산 지급 또는 수량 변경
+- `ASSETS` 자산 지급 또는 수량 변경
 - `GACHA_EXECUTIONS.result_data` 및 완료 상태 저장
 
 중간에 실패하면 모든 변경을 롤백한다.
@@ -179,7 +187,7 @@ API는 UUID `public_id`만 입력받고 반환한다. 인증 사용자의 내부
 }
 ```
 
-`user_id`, `item_id`, `cat_id`, `user_cat_id`와 같은 내부 정수 식별자는 API 응답 스키마에 포함하지 않는다. 공개 UUID는 인증과 소유권 검사를 대체하지 않는다.
+`user_id`, `item_id`, `cat_id`, `cat_asset_id`와 같은 내부 정수 식별자는 API 응답 스키마에 포함하지 않는다. 공개 UUID는 인증과 소유권 검사를 대체하지 않는다.
 
 권장 HTTP 상태 코드는 다음과 같다.
 
@@ -232,9 +240,12 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 ### 가챠와 고양이
 
-- 처음 획득한 고양이는 `USER_CATS.quantity = 1`로 생성한다.
+- 가챠 비용, 확률과 중복 마일리지는 서비스에 하드코딩하지 않고 정책 객체로 주입한다.
+- 멱등 요청 payload에는 클라이언트가 결정한 `draw_count`만 포함하고 서버 정책값은 요청 해시에서 제외한다.
+- 처음 획득한 고양이는 `ASSETS.quantity = 1`로 생성한다.
 - 이미 보유한 고양이는 새 자산 행을 만들거나 수량을 증가시키지 않는다.
 - 중복 고양이 보상은 같은 트랜잭션에서 `USERS.mileage`로 전환한다.
+- 가챠 결과에는 고양이 내부 정수 ID 대신 `cat_public_id`를 저장하고 반환한다.
 
 ### 상점
 
@@ -248,18 +259,21 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 동일 사용자의 아이템별 배치 행 수는 보유 `quantity`를 초과할 수 없다.
 - 배치 수량 검증에는 동시 요청을 막을 수 있는 잠금을 사용한다.
 - 배치 해제는 `PLACED_OBJECTS` 행만 삭제하며 보유 자산 수량은 줄이지 않는다.
-- `position_data`는 API 스키마에서 요구 필드와 범위를 검증한다.
+- `position_data`는 3축 위치 좌표 `x`, `y`, `z`를 필수 유한 숫자로 검증하고 알 수 없는 필드를 거부한다.
+- 이전 `rotation` 필드는 허용하지 않으며 기존 JSONB 데이터는 마이그레이션으로 같은 값을 `z`에 옮긴다.
+- 실제 방 크기에 따른 `x`, `y`, `z` 최솟값과 최댓값은 정책 확정 전까지 임의로 하드코딩하지 않는다.
+- 수정과 해제는 `placed_object_public_id`로 대상 행을 잠그고 인증 사용자 소유가 아니면 찾을 수 없는 것으로 처리한다.
 
 ### 고양이 기억
 
-- `CAT_MEMORIES.user_cat_id`는 고양이 자산에만 연결한다.
+- `CAT_MEMORIES.cat_asset_id`는 `ASSETS` 중 고양이 자산에만 연결한다.
 - 아이템 자산에는 기억을 연결할 수 없다.
 - 인증 사용자가 소유한 고양이 자산에만 기억을 추가하거나 조회할 수 있다.
 - 대화 요약은 새 `CAT_MEMORIES` 행으로 누적 기록한다.
 
 ## 7. 통합 완료 체크리스트
 
-- [ ] `USER_CATS`의 Python 모델명을 팀에서 확정했다.
+- [x] 보유 자산 테이블과 Python 모델명을 `assets`와 `Asset`으로 확정했다.
 - [x] 모든 Repository 메서드와 반환형이 이 문서와 일치한다.
 - [x] Repository 구현체가 자체적으로 커밋하지 않는다.
 - [x] 서비스 하나가 가챠 또는 구매 트랜잭션 전체를 소유한다.

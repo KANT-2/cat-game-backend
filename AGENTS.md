@@ -25,7 +25,7 @@
 - API 요청과 응답에 내부 INTEGER `id`를 노출하지 않는다.
 - 외부 식별자는 UUID `public_id`와 `*_public_id` 이름을 사용한다.
 - 내부 FK에는 INTEGER PK를 사용한다.
-- `user_cats`의 Python 모델은 기존 `UserCat`을 재사용한다. 별도의 중복 모델을 만들지 않는다.
+- 통합 보유 자산 테이블은 `assets`, Python 모델은 `Asset`을 사용한다.
 - Repository는 조회, 저장, 잠금만 담당하며 `commit()`하지 않는다.
 - 서비스와 Unit of Work가 전체 업무 트랜잭션을 소유한다.
 - 잔액·마일리지 변경, 자산 지급, 실행 결과 저장은 하나의 트랜잭션으로 처리한다.

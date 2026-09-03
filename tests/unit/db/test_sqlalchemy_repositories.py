@@ -16,8 +16,9 @@ from app.db.repositories import (
     SqlAlchemyPlacedObjectRepository,
     SqlAlchemyUserRepository,
 )
+from app.models.asset import Asset
 from app.models.gacha_execution import GachaExecution
-from app.models.user_cat import UserCat
+from app.models.placed_object import PlacedObject
 
 
 def _compile_sql(statement: object) -> str:
@@ -110,8 +111,8 @@ def test_asset_repository_gets_cat_asset_without_lock() -> None:
     sql = _compile_sql(statement)
 
     assert result is expected_asset
-    assert "user_cats.user_id = 1" in sql
-    assert "user_cats.cat_id = 10" in sql
+    assert "assets.user_id = 1" in sql
+    assert "assets.cat_id = 10" in sql
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
 
@@ -131,14 +132,14 @@ def test_asset_repository_locks_item_asset() -> None:
     sql = _compile_sql(statement)
 
     assert result is expected_asset
-    assert "user_cats.user_id = 1" in sql
-    assert "user_cats.item_id = 20" in sql
+    assert "assets.user_id = 1" in sql
+    assert "assets.item_id = 20" in sql
     assert "FOR UPDATE" in sql
     session.commit.assert_not_called()
 
 def test_asset_repository_adds_to_existing_item_quantity() -> None:
     session = Mock(spec=Session)
-    existing = UserCat(
+    existing = Asset(
         id=1,
         public_id=uuid.uuid4(),
         user_id=1,
@@ -217,7 +218,7 @@ def test_placed_object_repository_counts_locked_rows() -> None:
 def test_placed_object_repository_adds_object() -> None:
     session = Mock(spec=Session)
     repository = SqlAlchemyPlacedObjectRepository(session)
-    position_data = {"x": 120, "y": 80, "rotation": 0}
+    position_data = {"x": 120, "y": 80, "z": 0}
 
     result = repository.add(
         user_id=1,
@@ -239,13 +240,13 @@ def test_cat_memory_repository_lists_memories_in_order() -> None:
     )
     repository = SqlAlchemyCatMemoryRepository(session)
 
-    result = repository.list_by_user_cat_id(user_cat_id=30)
+    result = repository.list_by_cat_asset_id(cat_asset_id=30)
 
     statement = session.execute.call_args.args[0]
     sql = _compile_sql(statement)
 
     assert result == expected_memories
-    assert "cat_memories.user_cat_id = 30" in sql
+    assert "cat_memories.cat_asset_id = 30" in sql
     assert "ORDER BY cat_memories.created_at, cat_memories.id" in sql
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
@@ -256,11 +257,11 @@ def test_cat_memory_repository_adds_new_memory() -> None:
     repository = SqlAlchemyCatMemoryRepository(session)
 
     result = repository.add(
-        user_cat_id=30,
+        cat_asset_id=30,
         context_summary="The user learned about loops.",
     )
 
-    assert result.user_cat_id == 30
+    assert result.cat_asset_id == 30
     assert result.context_summary == "The user learned about loops."
     session.add.assert_called_once_with(result)
     session.commit.assert_not_called()
@@ -443,4 +444,53 @@ def test_execution_repository_detects_claim_conflict(
 
     assert result.status == ClaimStatus.HASH_CONFLICT
     assert result.execution is existing
+    session.commit.assert_not_called()
+
+def test_item_repository_gets_by_internal_id() -> None:
+    session = Mock(spec=Session)
+    expected_item = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_item
+    )
+    repository = SqlAlchemyItemRepository(session)
+
+    result = repository.get_by_id(20)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_item
+    assert "WHERE items.id = 20" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+
+def test_placed_object_repository_locks_by_public_id() -> None:
+    session = Mock(spec=Session)
+    expected_placement = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_placement
+    )
+    repository = SqlAlchemyPlacedObjectRepository(session)
+    public_id = uuid.uuid4()
+
+    result = repository.get_by_public_id_for_update(public_id)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_placement
+    assert "WHERE placed_objects.public_id =" in sql
+    assert "FOR UPDATE" in sql
+    session.commit.assert_not_called()
+
+
+def test_placed_object_repository_removes_object() -> None:
+    session = Mock(spec=Session)
+    repository = SqlAlchemyPlacedObjectRepository(session)
+    placed_object = PlacedObject()
+
+    repository.remove(placed_object)
+
+    session.delete.assert_called_once_with(placed_object)
     session.commit.assert_not_called()
