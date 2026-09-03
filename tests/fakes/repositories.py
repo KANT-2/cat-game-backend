@@ -266,25 +266,25 @@ class FakeCatMemoryRepository:
     ) -> None:
         self.memories = list(memories or [])
 
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]:
         return [
             memory
             for memory in self.memories
-            if memory.user_cat_id == user_cat_id
+            if memory.cat_asset_id == cat_asset_id
         ]
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory:
         memory = CatMemory(
             id=len(self.memories) + 1,
             public_id=uuid.uuid4(),
-            user_cat_id=user_cat_id,
+            cat_asset_id=cat_asset_id,
             context_summary=context_summary,
             created_at=datetime.now(UTC),
         )

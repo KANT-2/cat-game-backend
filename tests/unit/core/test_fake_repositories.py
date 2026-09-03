@@ -108,4 +108,4 @@ def test_fake_cat_memory_repository_accumulates() -> None:
     second = repository.add(10, "두 번째 대화")
     repository.add(20, "다른 고양이 대화")
 
-    assert repository.list_by_user_cat_id(10) == [first, second]
+    assert repository.list_by_cat_asset_id(10) == [first, second]

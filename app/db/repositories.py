@@ -180,24 +180,24 @@ class SqlAlchemyCatMemoryRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]:
         statement = (
             select(CatMemory)
-            .where(CatMemory.user_cat_id == user_cat_id)
+            .where(CatMemory.cat_asset_id == cat_asset_id)
             .order_by(CatMemory.created_at, CatMemory.id)
         )
         return list(self._session.execute(statement).scalars().all())
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory:
         memory = CatMemory(
-            user_cat_id=user_cat_id,
+            cat_asset_id=cat_asset_id,
             context_summary=context_summary,
         )
         self._session.add(memory)

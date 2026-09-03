@@ -25,7 +25,7 @@ EXPECTED_METHODS = {
         "add",
         "remove",
     },
-    CatMemoryRepository: {"list_by_user_cat_id", "add"},
+    CatMemoryRepository: {"list_by_cat_asset_id", "add"},
 }
 
 

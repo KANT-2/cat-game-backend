@@ -151,11 +151,11 @@ def test_cat_memory_trigger_accepts_cat_asset_and_rejects_item_asset(db_session)
     item_id = _insert_item(db_session, "FURNITURE", "memory-invalid-item")
     item_asset_id = _insert_item_asset(db_session, user_id, item_id)
     statement = text(
-        "INSERT INTO cat_memories (user_cat_id, context_summary) "
-        "VALUES (:user_cat_id, 'summary')"
+        "INSERT INTO cat_memories (cat_asset_id, context_summary) "
+        "VALUES (:cat_asset_id, 'summary')"
     )
 
-    db_session.execute(statement, {"user_cat_id": cat_asset_id})
+    db_session.execute(statement, {"cat_asset_id": cat_asset_id})
 
     with pytest.raises(DBAPIError, match="does not reference a cat asset"):
-        db_session.execute(statement, {"user_cat_id": item_asset_id})
+        db_session.execute(statement, {"cat_asset_id": item_asset_id})

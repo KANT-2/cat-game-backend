@@ -240,13 +240,13 @@ def test_cat_memory_repository_lists_memories_in_order() -> None:
     )
     repository = SqlAlchemyCatMemoryRepository(session)
 
-    result = repository.list_by_user_cat_id(user_cat_id=30)
+    result = repository.list_by_cat_asset_id(cat_asset_id=30)
 
     statement = session.execute.call_args.args[0]
     sql = _compile_sql(statement)
 
     assert result == expected_memories
-    assert "cat_memories.user_cat_id = 30" in sql
+    assert "cat_memories.cat_asset_id = 30" in sql
     assert "ORDER BY cat_memories.created_at, cat_memories.id" in sql
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
@@ -257,11 +257,11 @@ def test_cat_memory_repository_adds_new_memory() -> None:
     repository = SqlAlchemyCatMemoryRepository(session)
 
     result = repository.add(
-        user_cat_id=30,
+        cat_asset_id=30,
         context_summary="The user learned about loops.",
     )
 
-    assert result.user_cat_id == 30
+    assert result.cat_asset_id == 30
     assert result.context_summary == "The user learned about loops."
     session.add.assert_called_once_with(result)
     session.commit.assert_not_called()

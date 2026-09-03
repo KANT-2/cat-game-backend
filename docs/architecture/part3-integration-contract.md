@@ -23,7 +23,7 @@
 | `placed_objects` | `PlacedObject` | 하우징에 배치된 가구 인스턴스 |
 | `cat_memories` | `CatMemory` | 보유 고양이별 대화 요약 기록 |
 
-고양이와 아이템을 함께 저장하는 의미를 정확히 표현하도록 DB 테이블은 `assets`, Python 모델은 `Asset`으로 통일한다. 단, 고양이 기억은 범용 자산이 아니라 고양이 자산만 참조하므로 내부 FK는 `user_cat_id`, 외부 공개 식별자는 `user_cat_public_id`를 유지한다.
+고양이와 아이템을 함께 저장하는 의미를 정확히 표현하도록 DB 테이블은 `assets`, Python 모델은 `Asset`으로 통일한다. 고양이 기억은 범용 자산 중 고양이 자산만 참조한다는 의미가 드러나도록 내부 FK는 `cat_asset_id`, 외부 공개 식별자는 `cat_asset_public_id`를 사용한다.
 
 ## 2. Repository 계약
 
@@ -99,9 +99,9 @@ class PlacedObjectRepository(Protocol):
 
 
 class CatMemoryRepository(Protocol):
-    def list_by_user_cat_id(self, user_cat_id: int) -> "list[CatMemory]": ...
+    def list_by_cat_asset_id(self, cat_asset_id: int) -> "list[CatMemory]": ...
 
-    def add(self, user_cat_id: int, context_summary: str) -> "CatMemory": ...
+    def add(self, cat_asset_id: int, context_summary: str) -> "CatMemory": ...
 ```
 
 `ExecutionRepository.claim()`의 결과는 다음 의미를 가진다.
@@ -187,7 +187,7 @@ API는 UUID `public_id`만 입력받고 반환한다. 인증 사용자의 내부
 }
 ```
 
-`user_id`, `item_id`, `cat_id`, `user_cat_id`와 같은 내부 정수 식별자는 API 응답 스키마에 포함하지 않는다. 공개 UUID는 인증과 소유권 검사를 대체하지 않는다.
+`user_id`, `item_id`, `cat_id`, `cat_asset_id`와 같은 내부 정수 식별자는 API 응답 스키마에 포함하지 않는다. 공개 UUID는 인증과 소유권 검사를 대체하지 않는다.
 
 권장 HTTP 상태 코드는 다음과 같다.
 
@@ -266,7 +266,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 ### 고양이 기억
 
-- `CAT_MEMORIES.user_cat_id`는 `ASSETS` 중 고양이 자산에만 연결한다.
+- `CAT_MEMORIES.cat_asset_id`는 `ASSETS` 중 고양이 자산에만 연결한다.
 - 아이템 자산에는 기억을 연결할 수 없다.
 - 인증 사용자가 소유한 고양이 자산에만 기억을 추가하거나 조회할 수 있다.
 - 대화 요약은 새 `CAT_MEMORIES` 행으로 누적 기록한다.

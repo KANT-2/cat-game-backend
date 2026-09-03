@@ -42,7 +42,7 @@
 
 - `AssetRead`는 `to_asset_read()`로 `cat_public_id`와 `item_public_id`를 명시적으로 변환한다.
 - `PlacedObjectRead`는 `to_placed_object_read()`로 `item_public_id`를 명시적으로 변환한다.
-- `CatMemoryRead`는 `to_cat_memory_read()`로 `user_cat_public_id`를 명시적으로 변환한다.
+- `CatMemoryRead`는 `to_cat_memory_read()`로 `cat_asset_public_id`를 명시적으로 변환한다.
 - 변환 함수는 내부 INTEGER PK/FK를 응답 DTO에 복사하지 않는다.
 - `tests/unit/schemas/test_public_id_serialization.py`가 고양이·아이템·배치 객체·고양이 기억 변환을 검증한다.
 
@@ -137,8 +137,8 @@
 
 - 고양이와 아이템을 함께 보관하는 테이블 이름을 `user_cats`에서 `assets`로 변경했다.
 - Python ORM과 응답 DTO는 `UserCat`/`UserCatRead` 대신 `Asset`/`AssetRead`를 사용한다.
-- 고양이 기억 FK는 범용 자산이 아니라 고양이 자산만 참조한다는 뜻을 보존하기 위해 `user_cat_id`를 유지한다.
-- 고양이 기억의 공개 응답 필드도 `user_cat_public_id`를 유지한다.
+- 고양이 기억 FK는 범용 자산 중 고양이 자산만 참조한다는 뜻이 드러나도록 `user_cat_id`에서 `cat_asset_id`로 변경했다.
+- 고양이 기억의 공개 응답 필드도 `user_cat_public_id`에서 `cat_asset_public_id`로 변경했다.
 - Alembic 마이그레이션은 기존 데이터와 FK를 보존한 채 테이블 및 관련 제약·트리거 이름을 변경한다.
 - 실제 PostgreSQL에서 upgrade와 관련 마이그레이션·트리거 통합 테스트 12개가 통과했다.
 
@@ -148,8 +148,16 @@
 - Pydantic 입력 검증과 배치 생성·수정·직렬화·Repository 테스트 데이터를 모두 새 계약으로 통일했다.
 - `rotation` 키가 남은 기존 PostgreSQL JSONB 데이터는 값을 보존해 `z` 키로 변경하는 Alembic 마이그레이션을 추가했다.
 - downgrade 시에는 `z` 값을 다시 `rotation`으로 복구한다.
+- `docs/architecture/current-erd.md`와 팀 Notion ERD를 최신 16개 테이블 기준으로 갱신했다.
 
-### 14. 계약 테스트
+### 14. 고양이 자산 기억 참조 명칭 정리 — 완료
+
+- `CAT_MEMORIES.user_cat_id`를 `cat_asset_id`로 변경하되 참조 대상은 계속 `ASSETS.id`를 사용한다.
+- 공개 DTO 필드는 `cat_asset_public_id`, Repository 조회는 `list_by_cat_asset_id()`로 통일했다.
+- Alembic 마이그레이션이 기존 FK 값은 그대로 보존하면서 컬럼과 FK 제약 이름을 변경한다.
+- 자산 삭제 방지와 고양이 자산 검증 트리거 함수도 새 컬럼명을 사용하도록 갱신한다.
+
+### 15. 계약 테스트
 
 다음 검증은 추가됐다.
 

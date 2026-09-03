@@ -62,7 +62,8 @@ def test_asset_naming_migration_is_applied(engine):
 
     assert "assets" in tables
     assert "user_cats" not in tables
-    assert "user_cat_id" in memory_columns
+    assert "cat_asset_id" in memory_columns
+    assert "user_cat_id" not in memory_columns
     assert "asset_id" not in memory_columns
 
 

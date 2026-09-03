@@ -115,13 +115,13 @@ class PlacedObjectRepository(Protocol):
 
 
 class CatMemoryRepository(Protocol):
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]: ...
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory: ...

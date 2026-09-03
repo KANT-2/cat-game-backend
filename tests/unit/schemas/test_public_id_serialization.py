@@ -76,9 +76,9 @@ def test_to_placed_object_read_uses_item_public_id() -> None:
     assert "id" not in result.model_dump()
 
 
-def test_to_cat_memory_read_uses_user_cat_public_id() -> None:
+def test_to_cat_memory_read_uses_cat_asset_public_id() -> None:
     memory_public_id = uuid.uuid4()
-    user_cat_public_id = uuid.uuid4()
+    cat_asset_public_id = uuid.uuid4()
     created_at = datetime(2026, 9, 2, 12, 0, tzinfo=UTC)
 
     memory = SimpleNamespace(
@@ -89,11 +89,11 @@ def test_to_cat_memory_read_uses_user_cat_public_id() -> None:
 
     result = to_cat_memory_read(
         memory,
-        user_cat_public_id=user_cat_public_id,
+        cat_asset_public_id=cat_asset_public_id,
     )
 
     assert result.public_id == memory_public_id
-    assert result.user_cat_public_id == user_cat_public_id
+    assert result.cat_asset_public_id == cat_asset_public_id
     assert result.context_summary == "사용자는 반복문 문제를 어려워한다."
     assert result.created_at == created_at
     assert "id" not in result.model_dump()
