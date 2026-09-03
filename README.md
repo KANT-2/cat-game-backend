@@ -37,6 +37,8 @@ uvicorn app.main:app --reload
 
 자세한 내용: [Part 2 코딩 학습·채점 진행상황](docs/features/part2-status.md)
 
+Part 2 확장 설계: [학습 문제·객관식·숙련도·추천 MVP](docs/features/part2-learning-system.md)
+
 ### Part 3 — 상점·가챠·하우징
 
 자세한 내용: [Part 3 진행상황](docs/architecture/part3-status.md)

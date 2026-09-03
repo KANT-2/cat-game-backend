@@ -11,7 +11,8 @@ class TaskAttemptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_public_id: uuid.UUID
-    submitted_code: str
+    submitted_code: str | None = None
+    selected_option: str | None = None
     context_type: Literal["LEARNING", "DAILY", "BATTLE"]
     used_hint: bool = False
     attendance_task_public_id: uuid.UUID | None = None
@@ -19,8 +20,10 @@ class TaskAttemptCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_context_links(self):
-        if not self.submitted_code.strip():
-            raise ValueError("submitted_code must not be blank")
+        has_code = bool(self.submitted_code and self.submitted_code.strip())
+        has_option = bool(self.selected_option and self.selected_option.strip())
+        if has_code == has_option:
+            raise ValueError("submit exactly one of submitted_code or selected_option")
         links = (self.attendance_task_public_id, self.room_task_public_id)
         expected = {
             "LEARNING": (False, False),

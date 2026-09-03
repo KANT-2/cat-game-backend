@@ -80,7 +80,7 @@ def test_task_attempt_context_trigger_accepts_owner_and_rejects_other_user(db_se
             "INSERT INTO tasks "
             "(concept_id, title, type, difficulty, description, template_code, "
             "test_cases, is_active) VALUES "
-            "(:concept_id, 'trigger task', 'CODE', 'EASY', 'desc', 'code', '[]', true) "
+            "(:concept_id, 'trigger task', 'CODE', 'BRONZE', 'desc', 'code', '[]', true) "
             "RETURNING id"
         ),
         {"concept_id": concept_id},
