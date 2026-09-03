@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-03): SQLAlchemy Repository와 Unit of Work 구현 및 단위 검증을 완료했다. 다음 작업은 **6. 멱등성 실행 엔진**이다.
+현재 진행 상태(2026-09-03): 상점 아이템 구매 멱등성 서비스와 단위 검증을 완료했다. 다음 작업은 **8. 고양이 가챠**다.
 
 구현 기준은 다음 문서다.
 
@@ -18,7 +18,7 @@
 - [ ] 내부 FK에는 INTEGER PK를 사용한다.
 - [ ] 기존 `UserCat` 모델을 재사용한다.
 - [x] Repository는 `commit()`하지 않는다.
-- [ ] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
+- [x] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
 - [ ] 잠금 메서드는 이름에 `for_update`를 포함한다.
 - [ ] 미확정 가격, 확률, 보상값을 임의로 하드코딩하지 않는다.
 
@@ -135,7 +135,7 @@ git status
 - [x] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
 - [x] 멱등 실행 요청을 안전하게 `claim()`한다.
 - [x] Unit of Work를 구현한다.
-- [ ] 서비스만 한 번 `commit()`하도록 구성한다.
+- [x] 서비스만 한 번 `commit()`하도록 구성한다.
 - [x] 예외 발생 시 전체 rollback을 검증한다.
 
 완료 기준:
@@ -160,16 +160,16 @@ git status
 
 커밋 확인:
 
-- [ ] SQLAlchemy Repository와 Unit of Work 및 테스트를 커밋했다.
+- [x] SQLAlchemy Repository와 Unit of Work 및 테스트를 커밋했다.
 
 ## 6. 멱등성 실행 엔진
 
-- [ ] 신규 `request_id`를 `ACQUIRED`로 확보한다.
-- [ ] 완료된 동일 요청이면 기존 `result_data`를 반환한다.
+- [x] 신규 `request_id`를 `ACQUIRED`로 확보한다.
+- [x] 완료된 동일 요청이면 기존 `result_data`를 반환한다.
 - [ ] 동일 키의 요청 해시가 다르면 `409 Conflict`로 처리한다.
 - [ ] 동일 키의 사용자가 다르면 `409 Conflict`로 처리한다.
-- [ ] 성공 시 상태를 `COMPLETED`로 변경한다.
-- [ ] 실제 비용과 결과 데이터를 저장한다.
+- [x] 성공 시 상태를 `COMPLETED`로 변경한다.
+- [x] 실제 비용과 결과 데이터를 저장한다.
 - [ ] 동시에 같은 요청을 보내도 한 번만 처리되는지 검증한다.
 
 완료 기준:
@@ -183,15 +183,23 @@ git status
 
 ## 7. 아이템 구매 및 벽지·바닥 적용
 
-- [ ] `item_public_id`로 아이템을 조회한다.
-- [ ] 요청 가격이 아닌 DB의 `ITEMS.price`로 비용을 계산한다.
-- [ ] 사용자 행을 잠그고 잔액을 확인한다.
-- [ ] 기존 아이템 자산의 `quantity`를 합산한다.
-- [ ] 신규 아이템 자산을 생성한다.
+- [x] `item_public_id`로 아이템을 조회한다.
+- [x] 요청 가격이 아닌 DB의 `ITEMS.price`로 비용을 계산한다.
+- [x] 사용자 행을 잠그고 잔액을 확인한다.
+- [x] 기존 아이템 자산의 `quantity`를 합산한다.
+- [x] 신규 아이템 자산을 생성한다.
 - [ ] 벽지 소유권과 `WALLPAPER` 카테고리를 확인한다.
 - [ ] 바닥 소유권과 `FLOOR` 카테고리를 확인한다.
 - [ ] 구매 및 적용 API를 멱등성 트랜잭션으로 처리한다.
 - [ ] 잔액 부족과 잘못된 카테고리 테스트를 작성한다.
+
+현재 구매 서비스 검증 결과:
+
+- 정상 구매, 완료 결과 재사용, 사용자·해시 충돌, 잔액 부족과 입력 검증
+- 신규 자산 생성 및 기존 자산 수량 합산
+- 상점 구매 단위 테스트: `10 passed`
+- 전체 테스트: `59 passed, 11 skipped, 1 warning`
+- 전체 Ruff 검사와 `git diff --check`: 통과
 
 완료 기준:
 
@@ -319,7 +327,7 @@ python -m ruff check .
 - [x] 2. `balance_cost`와 `claim()` 계약 정리
 - [x] 3. 요청 해시 공통 함수
 - [x] 4. Repository 계약과 Fake 구현
-- [ ] 5. Unit of Work와 SQLAlchemy Repository
+- [x] 5. Unit of Work와 SQLAlchemy Repository
 - [ ] 6. 멱등성 실행 엔진
 - [ ] 7. 아이템 구매 및 벽지·바닥 적용
 - [ ] 8. 고양이 가챠
