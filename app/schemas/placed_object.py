@@ -1,12 +1,27 @@
 import uuid
 from typing import Protocol
 
+from pydantic import BaseModel, ConfigDict, Field
+
 from app.schemas.base import ReadSchema
 
 
 class _PlacedObjectReadSource(Protocol):
     public_id: uuid.UUID
     position_data: dict
+
+
+class PositionData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    x: float = Field(allow_inf_nan=False)
+    y: float = Field(allow_inf_nan=False)
+    rotation: float = Field(allow_inf_nan=False)
+
+
+class PlacedObjectCreate(BaseModel):
+    item_public_id: uuid.UUID
+    position_data: PositionData
 
 
 class PlacedObjectRead(ReadSchema):

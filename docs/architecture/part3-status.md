@@ -2,7 +2,7 @@
 
 이 문서는 로컬 Codex와 Codex cloud가 같은 기준으로 Part 3 작업을 이어가기 위한 현재 상태 기록이다.
 
-2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository, Unit of Work, 상점 구매와 고양이 가챠 서비스를 점검했다.
+2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository, Unit of Work, 상점 구매, 고양이 가챠와 하우징 배치 서비스를 점검했다.
 
 ## 완료된 기반
 
@@ -119,7 +119,20 @@
 - 스키마 테스트 4개와 서비스 테스트 14개를 포함한 전체 테스트가 `77 passed, 11 skipped, 1 warning`으로 통과했다.
 - 중간 실패의 실제 rollback과 동시 가챠 요청은 최종 PostgreSQL 통합 검증에 남아 있다.
 
-### 11. 계약 테스트
+### 11. 하우징 가구 배치 서비스 — 단위 구현 완료
+
+- `PositionData`가 `x`, `y`, `rotation`을 필수 유한 숫자로 검증하고 알 수 없는 필드를 거부한다.
+- 실제 방 크기에 따른 좌표와 회전 범위는 아직 확정되지 않아 임의의 최솟값·최댓값을 하드코딩하지 않았다.
+- `place_furniture()`는 `FURNITURE` 카테고리와 사용자 소유 아이템 자산을 확인한다.
+- 아이템 자산 행을 먼저 잠그고 현재 배치 행도 잠금 조회한 뒤 보유 수량과 비교한다.
+- 보유 수량 이상이면 `PlacementLimitExceededError`로 새 배치를 거부한다.
+- 수정과 해제는 배치 공개 UUID로 행을 잠그며 다른 사용자의 객체는 존재하지 않는 것처럼 처리한다.
+- 해제는 `PlacedObject`만 삭제하고 기존 `UserCat.quantity`는 변경하지 않는다.
+- Repository 계약, Fake와 SQLAlchemy 구현에 내부 아이템 조회, 배치 공개 UUID 잠금 조회와 삭제를 추가했다.
+- 전체 테스트는 `95 passed, 11 skipped, 1 warning`, Ruff와 `git diff --check`는 통과했다.
+- 실제 HTTP 404 변환, 좌표 정책 범위와 PostgreSQL 동시 배치 검증은 후속 단계에 남아 있다.
+
+### 12. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -135,6 +148,7 @@
 - Unit of Work의 Repository 세션 공유, commit, rollback, 세션 종료와 예외 전파
 - 상점 구매의 정상 처리, 완료 결과 재사용, 멱등 충돌, 잔액 부족, 입력 검증과 자산 합산
 - 가챠의 신규·중복 획득, 완료 결과 재사용, 멱등 충돌, 잔액·입력·정책 검증과 다중 추첨
+- 하우징의 좌표 입력, 카테고리·소유권·수량 제한과 배치 생성·수정·해제
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -145,8 +159,8 @@
 
 ## 권장 작업 순서
 
-1. 하우징 배치와 표면 아이템 적용
-2. 고양이 기억 API
+1. 고양이 기억 API
+2. 벽지·바닥 적용 서비스
 3. FastAPI 라우터와 예외 매핑
 4. PostgreSQL 동시성 및 rollback 통합 테스트
 

@@ -56,6 +56,7 @@ class UserRepository(Protocol):
 class ItemRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> Item | None: ...
 
+    def get_by_id(self, item_id: int) -> Item | None: ...
 
 class CatRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> Cat | None: ...
@@ -89,6 +90,11 @@ class AssetRepository(Protocol):
 
 
 class PlacedObjectRepository(Protocol):
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> PlacedObject | None: ...
+
     def count_for_update(
         self,
         user_id: int,
@@ -101,6 +107,11 @@ class PlacedObjectRepository(Protocol):
         item_id: int,
         position_data: dict[str, object],
     ) -> PlacedObject: ...
+
+    def remove(
+        self,
+        placed_object: PlacedObject,
+    ) -> None: ...
 
 
 class CatMemoryRepository(Protocol):

@@ -17,6 +17,7 @@ from app.db.repositories import (
     SqlAlchemyUserRepository,
 )
 from app.models.gacha_execution import GachaExecution
+from app.models.placed_object import PlacedObject
 from app.models.user_cat import UserCat
 
 
@@ -443,4 +444,53 @@ def test_execution_repository_detects_claim_conflict(
 
     assert result.status == ClaimStatus.HASH_CONFLICT
     assert result.execution is existing
+    session.commit.assert_not_called()
+
+def test_item_repository_gets_by_internal_id() -> None:
+    session = Mock(spec=Session)
+    expected_item = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_item
+    )
+    repository = SqlAlchemyItemRepository(session)
+
+    result = repository.get_by_id(20)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_item
+    assert "WHERE items.id = 20" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+
+def test_placed_object_repository_locks_by_public_id() -> None:
+    session = Mock(spec=Session)
+    expected_placement = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_placement
+    )
+    repository = SqlAlchemyPlacedObjectRepository(session)
+    public_id = uuid.uuid4()
+
+    result = repository.get_by_public_id_for_update(public_id)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_placement
+    assert "WHERE placed_objects.public_id =" in sql
+    assert "FOR UPDATE" in sql
+    session.commit.assert_not_called()
+
+
+def test_placed_object_repository_removes_object() -> None:
+    session = Mock(spec=Session)
+    repository = SqlAlchemyPlacedObjectRepository(session)
+    placed_object = PlacedObject()
+
+    repository.remove(placed_object)
+
+    session.delete.assert_called_once_with(placed_object)
     session.commit.assert_not_called()

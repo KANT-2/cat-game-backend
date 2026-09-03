@@ -46,6 +46,8 @@ def test_fake_lookup_repositories() -> None:
     assert users.get_by_public_id(user.public_id) is user
     assert users.get_for_update(user.id) is user
     assert items.get_by_public_id(item.public_id) is item
+    assert items.get_by_id(item.id) is item
+    assert items.get_by_id(999) is None
     assert cats.get_by_public_id(cat.public_id) is cat
     assert users.get_for_update(999) is None
 
@@ -84,6 +86,19 @@ def test_fake_placed_object_repository_counts_and_adds() -> None:
     assert repository.count_for_update(1, 20) == 1
     assert repository.count_for_update(2, 20) == 0
     assert placed.position_data == {"x": 10, "y": 20}
+
+    assert (
+        repository.get_by_public_id_for_update(placed.public_id)
+        is placed
+    )
+
+    repository.remove(placed)
+
+    assert repository.count_for_update(1, 20) == 0
+    assert (
+        repository.get_by_public_id_for_update(placed.public_id)
+        is None
+    )
 
 
 def test_fake_cat_memory_repository_accumulates() -> None:

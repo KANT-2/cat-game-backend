@@ -110,6 +110,12 @@ class FakeItemRepository:
             None,
         )
 
+    def get_by_id(self, item_id: int) -> Item | None:
+        return next(
+            (item for item in self.items if item.id == item_id),
+            None,
+        )
+
 
 class FakeCatRepository:
     def __init__(self, cats: list[Cat] | None = None) -> None:
@@ -207,6 +213,19 @@ class FakePlacedObjectRepository:
     ) -> None:
         self.placed_objects = list(placed_objects or [])
 
+    def get_by_public_id_for_update(
+        self,
+        public_id: uuid.UUID,
+    ) -> PlacedObject | None:
+        return next(
+            (
+                placed_object
+                for placed_object in self.placed_objects
+                if placed_object.public_id == public_id
+            ),
+            None,
+        )
+
     def count_for_update(
         self,
         user_id: int,
@@ -232,6 +251,12 @@ class FakePlacedObjectRepository:
         )
         self.placed_objects.append(placed)
         return placed
+
+    def remove(
+        self,
+        placed_object: PlacedObject,
+    ) -> None:
+        self.placed_objects.remove(placed_object)
 
 
 class FakeCatMemoryRepository:
