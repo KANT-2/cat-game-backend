@@ -8,10 +8,10 @@ from app.core.exceptions import (
     PlacementLimitExceededError,
     ResourceNotFoundError,
 )
+from app.models.asset import Asset
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
-from app.models.user_cat import UserCat
 from app.modules.housing.service import (
     place_furniture,
     remove_furniture_placement,
@@ -44,7 +44,7 @@ def test_place_furniture_uses_owned_quantity_in_one_transaction() -> None:
         name="Cat Chair",
         price=150,
     )
-    asset = UserCat(
+    asset = Asset(
         id=20,
         public_id=uuid.uuid4(),
         user_id=user.id,
@@ -55,7 +55,7 @@ def test_place_furniture_uses_owned_quantity_in_one_transaction() -> None:
     position_data = PositionData(
         x=120,
         y=80,
-        rotation=45,
+        z=45,
     )
 
     unit_of_work = MagicMock()
@@ -81,7 +81,7 @@ def test_place_furniture_uses_owned_quantity_in_one_transaction() -> None:
     assert result.position_data == {
         "x": 120.0,
         "y": 80.0,
-        "rotation": 45.0,
+        "z": 45.0,
     }
     assert "id" not in result.model_dump()
     assert "user_id" not in result.model_dump()
@@ -106,7 +106,7 @@ def test_place_furniture_rejects_non_furniture_item() -> None:
         name="Cloud Wallpaper",
         price=150,
     )
-    asset = UserCat(
+    asset = Asset(
         id=20,
         public_id=uuid.uuid4(),
         user_id=user.id,
@@ -133,7 +133,7 @@ def test_place_furniture_rejects_non_furniture_item() -> None:
             position_data=PositionData(
                 x=120,
                 y=80,
-                rotation=45,
+                z=45,
             ),
         )
 
@@ -158,7 +158,7 @@ def test_place_furniture_rejects_more_than_owned_quantity() -> None:
         name="Cat Chair",
         price=150,
     )
-    asset = UserCat(
+    asset = Asset(
         id=20,
         public_id=uuid.uuid4(),
         user_id=user.id,
@@ -174,7 +174,7 @@ def test_place_furniture_rejects_more_than_owned_quantity() -> None:
         position_data={
             "x": 10,
             "y": 20,
-            "rotation": 0,
+            "z": 0,
         },
     )
 
@@ -198,7 +198,7 @@ def test_place_furniture_rejects_more_than_owned_quantity() -> None:
             position_data=PositionData(
                 x=120,
                 y=80,
-                rotation=45,
+                z=45,
             ),
         )
 
@@ -244,7 +244,7 @@ def test_place_furniture_rejects_unowned_item() -> None:
             position_data=PositionData(
                 x=120,
                 y=80,
-                rotation=45,
+                z=45,
             ),
         )
 
@@ -277,7 +277,7 @@ def test_update_furniture_placement_changes_only_position() -> None:
         position_data={
             "x": 10,
             "y": 20,
-            "rotation": 0,
+            "z": 0,
         },
     )
 
@@ -296,14 +296,14 @@ def test_update_furniture_placement_changes_only_position() -> None:
         position_data=PositionData(
             x=300,
             y=150,
-            rotation=90,
+            z=90,
         ),
     )
 
     assert placed_object.position_data == {
         "x": 300.0,
         "y": 150.0,
-        "rotation": 90.0,
+        "z": 90.0,
     }
     assert result.public_id == placed_object.public_id
     assert result.item_public_id == item.public_id
@@ -342,7 +342,7 @@ def test_update_furniture_placement_hides_other_users_object() -> None:
         position_data={
             "x": 10,
             "y": 20,
-            "rotation": 0,
+            "z": 0,
         },
     )
     original_position = dict(placed_object.position_data)
@@ -365,7 +365,7 @@ def test_update_furniture_placement_hides_other_users_object() -> None:
             position_data=PositionData(
                 x=300,
                 y=150,
-                rotation=90,
+                z=90,
             ),
         )
 
@@ -390,7 +390,7 @@ def test_remove_furniture_placement_keeps_owned_quantity() -> None:
         name="Cat Chair",
         price=150,
     )
-    asset = UserCat(
+    asset = Asset(
         id=20,
         public_id=uuid.uuid4(),
         user_id=user.id,
@@ -406,7 +406,7 @@ def test_remove_furniture_placement_keeps_owned_quantity() -> None:
         position_data={
             "x": 10,
             "y": 20,
-            "rotation": 0,
+            "z": 0,
         },
     )
 
@@ -459,7 +459,7 @@ def test_remove_furniture_placement_hides_other_users_object() -> None:
         position_data={
             "x": 10,
             "y": 20,
-            "rotation": 0,
+            "z": 0,
         },
     )
 

@@ -2,22 +2,22 @@ import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+from app.schemas.asset import to_asset_read
 from app.schemas.cat_memory import to_cat_memory_read
 from app.schemas.placed_object import to_placed_object_read
-from app.schemas.user_cat import to_user_cat_read
 
 
-def test_to_user_cat_read_uses_public_ids() -> None:
+def test_to_asset_read_uses_public_ids() -> None:
     asset_public_id = uuid.uuid4()
     cat_public_id = uuid.uuid4()
 
-    user_cat = SimpleNamespace(
+    asset = SimpleNamespace(
         public_id=asset_public_id,
         quantity=1,
     )
 
-    result = to_user_cat_read(
-        user_cat,
+    result = to_asset_read(
+        asset,
         cat_public_id=cat_public_id,
         item_public_id=None,
     )
@@ -29,17 +29,17 @@ def test_to_user_cat_read_uses_public_ids() -> None:
     assert "id" not in result.model_dump()
 
 
-def test_to_user_cat_read_maps_item_public_id() -> None:
+def test_to_asset_read_maps_item_public_id() -> None:
     asset_public_id = uuid.uuid4()
     item_public_id = uuid.uuid4()
 
-    user_cat = SimpleNamespace(
+    asset = SimpleNamespace(
         public_id=asset_public_id,
         quantity=3,
     )
 
-    result = to_user_cat_read(
-        user_cat,
+    result = to_asset_read(
+        asset,
         cat_public_id=None,
         item_public_id=item_public_id,
     )
@@ -57,7 +57,7 @@ def test_to_placed_object_read_uses_item_public_id() -> None:
     position_data = {
         "x": 120,
         "y": 80,
-        "rotation": 0,
+        "z": 0,
     }
 
     placed_object = SimpleNamespace(
@@ -76,9 +76,9 @@ def test_to_placed_object_read_uses_item_public_id() -> None:
     assert "id" not in result.model_dump()
 
 
-def test_to_cat_memory_read_uses_user_cat_public_id() -> None:
+def test_to_cat_memory_read_uses_cat_asset_public_id() -> None:
     memory_public_id = uuid.uuid4()
-    user_cat_public_id = uuid.uuid4()
+    cat_asset_public_id = uuid.uuid4()
     created_at = datetime(2026, 9, 2, 12, 0, tzinfo=UTC)
 
     memory = SimpleNamespace(
@@ -89,11 +89,11 @@ def test_to_cat_memory_read_uses_user_cat_public_id() -> None:
 
     result = to_cat_memory_read(
         memory,
-        user_cat_public_id=user_cat_public_id,
+        cat_asset_public_id=cat_asset_public_id,
     )
 
     assert result.public_id == memory_public_id
-    assert result.user_cat_public_id == user_cat_public_id
+    assert result.cat_asset_public_id == cat_asset_public_id
     assert result.context_summary == "사용자는 반복문 문제를 어려워한다."
     assert result.created_at == created_at
     assert "id" not in result.model_dump()

@@ -9,9 +9,9 @@ from app.core.exceptions import (
     InvalidQuantityError,
     ResourceNotFoundError,
 )
+from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.user import User
-from app.models.user_cat import UserCat
 from app.modules.gacha.policy import GachaPolicy, GachaReward
 from app.modules.gacha.service import draw_cats
 from tests.fakes.repositories import (
@@ -117,7 +117,7 @@ def test_draw_cats_converts_duplicate_cat_to_mileage() -> None:
         persona="Friendly",
         rarity="COMMON",
     )
-    existing_asset = UserCat(
+    existing_asset = Asset(
         id=30,
         public_id=uuid.uuid4(),
         user_id=user.id,
@@ -549,7 +549,7 @@ def test_draw_cats_rejects_negative_duplicate_mileage() -> None:
         persona="Friendly",
         rarity="COMMON",
     )
-    existing_asset = UserCat(
+    existing_asset = Asset(
         id=30,
         public_id=uuid.uuid4(),
         user_id=user.id,

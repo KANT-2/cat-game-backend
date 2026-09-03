@@ -80,12 +80,12 @@ def test_fake_placed_object_repository_counts_and_adds() -> None:
     placed = repository.add(
         user_id=1,
         item_id=20,
-        position_data={"x": 10, "y": 20},
+        position_data={"x": 10, "y": 20, "z": 0},
     )
 
     assert repository.count_for_update(1, 20) == 1
     assert repository.count_for_update(2, 20) == 0
-    assert placed.position_data == {"x": 10, "y": 20}
+    assert placed.position_data == {"x": 10, "y": 20, "z": 0}
 
     assert (
         repository.get_by_public_id_for_update(placed.public_id)
@@ -108,4 +108,4 @@ def test_fake_cat_memory_repository_accumulates() -> None:
     second = repository.add(10, "두 번째 대화")
     repository.add(20, "다른 고양이 대화")
 
-    assert repository.list_by_user_cat_id(10) == [first, second]
+    assert repository.list_by_cat_asset_id(10) == [first, second]

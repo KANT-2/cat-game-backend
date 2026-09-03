@@ -28,7 +28,7 @@ def _insert_item(db_session, category: str, name: str) -> int:
 def _insert_item_asset(db_session, user_id: int, item_id: int, quantity: int = 1) -> int:
     return db_session.execute(
         text(
-            "INSERT INTO user_cats (user_id, item_id, quantity) "
+            "INSERT INTO assets (user_id, item_id, quantity) "
             "VALUES (:user_id, :item_id, :quantity) RETURNING id"
         ),
         {"user_id": user_id, "item_id": item_id, "quantity": quantity},
@@ -44,7 +44,7 @@ def _insert_cat_asset(db_session, user_id: int) -> int:
     ).scalar_one()
     return db_session.execute(
         text(
-            "INSERT INTO user_cats (user_id, cat_id, quantity) "
+            "INSERT INTO assets (user_id, cat_id, quantity) "
             "VALUES (:user_id, :cat_id, 1) RETURNING id"
         ),
         {"user_id": user_id, "cat_id": cat_id},
@@ -119,7 +119,7 @@ def test_placed_object_trigger_accepts_owned_quantity_and_rejects_excess(db_sess
     _insert_item_asset(db_session, user_id, item_id)
     statement = text(
         "INSERT INTO placed_objects (user_id, item_id, position_data) "
-        "VALUES (:user_id, :item_id, '{}'::jsonb)"
+        "VALUES (:user_id, :item_id, '{\"x\": 0, \"y\": 0, \"z\": 0}'::jsonb)"
     )
 
     db_session.execute(statement, {"user_id": user_id, "item_id": item_id})
@@ -135,13 +135,14 @@ def test_reverse_reference_trigger_rejects_deleting_placed_asset(db_session):
     db_session.execute(
         text(
             "INSERT INTO placed_objects (user_id, item_id, position_data) "
-            "VALUES (:user_id, :item_id, '{}'::jsonb)"
+            "VALUES (:user_id, :item_id, "
+            "'{\"x\": 0, \"y\": 0, \"z\": 0}'::jsonb)"
         ),
         {"user_id": user_id, "item_id": item_id},
     )
 
     with pytest.raises(DBAPIError, match="cannot reduce item"):
-        db_session.execute(text("DELETE FROM user_cats WHERE id = :id"), {"id": asset_id})
+        db_session.execute(text("DELETE FROM assets WHERE id = :id"), {"id": asset_id})
 
 
 def test_cat_memory_trigger_accepts_cat_asset_and_rejects_item_asset(db_session):
@@ -150,11 +151,11 @@ def test_cat_memory_trigger_accepts_cat_asset_and_rejects_item_asset(db_session)
     item_id = _insert_item(db_session, "FURNITURE", "memory-invalid-item")
     item_asset_id = _insert_item_asset(db_session, user_id, item_id)
     statement = text(
-        "INSERT INTO cat_memories (user_cat_id, context_summary) "
-        "VALUES (:user_cat_id, 'summary')"
+        "INSERT INTO cat_memories (cat_asset_id, context_summary) "
+        "VALUES (:cat_asset_id, 'summary')"
     )
 
-    db_session.execute(statement, {"user_cat_id": cat_asset_id})
+    db_session.execute(statement, {"cat_asset_id": cat_asset_id})
 
     with pytest.raises(DBAPIError, match="does not reference a cat asset"):
-        db_session.execute(statement, {"user_cat_id": item_asset_id})
+        db_session.execute(statement, {"cat_asset_id": item_asset_id})

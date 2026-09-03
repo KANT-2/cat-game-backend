@@ -16,7 +16,7 @@ class PositionData(BaseModel):
 
     x: float = Field(allow_inf_nan=False)
     y: float = Field(allow_inf_nan=False)
-    rotation: float = Field(allow_inf_nan=False)
+    z: float = Field(allow_inf_nan=False)
 
 
 class PlacedObjectCreate(BaseModel):

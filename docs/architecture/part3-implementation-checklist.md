@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-03): 하우징 가구 배치 서비스와 단위 검증을 완료했다. 다음 작업은 **10. 고양이 AI 기억**이다.
+현재 진행 상태(2026-09-03): 하우징 가구 배치 서비스와 단위 검증을 완료했다. 통합 보유 자산 명칭은 DB `assets`, Python `Asset`으로 정리했고, 하우징 위치 계약은 `x`, `y`, `z`로 통일했다. 고양이 기억 FK는 `cat_asset_id`, 공개 식별자는 `cat_asset_public_id`를 사용한다. 다음 작업은 **10. 고양이 AI 기억**이다.
 
 구현 기준은 다음 문서다.
 
@@ -16,7 +16,7 @@
 - [ ] API 요청과 응답에 내부 INTEGER `id`를 노출하지 않는다.
 - [ ] 외부 식별자는 UUID `public_id`, `*_public_id`를 사용한다.
 - [ ] 내부 FK에는 INTEGER PK를 사용한다.
-- [ ] 기존 `UserCat` 모델을 재사용한다.
+- [x] 통합 보유 자산 모델은 `Asset`을 사용한다.
 - [x] Repository는 `commit()`하지 않는다.
 - [x] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
 - [ ] 잠금 메서드는 이름에 `for_update`를 포함한다.
@@ -42,11 +42,11 @@ git status
 
 ## 1. 공개 UUID DTO 변환
 
-- [x] `UserCat` 응답에 `cat_public_id`, `item_public_id`를 변환한다.
+- [x] `Asset` 응답에 `cat_public_id`, `item_public_id`를 변환한다.
 - [x] `PlacedObject` 응답에 `item_public_id`를 변환한다.
-- [x] `CatMemory` 응답에 `user_cat_public_id`를 변환한다.
+- [x] `CatMemory` 응답에 `cat_asset_public_id`를 변환한다.
 - [x] 명시적인 DTO 변환 함수 또는 Repository 조회 projection을 사용한다.
-- [x] 내부 `id`, `user_id`, `cat_id`, `item_id`, `user_cat_id`가 응답에 없는지 검사한다.
+- [x] 내부 `id`, `user_id`, `cat_id`, `item_id`, `cat_asset_id`가 응답에 없는지 검사한다.
 - [x] 공개 UUID 직렬화 테스트를 작성한다.
 
 완료 기준:
@@ -215,7 +215,7 @@ git status
 - [x] 가챠 요청 및 응답 스키마를 작성한다.
 - [x] 비용, 확률과 중복 보상을 설정 또는 정책 객체로 주입한다.
 - [x] 미확정 정책값을 임의로 하드코딩하지 않는다.
-- [x] 신규 고양이는 `UserCat.quantity = 1`로 생성한다.
+- [x] 신규 고양이는 `Asset.quantity = 1`로 생성한다.
 - [x] 중복 고양이는 새 자산을 만들지 않는다.
 - [x] 중복 보상을 사용자 mileage로 전환한다.
 - [x] 잔액, mileage, 자산, 실행 결과를 한 트랜잭션으로 처리한다.
@@ -245,8 +245,10 @@ git status
 
 ## 9. 하우징 가구 배치
 
-- [x] `position_data`의 `x`, `y`, `rotation` 필수 필드와 유한 숫자를 Pydantic으로 검증한다.
-- [ ] 실제 방 크기에 따른 좌표·회전 최솟값과 최댓값을 확정해 검증한다.
+- [x] `position_data`의 `x`, `y`, `z` 필수 필드와 유한 숫자를 Pydantic으로 검증한다.
+- [x] 이전 `rotation` 필드를 거부한다.
+- [x] 기존 JSONB 데이터의 `rotation` 값을 `z`로 옮기는 마이그레이션을 작성한다.
+- [ ] 실제 방 크기에 따른 `x`, `y`, `z` 최솟값과 최댓값을 확정해 검증한다.
 - [x] `FURNITURE` 카테고리만 배치한다.
 - [x] 인증 사용자의 보유 자산 행을 잠근다.
 - [x] 현재 배치 수량과 보유 수량을 비교한다.
@@ -279,13 +281,13 @@ git status
 
 ## 10. 고양이 AI 기억
 
-- [ ] `user_cat_public_id`로 보유 고양이 자산을 조회한다.
+- [ ] `cat_asset_public_id`로 보유 고양이 자산을 조회한다.
 - [ ] 인증 사용자의 소유권을 검사한다.
 - [ ] 아이템 자산에는 기억을 생성하지 못하게 한다.
 - [ ] `context_summary`를 새 `CatMemory` 행으로 누적한다.
 - [ ] 고양이별 기억 목록을 조회한다.
 - [ ] 다른 사용자의 자산 접근은 `404 Not Found`로 처리한다.
-- [ ] 응답에 내부 `user_cat_id`가 없는지 테스트한다.
+- [ ] 응답에 내부 `cat_asset_id`가 없는지 테스트한다.
 
 완료 기준:
 

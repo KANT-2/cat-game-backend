@@ -5,13 +5,13 @@ from app.core.repository_contracts import (
     ClaimStatus,
     ExecutionClaim,
 )
+from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.cat_memory import CatMemory
 from app.models.gacha_execution import GachaExecution
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
-from app.models.user_cat import UserCat
 
 
 class FakeExecutionRepository:
@@ -129,14 +129,14 @@ class FakeCatRepository:
 
 
 class FakeAssetRepository:
-    def __init__(self, assets: list[UserCat] | None = None) -> None:
+    def __init__(self, assets: list[Asset] | None = None) -> None:
         self.assets = list(assets or [])
 
     def get_cat_asset(
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat | None:
+    ) -> Asset | None:
         return next(
             (
                 asset
@@ -150,7 +150,7 @@ class FakeAssetRepository:
         self,
         user_id: int,
         item_id: int,
-    ) -> UserCat | None:
+    ) -> Asset | None:
         return next(
             (
                 asset
@@ -165,7 +165,7 @@ class FakeAssetRepository:
         user_id: int,
         item_id: int,
         quantity: int,
-    ) -> UserCat:
+    ) -> Asset:
         if quantity <= 0:
             raise ValueError("quantity must be positive")
 
@@ -174,7 +174,7 @@ class FakeAssetRepository:
             existing.quantity += quantity
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             id=len(self.assets) + 1,
             public_id=uuid.uuid4(),
             user_id=user_id,
@@ -189,12 +189,12 @@ class FakeAssetRepository:
         self,
         user_id: int,
         cat_id: int,
-    ) -> UserCat:
+    ) -> Asset:
         existing = self.get_cat_asset(user_id, cat_id)
         if existing is not None:
             return existing
 
-        asset = UserCat(
+        asset = Asset(
             id=len(self.assets) + 1,
             public_id=uuid.uuid4(),
             user_id=user_id,
@@ -266,25 +266,25 @@ class FakeCatMemoryRepository:
     ) -> None:
         self.memories = list(memories or [])
 
-    def list_by_user_cat_id(
+    def list_by_cat_asset_id(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
     ) -> list[CatMemory]:
         return [
             memory
             for memory in self.memories
-            if memory.user_cat_id == user_cat_id
+            if memory.cat_asset_id == cat_asset_id
         ]
 
     def add(
         self,
-        user_cat_id: int,
+        cat_asset_id: int,
         context_summary: str,
     ) -> CatMemory:
         memory = CatMemory(
             id=len(self.memories) + 1,
             public_id=uuid.uuid4(),
-            user_cat_id=user_cat_id,
+            cat_asset_id=cat_asset_id,
             context_summary=context_summary,
             created_at=datetime.now(UTC),
         )
