@@ -7,11 +7,12 @@ class TaskRead(ReadSchema):
     concept_public_id: uuid.UUID
     title: str
     type: str
+    domain: str
     difficulty: str
     description: str
     template_code: str
+    options: dict[str, str] | None
     hint_text: str | None
     is_active: bool
 
-    # 주의: test_cases는 PRD 요구사항상 비공개 정보이므로
-    # 이 응답 스키마에 의도적으로 포함하지 않는다.
+    # test_cases와 correct_option은 채점 전용 정보라 의도적으로 포함하지 않는다.

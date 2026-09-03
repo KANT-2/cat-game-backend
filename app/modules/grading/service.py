@@ -12,8 +12,9 @@ from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user import User
-from app.modules.grading.sandbox.runner import sandbox
-from app.modules.grading.test_cases import TestCaseSpecError, parse_test_cases
+from app.modules.grading.runners import dispatcher
+from app.modules.grading.test_cases import TestCaseSpecError
+from app.modules.learning.proficiency import update_proficiency
 from app.schemas.task_attempt import TaskAttemptCreate
 
 
@@ -29,6 +30,13 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
     task = _by_public_id(db, Task, payload.task_public_id)
     if task is None or not task.is_active:
         raise SubmissionError("task not found")
+    if task.type == "CODE" and payload.submitted_code is None:
+        raise SubmissionError("CODE task requires submitted_code")
+    if task.type == "MULTIPLE_CHOICE":
+        if payload.selected_option is None:
+            raise SubmissionError("MULTIPLE_CHOICE task requires selected_option")
+        if payload.selected_option not in task.options:
+            raise SubmissionError("selected_option is not one of the task options")
     attendance_task = room_task = None
     if payload.context_type == "DAILY":
         attendance_task = _by_public_id(db, AttendanceTask, payload.attendance_task_public_id)
@@ -48,7 +56,8 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
         user_id=user.id, task_id=task.id,
         attendance_task_id=attendance_task.id if attendance_task else None,
         room_task_id=room_task.id if room_task else None,
-        context_type=payload.context_type, submitted_code=payload.submitted_code,
+        context_type=payload.context_type,
+        submitted_code=payload.submitted_code or payload.selected_option,
         used_hint=payload.used_hint, status="PENDING", is_correct=None,
     )
     db.add(attempt)
@@ -74,17 +83,20 @@ def grade_attempt(attempt_public_id: uuid.UUID) -> None:
         db.commit()
         task = db.get(Task, attempt.task_id)
         try:
-            cases = parse_test_cases(task.test_cases)
+            result = dispatcher.for_task(task).grade(task, attempt.submitted_code)
         except TestCaseSpecError as exc:
             _finish(db, attempt, None, "FAILED", "TEST_CASE_SPEC_ERROR", str(exc))
             return
-        result = sandbox.grade(attempt.submitted_code, cases)
         status = "FAILED" if result.is_system_failure else "COMPLETED"
         is_correct = None if result.is_system_failure else result.is_correct
-        _finish(db, attempt, is_correct, status, result.verdict, result.detail)
+        attempt.status = status
+        attempt.is_correct = is_correct
+        attempt.result_detail = json.dumps({"verdict": str(result.verdict), "detail": result.detail})
+        if is_correct is not None:
+            update_proficiency(db, attempt.user_id, task.concept_id)
         if is_correct and attempt.context_type == "DAILY":
             db.get(AttendanceTask, attempt.attendance_task_id).is_completed = True
-            db.commit()
+        db.commit()
     except Exception as exc:  # noqa: BLE001 - background boundary must persist FAILED
         db.rollback()
         attempt = _by_public_id(db, TaskAttempt, attempt_public_id)
