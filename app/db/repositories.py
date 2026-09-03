@@ -42,6 +42,9 @@ class SqlAlchemyItemRepository:
         statement = select(Item).where(Item.public_id == public_id)
         return self._session.execute(statement).scalar_one_or_none()
 
+    def get_by_id(self, item_id: int) -> Item | None:
+        statement = select(Item).where(Item.id == item_id)
+        return self._session.execute(statement).scalar_one_or_none()
 
 class SqlAlchemyCatRepository:
     def __init__(self, session: Session) -> None:
@@ -126,6 +129,17 @@ class SqlAlchemyPlacedObjectRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> PlacedObject | None:
+        statement = (
+            select(PlacedObject)
+            .where(PlacedObject.public_id == public_id)
+            .with_for_update()
+        )
+        return self._session.execute(statement).scalar_one_or_none()
+
     def count_for_update(
         self,
         user_id: int,
@@ -155,6 +169,12 @@ class SqlAlchemyPlacedObjectRepository:
         )
         self._session.add(placed_object)
         return placed_object
+
+    def remove(
+        self,
+        placed_object: PlacedObject,
+    ) -> None:
+        self._session.delete(placed_object)
 
 class SqlAlchemyCatMemoryRepository:
     def __init__(self, session: Session) -> None:

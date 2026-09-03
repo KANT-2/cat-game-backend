@@ -68,6 +68,7 @@ class UserRepository(Protocol):
 
 class ItemRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> "Item | None": ...
+    def get_by_id(self, item_id: int) -> "Item | None": ...
 
 
 class CatRepository(Protocol):
@@ -85,9 +86,16 @@ class AssetRepository(Protocol):
 
 
 class PlacedObjectRepository(Protocol):
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> "PlacedObject | None": ...
+
     def count_for_update(self, user_id: int, item_id: int) -> int: ...
 
     def add(self, user_id: int, item_id: int, position_data: dict) -> "PlacedObject": ...
+
+    def remove(self, placed_object: "PlacedObject") -> None: ...
 
 
 class CatMemoryRepository(Protocol):
@@ -251,7 +259,9 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 동일 사용자의 아이템별 배치 행 수는 보유 `quantity`를 초과할 수 없다.
 - 배치 수량 검증에는 동시 요청을 막을 수 있는 잠금을 사용한다.
 - 배치 해제는 `PLACED_OBJECTS` 행만 삭제하며 보유 자산 수량은 줄이지 않는다.
-- `position_data`는 API 스키마에서 요구 필드와 범위를 검증한다.
+- `position_data`는 `x`, `y`, `rotation`을 필수 유한 숫자로 검증하고 알 수 없는 필드를 거부한다.
+- 실제 방 크기에 따른 좌표·회전 최솟값과 최댓값은 정책 확정 전까지 임의로 하드코딩하지 않는다.
+- 수정과 해제는 `placed_object_public_id`로 대상 행을 잠그고 인증 사용자 소유가 아니면 찾을 수 없는 것으로 처리한다.
 
 ### 고양이 기억
 
