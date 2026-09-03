@@ -32,6 +32,7 @@ class TaskAttempt(Base):
     attempted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+    result_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         ForeignKeyConstraint(
