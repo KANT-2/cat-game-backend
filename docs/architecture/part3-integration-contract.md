@@ -232,9 +232,12 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 ### 가챠와 고양이
 
+- 가챠 비용, 확률과 중복 마일리지는 서비스에 하드코딩하지 않고 정책 객체로 주입한다.
+- 멱등 요청 payload에는 클라이언트가 결정한 `draw_count`만 포함하고 서버 정책값은 요청 해시에서 제외한다.
 - 처음 획득한 고양이는 `USER_CATS.quantity = 1`로 생성한다.
 - 이미 보유한 고양이는 새 자산 행을 만들거나 수량을 증가시키지 않는다.
 - 중복 고양이 보상은 같은 트랜잭션에서 `USERS.mileage`로 전환한다.
+- 가챠 결과에는 고양이 내부 정수 ID 대신 `cat_public_id`를 저장하고 반환한다.
 
 ### 상점
 
