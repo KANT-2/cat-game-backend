@@ -262,7 +262,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - [ ] `USER_CATS`의 Python 모델명을 팀에서 확정했다.
 - [x] 모든 Repository 메서드와 반환형이 이 문서와 일치한다.
 - [x] Repository 구현체가 자체적으로 커밋하지 않는다.
-- [ ] 서비스 하나가 가챠 또는 구매 트랜잭션 전체를 소유한다.
+- [x] 서비스 하나가 가챠 또는 구매 트랜잭션 전체를 소유한다.
 - [x] 잠금이 필요한 Repository 메서드에 `for_update`가 명시돼 있다.
 - [ ] API 요청과 응답에는 UUID `public_id`만 사용한다.
 - [ ] 내부 정수 PK가 응답 스키마에서 제외돼 있다.

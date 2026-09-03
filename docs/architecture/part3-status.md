@@ -2,7 +2,7 @@
 
 이 문서는 로컬 Codex와 Codex cloud가 같은 기준으로 Part 3 작업을 이어가기 위한 현재 상태 기록이다.
 
-2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository와 Unit of Work 구현을 점검했다.
+2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository, Unit of Work와 상점 구매 서비스를 점검했다.
 
 ## 완료된 기반
 
@@ -94,7 +94,18 @@
 - 컨텍스트 종료 시 rollback과 close를 실행하고, 서비스에서 발생한 예외는 숨기지 않는다.
 - `tests/unit/core/test_unit_of_work_contract.py`와 `tests/unit/db/test_unit_of_work.py`가 계약, 세션 공유, commit, rollback과 예외 경로를 검증한다.
 
-### 9. 계약 테스트
+### 9. 상점 아이템 구매 서비스 — 완료
+
+- `app/modules/shop/service.py`가 공개 사용자·아이템 UUID와 구매 수량으로 멱등 구매를 수행한다.
+- 공통 요청 해시로 실행을 claim하고 완료된 동일 요청은 저장된 결과를 그대로 반환한다.
+- 같은 요청 ID의 사용자 또는 내용이 다르면 `IdempotencyConflictError`로 거부한다.
+- DB의 아이템 가격으로 총비용을 계산하고 잠근 사용자 잔액에서 차감한다.
+- 신규 아이템 자산을 생성하거나 기존 `UserCat` 자산 수량을 합산한다.
+- 잔액 부족, 0 이하 수량과 존재하지 않는 리소스는 변경과 commit 전에 거부한다.
+- 실행 완료, 잔액과 자산 변경을 하나의 UoW에서 처리하고 서비스가 한 번만 commit한다.
+- `tests/unit/modules/shop/test_purchase_service.py`의 10개 테스트가 정상·재시도·충돌·오류·재구매 경로를 검증한다.
+
+### 10. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -108,6 +119,7 @@
 - Fake Repository의 선점·충돌·자산·배치·기억 동작
 - SQLAlchemy Repository의 공개 UUID 조회, 저장, 행 잠금과 멱등 실행 선점
 - Unit of Work의 Repository 세션 공유, commit, rollback, 세션 종료와 예외 전파
+- 상점 구매의 정상 처리, 완료 결과 재사용, 멱등 충돌, 잔액 부족, 입력 검증과 자산 합산
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -118,10 +130,11 @@
 
 ## 권장 작업 순서
 
-1. 구매 및 가챠 멱등성 서비스
+1. 고양이 가챠와 중복 마일리지 서비스
 2. 하우징 배치와 표면 아이템 적용
 3. 고양이 기억 API
-4. PostgreSQL 동시성 통합 테스트
+4. FastAPI 라우터와 예외 매핑
+5. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 
