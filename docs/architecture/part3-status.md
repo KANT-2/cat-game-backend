@@ -2,7 +2,7 @@
 
 이 문서는 로컬 Codex와 Codex cloud가 같은 기준으로 Part 3 작업을 이어가기 위한 현재 상태 기록이다.
 
-2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반과 SQLAlchemy Repository 구현을 점검했다.
+2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository와 Unit of Work 구현을 점검했다.
 
 ## 완료된 기반
 
@@ -85,7 +85,16 @@
 - 같은 실행의 완료·진행 상태와 다른 사용자 또는 요청 해시 충돌을 `ClaimStatus`로 구분한다.
 - `tests/unit/db/test_sqlalchemy_repositories.py`의 20개 테스트가 조회, 저장, 잠금, 선점과 완료 동작을 검증한다.
 
-### 8. 계약 테스트
+### 8. Unit of Work — 완료
+
+- `app/core/unit_of_work.py`에 서비스가 의존할 Unit of Work Protocol을 정의했다.
+- `app/db/unit_of_work.py`에 SQLAlchemy 세션과 일곱 Repository를 묶는 구현체를 추가했다.
+- 모든 Repository가 하나의 세션을 공유해 잔액, 자산과 실행 결과를 같은 트랜잭션에서 변경할 수 있다.
+- `commit()`과 `rollback()`은 공유 세션에 위임하며 Repository는 트랜잭션을 종료하지 않는다.
+- 컨텍스트 종료 시 rollback과 close를 실행하고, 서비스에서 발생한 예외는 숨기지 않는다.
+- `tests/unit/core/test_unit_of_work_contract.py`와 `tests/unit/db/test_unit_of_work.py`가 계약, 세션 공유, commit, rollback과 예외 경로를 검증한다.
+
+### 9. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -98,6 +107,7 @@
 - Repository 메서드 경계와 트랜잭션 책임 분리
 - Fake Repository의 선점·충돌·자산·배치·기억 동작
 - SQLAlchemy Repository의 공개 UUID 조회, 저장, 행 잠금과 멱등 실행 선점
+- Unit of Work의 Repository 세션 공유, commit, rollback, 세션 종료와 예외 전파
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -108,11 +118,10 @@
 
 ## 권장 작업 순서
 
-1. Unit of Work
-2. 구매 및 가챠 멱등성 서비스
-3. 하우징 배치와 표면 아이템 적용
-4. 고양이 기억 API
-5. PostgreSQL 동시성 통합 테스트
+1. 구매 및 가챠 멱등성 서비스
+2. 하우징 배치와 표면 아이템 적용
+3. 고양이 기억 API
+4. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 

@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-03): SQLAlchemy Repository 구현과 단위 검증을 완료했다. 다음 작업은 **5. Unit of Work 구현**이다.
+현재 진행 상태(2026-09-03): SQLAlchemy Repository와 Unit of Work 구현 및 단위 검증을 완료했다. 다음 작업은 **6. 멱등성 실행 엔진**이다.
 
 구현 기준은 다음 문서다.
 
@@ -17,7 +17,7 @@
 - [ ] 외부 식별자는 UUID `public_id`, `*_public_id`를 사용한다.
 - [ ] 내부 FK에는 INTEGER PK를 사용한다.
 - [ ] 기존 `UserCat` 모델을 재사용한다.
-- [ ] Repository는 `commit()`하지 않는다.
+- [x] Repository는 `commit()`하지 않는다.
 - [ ] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
 - [ ] 잠금 메서드는 이름에 `for_update`를 포함한다.
 - [ ] 미확정 가격, 확률, 보상값을 임의로 하드코딩하지 않는다.
@@ -134,9 +134,9 @@ git status
 - [x] 사용자 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
 - [x] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
 - [x] 멱등 실행 요청을 안전하게 `claim()`한다.
-- [ ] Unit of Work를 구현한다.
+- [x] Unit of Work를 구현한다.
 - [ ] 서비스만 한 번 `commit()`하도록 구성한다.
-- [ ] 예외 발생 시 전체 rollback을 검증한다.
+- [x] 예외 발생 시 전체 rollback을 검증한다.
 
 완료 기준:
 
@@ -147,6 +147,14 @@ git status
 
 - SQLAlchemy Repository 단위 테스트: `20 passed`
 - 전체 테스트: `42 passed, 11 skipped, 1 warning`
+- 전체 Ruff 검사: 통과
+- `git diff --check`: 통과
+
+현재 Unit of Work 검증 결과:
+
+- Unit of Work 계약 테스트: `2 passed`
+- SQLAlchemy Unit of Work 단위 테스트: `5 passed`
+- 전체 테스트: `49 passed, 11 skipped, 1 warning`
 - 전체 Ruff 검사: 통과
 - `git diff --check`: 통과
 
