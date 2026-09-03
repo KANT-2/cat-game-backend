@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-02): **1. 공개 UUID DTO 변환**, **2. `balance_cost`와 `claim()` 계약 정리**, **3. 요청 해시 공통 함수**를 완료했다. 다음 작업은 **4. Repository 계약과 Fake 구현**이다.
+현재 진행 상태(2026-09-03): SQLAlchemy Repository와 Unit of Work 구현 및 단위 검증을 완료했다. 다음 작업은 **6. 멱등성 실행 엔진**이다.
 
 구현 기준은 다음 문서다.
 
@@ -17,7 +17,7 @@
 - [ ] 외부 식별자는 UUID `public_id`, `*_public_id`를 사용한다.
 - [ ] 내부 FK에는 INTEGER PK를 사용한다.
 - [ ] 기존 `UserCat` 모델을 재사용한다.
-- [ ] Repository는 `commit()`하지 않는다.
+- [x] Repository는 `commit()`하지 않는다.
 - [ ] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
 - [ ] 잠금 메서드는 이름에 `for_update`를 포함한다.
 - [ ] 미확정 가격, 확률, 보상값을 임의로 하드코딩하지 않는다.
@@ -108,16 +108,16 @@ git status
 
 ## 4. Repository 계약과 Fake 구현
 
-- [ ] `ExecutionRepository` Protocol을 작성한다.
-- [ ] `UserRepository` Protocol을 작성한다.
-- [ ] `ItemRepository` Protocol을 작성한다.
-- [ ] `CatRepository` Protocol을 작성한다.
-- [ ] `AssetRepository` Protocol을 작성한다.
-- [ ] `PlacedObjectRepository` Protocol을 작성한다.
-- [ ] `CatMemoryRepository` Protocol을 작성한다.
-- [ ] 테스트용 Fake Repository를 작성한다.
-- [ ] 잠금 조회 메서드 이름에 `for_update`를 사용한다.
-- [ ] Repository에 `commit()`이 없는지 확인한다.
+- [x] `ExecutionRepository` Protocol을 작성한다.
+- [x] `UserRepository` Protocol을 작성한다.
+- [x] `ItemRepository` Protocol을 작성한다.
+- [x] `CatRepository` Protocol을 작성한다.
+- [x] `AssetRepository` Protocol을 작성한다.
+- [x] `PlacedObjectRepository` Protocol을 작성한다.
+- [x] `CatMemoryRepository` Protocol을 작성한다.
+- [x] 테스트용 Fake Repository를 작성한다.
+- [x] 잠금 조회 메서드 이름에 `for_update`를 사용한다.
+- [x] Repository에 `commit()`이 없는지 확인한다.
 
 완료 기준:
 
@@ -126,22 +126,37 @@ git status
 
 커밋 확인:
 
-- [ ] Repository 계약, Fake 및 계약 테스트를 커밋했다.
+- [x] Repository 계약, Fake 및 계약 테스트를 커밋했다.
 
 ## 5. Unit of Work와 SQLAlchemy Repository
 
-- [ ] SQLAlchemy Repository 구현체를 작성한다.
-- [ ] 사용자 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
-- [ ] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
-- [ ] 멱등 실행 요청을 안전하게 `claim()`한다.
-- [ ] Unit of Work를 구현한다.
+- [x] SQLAlchemy Repository 구현체를 작성한다.
+- [x] 사용자 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
+- [x] 아이템 자산 행 잠금에 `SELECT ... FOR UPDATE`를 사용한다.
+- [x] 멱등 실행 요청을 안전하게 `claim()`한다.
+- [x] Unit of Work를 구현한다.
 - [ ] 서비스만 한 번 `commit()`하도록 구성한다.
-- [ ] 예외 발생 시 전체 rollback을 검증한다.
+- [x] 예외 발생 시 전체 rollback을 검증한다.
 
 완료 기준:
 
 - Repository는 조회, 저장, 잠금만 담당한다.
 - 트랜잭션의 시작과 종료는 Unit of Work와 서비스가 담당한다.
+
+현재 Repository 검증 결과:
+
+- SQLAlchemy Repository 단위 테스트: `20 passed`
+- 전체 테스트: `42 passed, 11 skipped, 1 warning`
+- 전체 Ruff 검사: 통과
+- `git diff --check`: 통과
+
+현재 Unit of Work 검증 결과:
+
+- Unit of Work 계약 테스트: `2 passed`
+- SQLAlchemy Unit of Work 단위 테스트: `5 passed`
+- 전체 테스트: `49 passed, 11 skipped, 1 warning`
+- 전체 Ruff 검사: 통과
+- `git diff --check`: 통과
 
 커밋 확인:
 
@@ -303,7 +318,7 @@ python -m ruff check .
 - [x] 1. 공개 UUID DTO 변환
 - [x] 2. `balance_cost`와 `claim()` 계약 정리
 - [x] 3. 요청 해시 공통 함수
-- [ ] 4. Repository 계약과 Fake 구현
+- [x] 4. Repository 계약과 Fake 구현
 - [ ] 5. Unit of Work와 SQLAlchemy Repository
 - [ ] 6. 멱등성 실행 엔진
 - [ ] 7. 아이템 구매 및 벽지·바닥 적용

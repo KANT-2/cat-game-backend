@@ -2,7 +2,7 @@
 
 이 문서는 로컬 Codex와 Codex cloud가 같은 기준으로 Part 3 작업을 이어가기 위한 현재 상태 기록이다.
 
-2026-09-02 기준으로 `origin/main`의 Part 1 안정화 변경을 `feature/part3`에 병합한 뒤 다시 점검했다.
+2026-09-03 기준으로 `feature/part3`에서 Part 3 공통 기반, SQLAlchemy Repository와 Unit of Work 구현을 점검했다.
 
 ## 완료된 기반
 
@@ -66,7 +66,35 @@
 - `operation_type`은 포함하고 `request_id`와 가격·잔액·마일리지 등 서버 결정값은 제외한다.
 - `tests/unit/core/test_request_hash.py`가 키 순서, 제외 필드, 업무 종류와 요청 내용 변경을 검증한다.
 
-### 6. 계약 테스트
+### 6. Repository 계약과 Fake — 완료
+
+- `app/core/repository_contracts.py`에 Execution, User, Item, Cat, Asset, PlacedObject, CatMemory Repository Protocol을 정의했다.
+- `ClaimStatus`와 `ExecutionClaim`으로 멱등 요청 선점 결과를 표현한다.
+- 잠금 메서드는 `for_update` 이름을 사용하고 모든 Repository에서 `commit()`과 `rollback()`을 제외했다.
+- `tests/fakes/repositories.py`에 동일 계약을 따르는 7개 메모리 Fake를 구현했다.
+- Fake 실행 저장소는 신규 선점, 완료 결과 재사용, 사용자·해시 충돌을 재현한다.
+- 나머지 Fake는 공개 UUID 조회, 자산 지급·수량 합산, 배치 수 집계와 고양이 기억 누적을 지원한다.
+
+### 7. SQLAlchemy Repository — 완료
+
+- `app/db/repositories.py`에 User, Item, Cat, Asset, PlacedObject, CatMemory, Execution Repository 구현체를 추가했다.
+- 공개 UUID 조회와 저장 동작을 분리하고, Repository 내부에서는 `commit()`하지 않는다.
+- 사용자와 아이템 자산 변경 조회는 `SELECT ... FOR UPDATE`를 사용한다.
+- 배치 개수 조회는 PostgreSQL에서 허용되지 않는 `COUNT(*) FOR UPDATE` 대신 대상 행을 잠근 뒤 Python에서 개수를 센다.
+- 실행 선점은 PostgreSQL `INSERT ... ON CONFLICT DO NOTHING RETURNING`을 사용하고, 기존 실행은 `FOR UPDATE`로 조회한다.
+- 같은 실행의 완료·진행 상태와 다른 사용자 또는 요청 해시 충돌을 `ClaimStatus`로 구분한다.
+- `tests/unit/db/test_sqlalchemy_repositories.py`의 20개 테스트가 조회, 저장, 잠금, 선점과 완료 동작을 검증한다.
+
+### 8. Unit of Work — 완료
+
+- `app/core/unit_of_work.py`에 서비스가 의존할 Unit of Work Protocol을 정의했다.
+- `app/db/unit_of_work.py`에 SQLAlchemy 세션과 일곱 Repository를 묶는 구현체를 추가했다.
+- 모든 Repository가 하나의 세션을 공유해 잔액, 자산과 실행 결과를 같은 트랜잭션에서 변경할 수 있다.
+- `commit()`과 `rollback()`은 공유 세션에 위임하며 Repository는 트랜잭션을 종료하지 않는다.
+- 컨텍스트 종료 시 rollback과 close를 실행하고, 서비스에서 발생한 예외는 숨기지 않는다.
+- `tests/unit/core/test_unit_of_work_contract.py`와 `tests/unit/db/test_unit_of_work.py`가 계약, 세션 공유, commit, rollback과 예외 경로를 검증한다.
+
+### 9. 계약 테스트
 
 다음 검증은 추가됐다.
 
@@ -76,6 +104,10 @@
 - `balance_cost`의 ORM/DB 기본값 메타데이터
 - PostgreSQL 16에서 비용을 생략한 실행 행의 DB 기본값 `0`
 - 요청 해시 정규화 및 충돌 구분
+- Repository 메서드 경계와 트랜잭션 책임 분리
+- Fake Repository의 선점·충돌·자산·배치·기억 동작
+- SQLAlchemy Repository의 공개 UUID 조회, 저장, 행 잠금과 멱등 실행 선점
+- Unit of Work의 Repository 세션 공유, commit, rollback, 세션 종료와 예외 전파
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -86,12 +118,10 @@
 
 ## 권장 작업 순서
 
-1. Repository Protocol과 Fake 기반 단위 테스트
-2. SQLAlchemy Repository와 Unit of Work
-3. 구매 및 가챠 멱등성 서비스
-4. 하우징 배치와 표면 아이템 적용
-5. 고양이 기억 API
-6. PostgreSQL 동시성 통합 테스트
+1. 구매 및 가챠 멱등성 서비스
+2. 하우징 배치와 표면 아이템 적용
+3. 고양이 기억 API
+4. PostgreSQL 동시성 통합 테스트
 
 ## 웹 작업 시작 프롬프트
 

@@ -260,13 +260,13 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 ## 7. 통합 완료 체크리스트
 
 - [ ] `USER_CATS`의 Python 모델명을 팀에서 확정했다.
-- [ ] 모든 Repository 메서드와 반환형이 이 문서와 일치한다.
-- [ ] Repository 구현체가 자체적으로 커밋하지 않는다.
+- [x] 모든 Repository 메서드와 반환형이 이 문서와 일치한다.
+- [x] Repository 구현체가 자체적으로 커밋하지 않는다.
 - [ ] 서비스 하나가 가챠 또는 구매 트랜잭션 전체를 소유한다.
-- [ ] 잠금이 필요한 Repository 메서드에 `for_update`가 명시돼 있다.
+- [x] 잠금이 필요한 Repository 메서드에 `for_update`가 명시돼 있다.
 - [ ] API 요청과 응답에는 UUID `public_id`만 사용한다.
 - [ ] 내부 정수 PK가 응답 스키마에서 제외돼 있다.
 - [x] 정규 JSON과 SHA-256 생성 규칙이 단일 함수로 구현돼 있다.
 - [ ] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
-- [ ] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
+- [x] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
 - [ ] PostgreSQL 통합 테스트에서 동시 멱등 요청과 자산 잠금을 검증한다.
