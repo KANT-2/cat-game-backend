@@ -62,3 +62,5 @@ def test_public_task_schema_never_contains_grading_answers():
     assert "correct_option" not in TaskRead.model_fields
     assert "test_cases" not in TaskRead.model_fields
     assert "options" in TaskRead.model_fields
+    assert "completed" in TaskRead.model_fields
+    assert "concept_name" in TaskRead.model_fields
