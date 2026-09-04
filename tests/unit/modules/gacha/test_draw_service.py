@@ -287,7 +287,7 @@ def test_draw_cats_rejects_same_request_id_with_different_draw_count() -> None:
             policy=policy,
             user_public_id=user.public_id,
             request_id=request_id,
-            draw_count=10,
+            draw_count=11,
         )
 
     assert user.balance == 800
@@ -352,7 +352,7 @@ def test_draw_cats_rejects_insufficient_balance_before_drawing() -> None:
     unit_of_work.commit.assert_not_called()
 
 
-@pytest.mark.parametrize("draw_count", [0, -1, 2, 11])
+@pytest.mark.parametrize("draw_count", [0, -1, 2, 10])
 def test_draw_cats_rejects_unsupported_draw_count(
     draw_count: int,
 ) -> None:
@@ -361,7 +361,7 @@ def test_draw_cats_rejects_unsupported_draw_count(
 
     with pytest.raises(
         InvalidQuantityError,
-        match="draw_count must be 1 or 10",
+        match="draw_count must be 1 or 11",
     ):
         draw_cats(
             unit_of_work=unit_of_work,
@@ -494,7 +494,7 @@ def test_draw_cats_rejects_wrong_number_of_policy_rewards() -> None:
             policy=policy,
             user_public_id=user.public_id,
             request_id=uuid.uuid4(),
-            draw_count=10,
+            draw_count=11,
         )
 
     assert user.balance == 1000
@@ -644,7 +644,7 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
         policy=policy,
         user_public_id=user.public_id,
         request_id=uuid.uuid4(),
-        draw_count=10,
+        draw_count=11,
     )
 
     asset = unit_of_work.assets.get_cat_asset(user.id, cat.id)
@@ -658,7 +658,7 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
     assert result["results"][0]["mileage_awarded"] == 0
     assert result["results"][1]["is_duplicate"] is True
     assert result["results"][1]["mileage_awarded"] == 25
-    assert result["draw_count"] == 10
+    assert result["draw_count"] == 11
     assert result["bonus_draw_count"] == 1
     assert len(result["results"]) == 11
     assert all(draw["is_duplicate"] is True for draw in result["results"][1:])

@@ -27,7 +27,12 @@ class SqlAlchemyUserRepository:
         return self._session.execute(statement).scalar_one_or_none()
 
     def get_for_update(self, user_id: int) -> User | None:
-        statement = select(User).where(User.id == user_id).with_for_update()
+        statement = (
+            select(User)
+            .where(User.id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         return self._session.execute(statement).scalar_one_or_none()
 
 

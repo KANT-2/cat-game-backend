@@ -32,16 +32,16 @@ def apply_surface_item(
         if item.category not in {"WALLPAPER", "FLOOR"}:
             raise InvalidItemCategoryError("item is not wallpaper or floor")
 
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
         asset = uow.assets.get_item_asset_for_update(
-            user.id,
+            locked_user.id,
             item.id,
         )
         if asset is None:
             raise ResourceNotFoundError("item asset not found")
-
-        locked_user = uow.users.get_for_update(user.id)
-        if locked_user is None:
-            raise ResourceNotFoundError("user not found")
 
         if item.category == "WALLPAPER":
             locked_user.wallpaper_item_id = item.id
@@ -76,22 +76,26 @@ def place_furniture(
         if item.category != "FURNITURE":
             raise InvalidItemCategoryError("item is not furniture")
 
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
         asset = uow.assets.get_item_asset_for_update(
-            user.id,
+            locked_user.id,
             item.id,
         )
         if asset is None:
             raise ResourceNotFoundError("item asset not found")
 
         placed_count = uow.placed_objects.count_for_update(
-            user.id,
+            locked_user.id,
             item.id,
         )
         if placed_count >= asset.quantity:
             raise PlacementLimitExceededError("placement exceeds owned quantity")
 
         placed_object = uow.placed_objects.add(
-            user.id,
+            locked_user.id,
             item.id,
             position_data.model_dump(mode="json"),
         )

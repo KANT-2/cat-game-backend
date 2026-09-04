@@ -117,7 +117,7 @@
 - 비용·보상 개수·중복 마일리지 같은 정책 결과를 변경 전에 검증한다.
 - 잔액, mileage, 자산과 실행 결과를 하나의 UoW에서 변경하고 서비스가 한 번만 commit한다.
 - 스키마 테스트 4개와 서비스 테스트 14개를 포함한 전체 테스트가 `77 passed, 11 skipped, 1 warning`으로 통과했다.
-- 중간 실패의 실제 rollback과 동시 가챠 요청은 최종 PostgreSQL 통합 검증에 남아 있다.
+- 중간 실패의 실제 rollback과 동시 가챠 요청은 최종 PostgreSQL 통합 검증에서 통과했다.
 
 ### 11. 하우징 가구 배치 서비스 — 단위 구현 완료
 
@@ -220,10 +220,10 @@
 - 구매·가챠 요청과 가구 좌표 요청은 알 수 없는 필드를 거부한다.
 - 브라우저 호출을 위해 CORS 허용 메서드에 `PUT`, `PATCH`, `DELETE`를 포함했다.
 - 가챠 비용·확률·중복 마일리지는 아직 확정되지 않았다. 따라서 기본 `get_gacha_policy()`는 `503 Service Unavailable`을 반환하며, 확정 정책을 주입한 환경과 테스트에서만 추첨을 실행한다.
-- 가챠 요청은 프런트의 별도 `1회 뽑기`, `10+1회 뽑기` 버튼에 맞춰 `draw_count`를 `1` 또는 `10`으로 제한한다.
-- `draw_count=10`은 10회 비용만 계산하고 보너스 1회를 더해 `bonus_draw_count=1`, 결과 11개를 반환한다. `draw_count=1`은 보너스 없이 결과 한 개다.
+- 가챠 요청은 프런트의 별도 `1회 뽑기`, `10+1회 뽑기` 버튼에 맞춰 `draw_count`를 `1` 또는 `11`로 제한한다.
+- `draw_count=11`은 10회 비용만 계산하고 `bonus_draw_count=1`, 결과 11개를 반환한다. `draw_count=1`은 보너스 없이 결과 한 개다.
 - 중복된 `test_router.py` 모듈명 때문에 전체 Pytest 수집 충돌이 발생해 기능별 테스트 파일을 `test_cats_router.py`, `test_shop_router.py`, `test_housing_router.py`, `test_gacha_router.py`로 구분했다.
-- 전체 검증 결과는 Ruff 통과, `206 passed, 13 skipped, 1 warning`이다. 13개 skip은 실제 PostgreSQL 검증 대상이며 경고는 기존 TestClient/httpx deprecation이다.
+- `draw_count=1/11` 계약과 최신 `origin/main`을 포함한 최종 전체 검증 결과는 Ruff 통과, `277 passed, 5 skipped, 1 warning`이다. 5개 skip은 전체 검사 당시 별도 SQL grader PostgreSQL이 실행 중이지 않아 생겼으며, 같은 테스트를 전용 환경에서 별도로 모두 통과시켰다. 경고는 기존 TestClient/httpx deprecation이다.
 - 인증 보조 API를 포함한 Frontend ↔ Backend 전체 요약표, 요청·응답 필드와 오류 상태는 `part3-integration-contract.md`에 기록했다.
 
 ### 19. 고양이 도감 API — 완료
@@ -237,18 +237,27 @@
 - 페이지네이션, 검색, 희귀도 필터와 이미지 URL은 현재 데이터·프런트 계약에 없어 임의로 추가하지 않았다.
 - 도감 Repository·서비스·라우터 대상 검증은 `61 passed, 1 warning`으로 통과했다.
 
-다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
+### 20. 최종 PostgreSQL 통합 검증 — 완료
 
-- 동일 요청 동시 재시도와 PostgreSQL 행 잠금
-- PostgreSQL에서 다른 사용자의 동일 `request_id` 사용
-- 동시 가구 배치 및 자산 행 잠금
-- 잔액, 마일리지, 자산, 실행 결과의 원자적 롤백
+- 빈 PostgreSQL 16 데이터베이스에서 전체 Alembic 마이그레이션의 downgrade와 `upgrade head`를 검증했다.
+- 현재 Alembic revision은 `8a91c3d4e5f6 (head)`이다.
+- 실제 PostgreSQL에서 구매 중간 실패 rollback, 동일 구매 요청의 동시 재시도, 서로 다른 구매·가챠 요청의 잔액 초과 방지를 검증했다.
+- 서로 다른 사용자의 동일 `request_id` 사용이 충돌로 처리되고 두 번째 사용자의 잔액과 자산이 변경되지 않는 것을 검증했다.
+- 구매·표면 적용의 공통 사용자 잠금 순서와 동시 가구 배치의 보유 수량 초과 방지를 검증했다.
+- 중복 고양이 마일리지 처리 후 실행 결과 저장이 실패하면 마일리지, 자산과 실행 기록이 모두 rollback되는 것을 검증했다.
+- 실제 HTTP 요청으로 구매 멱등성, 가챠 정책 미설정 `503`, 가구 배치·수정·해제, 벽지·바닥 적용, 고양이 도감·대화 컨텍스트·기억 추가·선택 삭제·전체 삭제를 검증했다.
+- HTTP 응답에는 공개 UUID만 포함되며 내부 정수 ID가 노출되지 않는 것을 검증했다.
+- Part 3 PostgreSQL 통합 테스트 결과는 `28 passed, 1 warning`이다.
+- 별도 SQL grader PostgreSQL 환경의 SQL sandbox 검증은 `5 passed`이다.
+- 최신 `origin/main`을 fast-forward로 반영한 뒤 전체 Ruff 검사가 통과했다.
+- 최신 `main` 통합 후 전체 회귀 검사 결과는 `277 passed, 5 skipped, 1 warning`이다. 5개 skip은 전체 검사 당시 별도 SQL grader 데이터베이스가 실행 중이지 않아 생겼으며, 같은 테스트를 전용 환경에서 별도로 모두 통과시켰다.
+- 남은 경고는 기존 FastAPI TestClient와 httpx 호환성 deprecation 경고다.
 
-## 권장 작업 순서
+## 남은 정책 작업
 
-1. 실제 PostgreSQL에서 마이그레이션, HTTP, rollback, 동시 요청과 행 잠금 검증
-2. 가챠 비용·확률·중복 마일리지 정책 확정 및 `GachaPolicy` 운영 주입
-3. 생성형 AI 공급자·프롬프트·요약·비용 정책 확정과 연동
+1. 가챠 비용·확률·중복 마일리지 정책 확정 및 운영 `GachaPolicy` 주입
+2. 생성형 AI 공급자·모델·프롬프트·요약·실패 처리·비용 정책 확정과 연동
+3. 일일 보상액, 배틀 정답 점수와 Part 2 일반 학습 보상·직접 문제 선택의 MVP 포함 여부 확정
 
 ## 프런트엔드 학습 연결 기반
 

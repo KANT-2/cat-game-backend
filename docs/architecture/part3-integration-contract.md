@@ -2,6 +2,8 @@
 
 이 문서는 Part 3의 가챠·구매 멱등성, 상점·하우징, 고양이 및 AI 기억 기능을 DB 구현과 분리해서 개발한 뒤 안전하게 통합하기 위한 계약을 정의한다.
 
+Part 2와 Part 3의 전체 endpoint를 한 번에 찾으려면 [통합 API 계약](../api/README.md)을 먼저 본다. 이 문서는 Part 3의 상세 트랜잭션과 업무 규칙을 설명한다.
+
 최종 ERD를 기준으로 하며, 이전 프로젝트의 모델과 스키마는 구현 기준으로 사용하지 않는다.
 
 ## 1. 공통 명명 규칙
@@ -247,8 +249,8 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 ### 가챠와 고양이
 
 - 가챠 비용, 확률과 중복 마일리지는 서비스에 하드코딩하지 않고 정책 객체로 주입한다.
-- 멱등 요청 payload에는 클라이언트가 결정한 `draw_count`만 포함하며 값은 `1` 또는 `10`만 허용한다.
-- `draw_count=10`은 10회 비용을 계산한 뒤 보너스 1회를 더해 정확히 11개 결과를 반환한다.
+- 멱등 요청 payload에는 클라이언트가 결정한 전체 결과 수 `draw_count`만 포함하며 값은 `1` 또는 `11`만 허용한다.
+- `draw_count=11`은 10회 비용을 계산하고 보너스 1회를 포함해 정확히 11개 결과를 반환한다.
 - `bonus_draw_count`는 서버가 결정하므로 요청과 요청 해시에는 포함하지 않는다.
 - 처음 획득한 고양이는 `ASSETS.quantity = 1`로 생성한다.
 - 이미 보유한 고양이는 새 자산 행을 만들거나 수량을 증가시키지 않는다.
@@ -309,7 +311,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 | 가구 배치 | `POST /api/v1/housing/placed-objects` | 아이템 UUID·좌표 | 생성된 배치 객체 |
 | 가구 위치 수정 | `PATCH /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID·새 좌표 | 수정된 배치 객체 |
 | 가구 배치 해제 | `DELETE /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID | 본문 없음 |
-| 고양이 가챠 | `POST /api/v1/gacha/draws` | 멱등 키·`draw_count` 1 또는 10 | 비용·보너스 횟수·잔액·마일리지·추첨 결과 |
+| 고양이 가챠 | `POST /api/v1/gacha/draws` | 멱등 키·`draw_count` 1 또는 11 | 비용·보너스 횟수·잔액·마일리지·추첨 결과 |
 
 공통 클라이언트 규칙은 다음과 같다.
 
@@ -555,7 +557,7 @@ Content-Type: application/json
 ```json
 {
   "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
-  "draw_count": 10
+  "draw_count": 11
 }
 ```
 
@@ -565,7 +567,7 @@ Content-Type: application/json
 {
   "execution_public_id": "3cded9b5-2655-471e-90c8-3a63a9c43018",
   "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
-  "draw_count": 10,
+  "draw_count": 11,
   "bonus_draw_count": 1,
   "balance_cost": 1000,
   "balance": 4200,
@@ -582,7 +584,7 @@ Content-Type: application/json
 }
 ```
 
-예시에는 결과 한 건만 표시했지만 `draw_count=10`의 실제 `results` 길이는 11이다. 10회 비용만 `calculate_balance_cost(draw_count=10)`으로 계산하고 추첨 정책에는 `draw_count=11`을 전달한다. 1회 요청은 `bonus_draw_count=0`과 결과 한 건을 반환한다. 위 숫자는 응답 형태 설명용 예시이며 실제 비용·확률·중복 마일리지 정책값이 아니다. 현재 기본 `get_gacha_policy()`는 정책 미확정 상태를 숨기지 않고 `503 Service Unavailable`을 반환한다. 테스트와 배포 환경은 확정된 `GachaPolicy`를 의존성으로 주입해야 한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, `1`·`10` 이외 추첨 수나 잘못된 본문은 `422`다.
+예시에는 결과 한 건만 표시했지만 `draw_count=11`의 실제 `results` 길이는 11이다. 이 중 `bonus_draw_count=1`이며 10회 비용만 `calculate_balance_cost(draw_count=10)`으로 계산하고 추첨 정책에는 `draw_count=11`을 전달한다. 1회 요청은 `bonus_draw_count=0`과 결과 한 건을 반환한다. 위 숫자는 응답 형태 설명용 예시이며 실제 비용·확률·중복 마일리지 정책값이 아니다. 현재 기본 `get_gacha_policy()`는 정책 미확정 상태를 숨기지 않고 `503 Service Unavailable`을 반환한다. 테스트와 배포 환경은 확정된 `GachaPolicy`를 의존성으로 주입해야 한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, `1`·`11` 이외 추첨 수나 잘못된 본문은 `422`다.
 
 ## 7. 통합 완료 체크리스트
 
