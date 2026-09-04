@@ -20,7 +20,15 @@ class PositionData(BaseModel):
 
 
 class PlacedObjectCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     item_public_id: uuid.UUID
+    position_data: PositionData
+
+
+class PlacedObjectUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     position_data: PositionData
 
 

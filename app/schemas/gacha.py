@@ -1,9 +1,11 @@
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GachaRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     request_id: uuid.UUID
     draw_count: int = Field(gt=0)
 

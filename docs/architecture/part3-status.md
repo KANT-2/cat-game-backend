@@ -190,7 +190,7 @@
 - 고양이 페르소나와 기억 목록의 공개 UUID DTO 직렬화
 - 보유 고양이별 기억 조회·누적·선택 삭제·전체 삭제, 소유권 차단과 시간순 정렬
 
-### 17. 고양이 페르소나와 대화 기억 서비스 — 단위 구현 완료
+### 17. 고양이 페르소나와 대화 기억 — FastAPI 연결 완료
 
 - 고양이의 고정 성격은 `CATS.persona`에서 읽으며 기억 삭제의 대상이 아니다.
 - `get_cat_conversation_context()`는 보유 고양이 자산 UUID로 이름, 페르소나와 누적 기억을 반환한다.
@@ -200,8 +200,29 @@
 - `delete_all_cat_memories()`는 지정한 고양이 자산의 기억 행만 일괄 삭제한다.
 - 모든 경로에서 인증 사용자의 소유권과 고양이 자산 여부를 검사하며, 다른 사용자의 자산은 찾을 수 없는 것으로 처리한다.
 - Repository는 조회·추가·삭제만 수행하고 서비스가 Unit of Work를 통해 commit한다.
-- 전체 단위 회귀 검사 결과는 `143 passed, 13 skipped, 1 warning`이며 Ruff와 `git diff --check`도 통과했다.
-- 실제 HTTP 엔드포인트와 예외 상태 코드 매핑은 FastAPI 라우터 단계에 남아 있다.
+- `GET /api/v1/cats/{cat_asset_public_id}/conversation-context`는 고양이 이름, 고정 페르소나와 누적 기억을 반환한다.
+- `POST /api/v1/cats/{cat_asset_public_id}/memories`는 새 기억을 누적하고 `201 Created`를 반환한다.
+- 선택 삭제와 전체 삭제는 각각 기억 공개 UUID 포함 경로와 고양이 자산의 memories 경로에서 빈 `204 No Content`를 반환한다.
+- 모든 경로는 `CurrentUser`와 공개 UUID만 사용하며 소유권·리소스 오류는 `404`, 공백 요약과 요청 검증 오류는 `422`로 변환한다.
+- `CatMemoryCreate`는 알 수 없는 필드를 거부하고 OpenAPI 응답 스키마는 내부 정수 ID를 포함하지 않는다.
+- 요청 헤더, 경로 변수, JSON 본문, 성공 응답과 오류 형식의 예시는 `part3-integration-contract.md`의 고양이 페르소나·기억 FastAPI 계약에 기록했다.
+- 브라우저 클라이언트가 기억 삭제를 호출할 수 있도록 CORS 허용 메서드에 `DELETE`를 추가했다.
+- 관련 API·서비스·스키마·CORS 테스트는 `44 passed`, 전체 회귀 검사는 `171 passed, 13 skipped, 1 warning`이다.
+- 전체 Ruff와 `git diff --check`도 통과했다. 남은 경고는 기존 TestClient/httpx deprecation 경고다.
+
+### 18. 나머지 Part 3 API — FastAPI 연결 완료
+
+- `POST /api/v1/shop/purchases`를 구매 서비스에 연결하고 성공 `201`, 리소스 `404`, 멱등 충돌·잔액 부족 `409`, 수량 검증 `422`를 적용했다.
+- `PUT /api/v1/housing/surfaces/{item_public_id}`를 벽지·바닥 적용 서비스에 연결하고 성공 `200`, 리소스 `404`, 카테고리 검증 `422`를 적용했다.
+- `POST /api/v1/housing/placed-objects`, `PATCH`·`DELETE /api/v1/housing/placed-objects/{placed_object_public_id}`를 배치·수정·해제 서비스에 연결했다. 생성은 `201`, 수정은 `200`, 삭제는 빈 `204`이며 리소스 `404`, 수량 초과 `409`, 입력·카테고리 오류 `422`를 사용한다.
+- `POST /api/v1/gacha/draws`를 가챠 서비스에 연결하고 리소스 `404`, 멱등 충돌·잔액 부족 `409`, 수량 검증 `422`를 적용했다.
+- 모든 새 API는 `CurrentUser`, 공개 UUID와 Unit of Work를 사용하고 응답 모델에 내부 정수 ID를 선언하지 않는다.
+- 구매·가챠 요청과 가구 좌표 요청은 알 수 없는 필드를 거부한다.
+- 브라우저 호출을 위해 CORS 허용 메서드에 `PUT`, `PATCH`, `DELETE`를 포함했다.
+- 가챠 비용·확률·중복 마일리지는 아직 확정되지 않았다. 따라서 기본 `get_gacha_policy()`는 `503 Service Unavailable`을 반환하며, 확정 정책을 주입한 환경과 테스트에서만 추첨을 실행한다.
+- 중복된 `test_router.py` 모듈명 때문에 전체 Pytest 수집 충돌이 발생해 기능별 테스트 파일을 `test_cats_router.py`, `test_shop_router.py`, `test_housing_router.py`, `test_gacha_router.py`로 구분했다.
+- 전체 검증 결과는 Ruff 통과, `206 passed, 13 skipped, 1 warning`이다. 13개 skip은 실제 PostgreSQL 검증 대상이며 경고는 기존 TestClient/httpx deprecation이다.
+- 인증 보조 API를 포함한 Frontend ↔ Backend 전체 요약표, 요청·응답 필드와 오류 상태는 `part3-integration-contract.md`에 기록했다.
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 
@@ -212,9 +233,9 @@
 
 ## 권장 작업 순서
 
-1. FastAPI 라우터와 예외 매핑
-2. 고양이 기억 조회·추가·선택 삭제·전체 삭제 API
-3. PostgreSQL 동시성 및 rollback 통합 테스트
+1. 실제 PostgreSQL에서 마이그레이션, HTTP, rollback, 동시 요청과 행 잠금 검증
+2. 가챠 비용·확률·중복 마일리지 정책 확정 및 `GachaPolicy` 운영 주입
+3. 생성형 AI 공급자·프롬프트·요약·비용 정책 확정과 연동
 
 ## 프런트엔드 학습 연결 기반
 
