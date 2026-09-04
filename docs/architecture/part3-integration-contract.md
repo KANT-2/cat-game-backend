@@ -286,6 +286,261 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 선택 삭제와 전체 삭제는 `CATS.persona`, `CATS` 행과 `ASSETS` 행을 삭제하거나 변경하지 않는다.
 - 다른 사용자의 고양이 자산 또는 기억 접근은 리소스 존재 여부를 숨기기 위해 `404 Not Found`로 처리한다.
 
+#### Frontend ↔ Backend 데이터 계약 빠른 참조
+
+이 표는 프런트엔드 연결에 필요한 인증 보조 API 2개와 Part 3 기능 API 10개를 한곳에 정리한다. 각 기능의 상세 JSON과 오류 계약은 바로 아래 절을 따른다.
+
+| 기능 | 메서드·경로 | Frontend → Backend | Backend → Frontend |
+| --- | --- | --- | --- |
+| 개발 사용자 준비 | `POST /api/v1/session/development` | 본문 없음 | 사용자 공개 프로필 |
+| 현재 사용자 확인 | `GET /api/v1/session/me` | 인증 헤더 | 사용자 공개 프로필 |
+| 고양이 대화 컨텍스트 | `GET /api/v1/cats/{cat_asset_public_id}/conversation-context` | 고양이 보유 자산 UUID | 고양이·persona·기억 목록 |
+| 기억 추가 | `POST /api/v1/cats/{cat_asset_public_id}/memories` | `context_summary` | 생성된 기억 |
+| 기억 선택 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | 고양이 자산·기억 UUID | 본문 없음 |
+| 기억 전체 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories` | 고양이 자산 UUID | 본문 없음 |
+| 아이템 구매 | `POST /api/v1/shop/purchases` | 멱등 키·아이템 UUID·수량 | 구매 결과·보유 수량·잔액 |
+| 벽지·바닥 적용 | `PUT /api/v1/housing/surfaces/{item_public_id}` | 아이템 UUID | 적용된 표면 종류 |
+| 가구 배치 | `POST /api/v1/housing/placed-objects` | 아이템 UUID·좌표 | 생성된 배치 객체 |
+| 가구 위치 수정 | `PATCH /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID·새 좌표 | 수정된 배치 객체 |
+| 가구 배치 해제 | `DELETE /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID | 본문 없음 |
+| 고양이 가챠 | `POST /api/v1/gacha/draws` | 멱등 키·추첨 횟수 | 비용·잔액·마일리지·추첨 결과 |
+
+공통 클라이언트 규칙은 다음과 같다.
+
+- 기본 URL prefix는 `/api/v1`이다.
+- JSON 본문이 있는 요청은 `Content-Type: application/json`을 사용한다.
+- 로컬·테스트 환경의 보호 API에는 `X-User-Public-ID: <사용자 UUID>`를 보낸다.
+- 외부 식별자는 `public_id`, `*_public_id` 형식의 UUID만 사용하고 내부 INTEGER ID는 보내거나 받지 않는다.
+- 가격, 잔액 차감액, 가챠 확률과 마일리지는 서버 계산값이므로 요청에 넣지 않는다.
+- `204 No Content` 응답에는 본문이 없으므로 JSON 파싱을 시도하지 않는다.
+- 구매와 가챠의 `request_id`는 동작마다 새 UUID를 생성하되, 같은 동작의 네트워크 재시도에는 같은 UUID를 재사용한다.
+
+##### 인증 보조 API
+
+로컬·테스트 환경에서 프런트엔드는 먼저 다음 요청으로 개발 사용자를 생성하거나 재사용할 수 있다.
+
+```http
+POST /api/v1/session/development
+```
+
+`200 OK` 응답:
+
+```json
+{
+  "public_id": "8a4a9c2f-645f-4b94-9b5d-16bc7d563f42",
+  "email": "player@local.nyang",
+  "username": "{ 냥 } 플레이어",
+  "role": "STUDENT",
+  "balance": 1100000,
+  "mileage": 0,
+  "house_level": 1,
+  "created_at": "2026-09-04T12:00:00Z"
+}
+```
+
+프런트엔드는 받은 `public_id`를 이후 보호 API의 `X-User-Public-ID` 값으로 사용한다. 현재 사용자 확인은 다음 요청을 사용하며 같은 공개 사용자 DTO를 반환한다.
+
+```http
+GET /api/v1/session/me
+X-User-Public-ID: 8a4a9c2f-645f-4b94-9b5d-16bc7d563f42
+```
+
+인증 헤더가 없거나 사용자를 찾지 못하면 `401 Unauthorized`다. 운영 환경에서는 개발 세션 endpoint가 `404`이며 임시 UUID 헤더 대신 호스트 인증 공급자가 `CurrentUser`를 제공해야 한다.
+
+#### 고양이 페르소나·기억 FastAPI 계약
+
+모든 경로는 로컬·테스트 환경에서 다음 인증 헤더를 요구한다.
+
+```http
+X-User-Public-ID: 8a4a9c2f-645f-4b94-9b5d-16bc7d563f42
+```
+
+운영 환경에서는 호스트 인증 공급자가 `CurrentUser`를 제공하며 임시 UUID 헤더를 사용하지 않는다.
+
+##### 페르소나와 기억 전체 조회
+
+```http
+GET /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/conversation-context
+```
+
+`200 OK` 응답:
+
+```json
+{
+  "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+  "cat_public_id": "063115f5-749f-43ff-9016-eb9dc4203d30",
+  "name": "나비",
+  "persona": "차분하고 다정한 고양이",
+  "memories": [
+    {
+      "public_id": "5ad14e95-d2da-4628-9632-599390490abe",
+      "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+      "context_summary": "사용자는 반복문을 공부했다.",
+      "created_at": "2026-09-04T12:00:00Z"
+    }
+  ]
+}
+```
+
+기억이 없으면 `memories`는 빈 배열이다. `persona`는 `CATS`의 고정 데이터이며 기억 삭제로 변경되지 않는다.
+
+##### 기억 추가
+
+```http
+POST /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/memories
+Content-Type: application/json
+```
+
+요청 본문:
+
+```json
+{
+  "context_summary": "사용자는 함수 호출을 이해했다."
+}
+```
+
+`201 Created` 응답:
+
+```json
+{
+  "public_id": "a816c517-cc27-418b-b32b-277b40d37af2",
+  "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+  "context_summary": "사용자는 함수 호출을 이해했다.",
+  "created_at": "2026-09-04T13:00:00Z"
+}
+```
+
+`context_summary`가 없거나 문자열이 아니거나 공백뿐이면 `422`다. 요청 스키마는 알 수 없는 필드를 거부한다.
+
+##### 기억 선택 삭제
+
+```http
+DELETE /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/memories/5ad14e95-d2da-4628-9632-599390490abe
+```
+
+성공 시 `204 No Content`이며 응답 본문은 없다. 선택한 기억이 요청한 고양이 자산의 기억이 아니거나 접근 권한이 없으면 `404`다.
+
+##### 기억 전체 삭제
+
+```http
+DELETE /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/memories
+```
+
+성공 시 `204 No Content`이며 응답 본문은 없다. 지정한 고양이 자산의 `CAT_MEMORIES`만 삭제하고 `CATS.persona`, 고양이 마스터와 보유 자산은 유지한다.
+
+##### 공통 오류 응답
+
+인증 및 도메인 오류는 다음 형태를 사용한다.
+
+```json
+{
+  "detail": "cat asset not found"
+}
+```
+
+| 상태 | 의미 |
+| --- | --- |
+| `401 Unauthorized` | 인증 헤더가 없거나 개발 사용자를 찾을 수 없음 |
+| `404 Not Found` | 고양이 자산·기억이 없거나 인증 사용자가 소유하지 않음 |
+| `422 Unprocessable Content` | UUID, 요청 본문 또는 기억 요약이 유효하지 않음 |
+
+FastAPI/Pydantic의 경로·본문 검증 `422`는 `detail` 배열을 사용하고, 서비스의 공백 요약 `422`는 안전한 도메인 메시지를 `detail` 문자열로 반환한다.
+
+#### 나머지 Part 3 FastAPI 계약
+
+다음 경로도 고양이 API와 동일한 `CurrentUser` 인증을 요구하며 API 입력과 출력에는 공개 UUID만 사용한다.
+
+##### 아이템 구매
+
+```http
+POST /api/v1/shop/purchases
+Content-Type: application/json
+```
+
+```json
+{
+  "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
+  "item_public_id": "ee50a4a7-f05d-44b2-ac84-9b0276eeedfe",
+  "quantity": 2
+}
+```
+
+성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다.
+
+##### 벽지·바닥 적용
+
+```http
+PUT /api/v1/housing/surfaces/ee50a4a7-f05d-44b2-ac84-9b0276eeedfe
+```
+
+요청 본문은 없다. 성공 시 `200 OK`로 다음 공개 응답을 반환한다.
+
+```json
+{
+  "user_public_id": "8a4a9c2f-645f-4b94-9b5d-16bc7d563f42",
+  "item_public_id": "ee50a4a7-f05d-44b2-ac84-9b0276eeedfe",
+  "category": "WALLPAPER"
+}
+```
+
+사용자·아이템·보유 자산 부재는 `404`, `WALLPAPER` 또는 `FLOOR`가 아닌 카테고리는 `422`다.
+
+##### 가구 배치·수정·해제
+
+배치는 다음 요청으로 생성한다.
+
+```http
+POST /api/v1/housing/placed-objects
+Content-Type: application/json
+```
+
+```json
+{
+  "item_public_id": "ee50a4a7-f05d-44b2-ac84-9b0276eeedfe",
+  "position_data": {"x": 1.0, "y": 2.0, "z": 0.0}
+}
+```
+
+성공 시 `201 Created`로 `public_id`, `item_public_id`, `position_data`를 반환한다. 배치 수정은 `PATCH /api/v1/housing/placed-objects/{placed_object_public_id}`에 `position_data`만 보내고 같은 응답을 `200 OK`로 받는다. 해제는 같은 경로에 `DELETE`를 보내며 성공 시 본문 없는 `204 No Content`다. 리소스·소유권 오류는 `404`, 가구가 아닌 카테고리나 잘못된 좌표는 `422`, 보유 수량을 초과한 배치는 `409`다. 좌표 객체는 `x`, `y`, `z`를 모두 요구하고 알 수 없는 필드와 무한값을 거부한다.
+
+##### 고양이 가챠
+
+```http
+POST /api/v1/gacha/draws
+Content-Type: application/json
+```
+
+```json
+{
+  "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
+  "draw_count": 10
+}
+```
+
+정책이 주입된 환경에서는 성공 시 `200 OK`로 다음 형태를 반환한다.
+
+```json
+{
+  "execution_public_id": "3cded9b5-2655-471e-90c8-3a63a9c43018",
+  "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
+  "draw_count": 10,
+  "balance_cost": 1000,
+  "balance": 4200,
+  "mileage": 30,
+  "results": [
+    {
+      "cat_public_id": "063115f5-749f-43ff-9016-eb9dc4203d30",
+      "name": "나비",
+      "rarity": "RARE",
+      "is_duplicate": false,
+      "mileage_awarded": 0
+    }
+  ]
+}
+```
+
+위 숫자는 응답 형태 설명용 예시이며 실제 비용·확률·중복 마일리지 정책값이 아니다. 현재 기본 `get_gacha_policy()`는 정책 미확정 상태를 숨기지 않고 `503 Service Unavailable`을 반환한다. 테스트와 배포 환경은 확정된 `GachaPolicy`를 의존성으로 주입해야 한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 추첨 수나 잘못된 본문은 `422`다.
+
 ## 7. 통합 완료 체크리스트
 
 - [x] 보유 자산 테이블과 Python 모델명을 `assets`와 `Asset`으로 확정했다.
@@ -293,10 +548,10 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - [x] Repository 구현체가 자체적으로 커밋하지 않는다.
 - [x] 서비스 하나가 가챠 또는 구매 트랜잭션 전체를 소유한다.
 - [x] 잠금이 필요한 Repository 메서드에 `for_update`가 명시돼 있다.
-- [ ] API 요청과 응답에는 UUID `public_id`만 사용한다.
-- [ ] 내부 정수 PK가 응답 스키마에서 제외돼 있다.
+- [x] API 요청과 응답에는 UUID `public_id`만 사용한다.
+- [x] 내부 정수 PK가 응답 스키마에서 제외돼 있다.
 - [x] 정규 JSON과 SHA-256 생성 규칙이 단일 함수로 구현돼 있다.
-- [ ] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
+- [x] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
 - [x] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
 - [ ] PostgreSQL 통합 테스트에서 동시 멱등 요청과 자산 잠금을 검증한다.
 

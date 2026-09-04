@@ -50,6 +50,20 @@ def test_cors_preflight_accepts_configured_pwa_origin() -> None:
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
+def test_cors_preflight_allows_cat_memory_delete() -> None:
+    response = TestClient(app).options(
+        f"/api/v1/cats/{uuid.uuid4()}/memories",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "DELETE",
+            "Access-Control-Request-Headers": "X-User-Public-ID",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "DELETE" in response.headers["access-control-allow-methods"]
+
+
 def test_local_header_auth_resolves_public_user(monkeypatch) -> None:
     user = user_fixture()
     monkeypatch.setattr(settings, "app_env", "local")
@@ -93,3 +107,33 @@ def test_development_session_is_hidden_in_production(monkeypatch) -> None:
         development_session(ExistingUserSession(user_fixture()))
 
     assert error.value.status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        (
+            "PUT",
+            f"/api/v1/housing/surfaces/{uuid.uuid4()}",
+        ),
+        (
+            "PATCH",
+            (f"/api/v1/housing/placed-objects/{uuid.uuid4()}"),
+        ),
+    ],
+)
+def test_cors_preflight_allows_housing_changes(
+    method: str,
+    path: str,
+) -> None:
+    response = TestClient(app).options(
+        path,
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": ("X-User-Public-ID"),
+        },
+    )
+
+    assert response.status_code == 200
+    assert method in response.headers["access-control-allow-methods"]
