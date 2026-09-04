@@ -12,6 +12,7 @@ from app.models.concept import Concept
 from app.models.task import Task
 
 SEED_PREFIX = "[SAMPLE:SQL:"
+CAT_HELPERS = ("치즈", "나비", "보리", "코코", "모카")
 SEED_SQL = """
 CREATE TABLE students (id int, name text, team text, score int, active boolean);
 INSERT INTO students VALUES
@@ -32,17 +33,22 @@ def query_case(reference_query: str) -> str:
 
 
 def task(level: str, number: int, concept: str, title: str, prompt: str, query: str) -> dict:
+    cat = CAT_HELPERS[(number - 1) % len(CAT_HELPERS)]
     return {
-        "title": f"{SEED_PREFIX}{level}:{number:03d}] {title}",
+        "title": f"{SEED_PREFIX}{level}:{number:03d}] 🐾 {cat}의 데이터 부탁: {title}",
         "concept": f"SQL:{concept}",
         "difficulty": level,
         "type": "CODE",
-        "description": prompt,
-        "template_code": "-- SELECT 문을 작성하세요.\n",
+        "description": (
+            f"[고양이 이야기] {cat}가 생선 가게 데이터 앞에서 꼬리를 동동 구르고 있어요. "
+            "간식 장부를 무사히 정리할 수 있도록 도와주세요, 야옹~\n\n"
+            f"[도와주세요!] {prompt}"
+        ),
+        "template_code": "-- 냥이의 부탁을 해결할 SQL을 작성해 주세요. 야옹!\n",
         "test_cases": query_case(query),
         "options": None,
         "correct_option": None,
-        "hint_text": "결과의 행 순서까지 문제의 요구와 일치시켜야 합니다.",
+        "hint_text": "고양이 힌트 🐾 결과의 행 순서까지 문제의 요구와 일치시켜야 해요.",
     }
 
 
