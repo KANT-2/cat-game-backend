@@ -18,11 +18,11 @@ from app.modules.learning.proficiency import update_proficiency
 SEED_PREFIX = "[SAMPLE:PYTHON:"
 BENCHMARK_MARKERS = ("[BENCHMARK]", "BENCHMARK:", "LOAD TEST:", "PERF TEST:")
 VARIANTS = (
-    ("기본기", "먼저 작은 예제로 정확한 기본 동작을 확인합니다."),
-    ("데이터 정리", "학습 기록을 정리하는 상황에 적용합니다."),
-    ("게임 점수", "게임 점수 데이터를 처리하는 상황에 적용합니다."),
-    ("상점 통계", "상점 주문 정보를 계산하는 상황에 적용합니다."),
-    ("경계값", "조건의 경계와 예외적인 값을 놓치지 않도록 풉니다."),
+    ("치즈의 첫 심부름", "아기 고양이 치즈가 처음 맡은 심부름이에요. 차근차근 도와주세요, 야옹!"),
+    ("나비의 기록 정리", "꼼꼼한 나비가 흩어진 학습 기록을 정리하고 있어요. 발바닥 도장을 받을 수 있게 도와주세요."),
+    ("보리의 놀이 점수", "보리가 신나게 놀고 받은 점수를 세다가 수염이 꼬였어요. 정확한 답을 알려주세요!"),
+    ("코코의 생선 가게", "코코가 생선 가게 장부를 정리하고 있어요. 간식 시간이 늦지 않도록 도와주세요."),
+    ("모카의 수상한 상자", "호기심 많은 모카가 상자 속 경계값을 발견했어요. 빠뜨리는 값 없이 확인해 주세요, 야옹~"),
 )
 
 PYTHON_CONCEPTS = {
@@ -73,14 +73,14 @@ class Spec:
 BRONZE = [
     Spec("basics", "두 수의 합", "두 정수 a, b를 읽고 합을 출력하세요.", "+ 연산자를 사용하세요.", "sum"),
     Spec("strings", "문자열 길이", "문자열 한 줄을 읽고 글자 수를 출력하세요.", "len을 사용하세요.", "length"),
-    Spec("conditionals", "짝수 판별", "정수 하나를 읽고 짝수면 YES, 아니면 NO를 출력하세요.", "% 2를 확인하세요.", "even"),
+    Spec("conditionals", "짝수 판별", "정수 하나를 읽고 짝수면 야옹~, 아니면 갸우뚱...을 출력하세요.", "% 2를 확인하세요.", "even"),
     Spec("loops", "1부터 N까지", "N을 읽고 1부터 N까지의 합을 출력하세요.", "range 또는 등차수열을 쓰세요.", "range_sum"),
     Spec("collections", "리스트 최댓값", "공백으로 구분된 정수 목록의 최댓값을 출력하세요.", "max를 사용할 수 있습니다.", "max"),
     Spec("basics", "좌표 거리", "x와 y를 읽어 원점과의 맨해튼 거리를 출력하세요.", "좌표를 튜플로 묶어도 됩니다.", "manhattan"),
     Spec("collections", "중복 제거 개수", "공백으로 구분된 값에서 서로 다른 값의 개수를 출력하세요.", "set을 사용하세요.", "unique"),
     Spec("collections", "단어 빈도", "공백으로 구분된 단어 중 첫 단어가 나온 횟수를 출력하세요.", "dict로 빈도를 세어보세요.", "frequency"),
     Spec("basics", "섭씨 정수 변환", "실수 문자열 하나를 읽고 소수점을 버린 정수를 출력하세요.", "float 다음 int를 적용하세요.", "truncate"),
-    Spec("conditionals", "범위 안인지 확인", "정수 n을 읽고 1 이상 100 이하면 YES를 출력하세요.", "비교 연산을 연결할 수 있습니다.", "range_check"),
+    Spec("conditionals", "범위 안인지 확인", "정수 n을 읽고 1 이상 100 이하면 야옹~, 아니면 상자 밖!을 출력하세요.", "비교 연산을 연결할 수 있습니다.", "range_check"),
 ]
 
 SILVER = [
@@ -113,11 +113,11 @@ GOLD = [
 def cases(operation: str, variant: int) -> list[dict[str, str]]:
     data = {
         "sum": [(f"{variant} {variant + 2}\n", f"{variant * 2 + 2}\n")],
-        "length": [("codex\n", "5\n")], "even": [(f"{variant + 2}\n", "YES\n" if (variant + 2) % 2 == 0 else "NO\n")],
+        "length": [("야옹~\n", "3\n")], "even": [(f"{variant + 2}\n", "야옹~\n" if (variant + 2) % 2 == 0 else "갸우뚱...\n")],
         "range_sum": [(f"{variant + 3}\n", f"{sum(range(1, variant + 4))}\n")],
         "max": [(f"{variant} 9 -2 4\n", "9\n")], "manhattan": [(f"-{variant} {variant + 1}\n", f"{variant * 2 + 1}\n")],
         "unique": [("a b a c b\n", "3\n")], "frequency": [("cat dog cat bird cat\n", "3\n")],
-        "truncate": [(f"{variant}.75\n", f"{variant}\n")], "range_check": [(f"{variant * 20}\n", "YES\n" if variant * 20 <= 100 else "NO\n")],
+        "truncate": [(f"{variant}.75\n", f"{variant}\n")], "range_check": [(f"{variant * 20}\n", "야옹~\n" if variant * 20 <= 100 else "상자 밖!\n")],
         "even_square_sum": [("1 2 3 4\n", "20\n")], "word_count": [("Hello Python World\n", "3\n")],
         "second_largest": [("4 9 9 2 7\n", "7\n")], "mode_char": [("banana\n", "a\n")],
         "divisor_count": [("12\n", "6\n")], "average": [("2 4 6 8\n", "5.00\n")],
@@ -147,28 +147,28 @@ def build_tasks() -> list[dict]:
                     "D": "이 문제는 Python으로 표현할 수 없습니다.",
                 } if is_choice else None)
                 prompt = (
-                    f"[학습 목표] {spec.title}\n\n[상황] {variant_context}\n\n"
-                    "[문제] 가장 올바른 설명을 고르세요. 오답은 실행 환경과 입력 조건을 "
+                    f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
+                    "[도와주세요!] 가장 올바른 설명을 골라 주세요. 오답은 실행 환경과 입력 조건을 "
                     "임의로 가정한 설명입니다."
                     if is_choice else
-                    f"[학습 목표] {spec.title}\n\n[상황] {variant_context}\n\n"
-                    f"[문제] {spec.prompt}\n\n[제약] 표준 입력만 읽고 표준 출력에 정답만 "
+                    f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
+                    f"[도와주세요!] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "
                     "출력하세요. 입력 형식과 줄바꿈을 정확히 지켜야 합니다."
                 )
                 rows.append({
-                    "title": f"{SEED_PREFIX}{difficulty}:{local_number:03d}] {spec.title} - {variant_title}",
+                    "title": f"{SEED_PREFIX}{difficulty}:{local_number:03d}] 🐾 {variant_title}: {spec.title}",
                     "concept": f"PYTHON:{spec.concept}", "difficulty": difficulty,
                     "type": "MULTIPLE_CHOICE" if is_choice else "CODE", "description": prompt,
                     "template_code": "" if is_choice else (
                         "def solve() -> None:\n"
-                        "    # 입력을 읽고 정답을 출력하세요.\n"
+                        "    # 냥이의 입력을 읽고 정답을 출력해 주세요. 야옹!\n"
                         "    pass\n\n"
                         "if __name__ == '__main__':\n"
                         "    solve()\n"
                     ),
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
-                    "hint_text": spec.hint,
+                    "hint_text": f"고양이 힌트 🐾 {spec.hint}",
                 })
     assert len(rows) == 150
     assert {d: sum(row["difficulty"] == d for row in rows) for d in ("BRONZE", "SILVER", "GOLD")} == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}
