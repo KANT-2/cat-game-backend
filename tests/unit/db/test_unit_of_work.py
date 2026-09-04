@@ -41,6 +41,7 @@ def test_unit_of_work_opens_one_session_for_all_repositories() -> None:
         assert isinstance(repository, repository_type)
         assert repository._session is session
 
+
 def test_unit_of_work_commit_delegates_to_session() -> None:
     session = Mock(spec=Session)
     unit_of_work = SqlAlchemyUnitOfWork(Mock(return_value=session))
@@ -70,6 +71,7 @@ def test_unit_of_work_exit_rolls_back_and_closes_session() -> None:
 
     session.rollback.assert_called_once_with()
     session.close.assert_called_once_with()
+
 
 def test_unit_of_work_rolls_back_and_closes_when_exception_occurs() -> None:
     session = Mock(spec=Session)

@@ -11,6 +11,7 @@ from app.core.exceptions import (
 from app.core.unit_of_work import UnitOfWork
 from app.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.modules.cats import service as cat_service
+from app.schemas.cat_collection import CatCollectionRead
 from app.schemas.cat_conversation import CatConversationContextRead
 from app.schemas.cat_memory import CatMemoryCreate, CatMemoryRead
 
@@ -25,6 +26,26 @@ CatUnitOfWork = Annotated[
     UnitOfWork,
     Depends(get_cat_unit_of_work),
 ]
+
+
+@router.get(
+    "/collection",
+    response_model=CatCollectionRead,
+)
+def read_cat_collection(
+    current_user: CurrentUser,
+    unit_of_work: CatUnitOfWork,
+) -> CatCollectionRead:
+    try:
+        return cat_service.get_cat_collection(
+            unit_of_work=unit_of_work,
+            user_public_id=current_user.public_id,
+        )
+    except ResourceNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(

@@ -10,20 +10,23 @@ from app.schemas.gacha import (
 )
 
 
-def test_gacha_request_accepts_positive_draw_count() -> None:
+@pytest.mark.parametrize("draw_count", [1, 10])
+def test_gacha_request_accepts_supported_draw_count(
+    draw_count: int,
+) -> None:
     request_id = uuid.uuid4()
 
     request = GachaRequest(
         request_id=request_id,
-        draw_count=10,
+        draw_count=draw_count,
     )
 
     assert request.request_id == request_id
-    assert request.draw_count == 10
+    assert request.draw_count == draw_count
 
 
-@pytest.mark.parametrize("draw_count", [0, -1])
-def test_gacha_request_rejects_nonpositive_draw_count(
+@pytest.mark.parametrize("draw_count", [0, -1, 2, 11])
+def test_gacha_request_rejects_unsupported_draw_count(
     draw_count: int,
 ) -> None:
     with pytest.raises(ValidationError):
@@ -42,6 +45,7 @@ def test_gacha_response_exposes_only_public_ids() -> None:
         execution_public_id=execution_public_id,
         request_id=request_id,
         draw_count=1,
+        bonus_draw_count=0,
         balance_cost=100,
         balance=900,
         mileage=20,

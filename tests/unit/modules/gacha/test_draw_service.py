@@ -78,6 +78,7 @@ def test_draw_cats_grants_new_cat_in_one_transaction() -> None:
         "execution_public_id": str(execution.public_id),
         "request_id": str(request_id),
         "draw_count": 1,
+        "bonus_draw_count": 0,
         "balance_cost": 200,
         "balance": 800,
         "mileage": 10,
@@ -98,6 +99,7 @@ def test_draw_cats_grants_new_cat_in_one_transaction() -> None:
     policy.calculate_balance_cost.assert_called_once_with(draw_count=1)
     policy.draw.assert_called_once_with(draw_count=1)
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_draw_cats_converts_duplicate_cat_to_mileage() -> None:
     user = User(
@@ -167,6 +169,7 @@ def test_draw_cats_converts_duplicate_cat_to_mileage() -> None:
     ]
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_draw_cats_reuses_completed_result_without_drawing_twice() -> None:
     user = User(
         id=1,
@@ -229,6 +232,7 @@ def test_draw_cats_reuses_completed_result_without_drawing_twice() -> None:
     policy.calculate_balance_cost.assert_called_once_with(draw_count=1)
     policy.draw.assert_called_once_with(draw_count=1)
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_draw_cats_rejects_same_request_id_with_different_draw_count() -> None:
     user = User(
@@ -293,6 +297,7 @@ def test_draw_cats_rejects_same_request_id_with_different_draw_count() -> None:
     policy.draw.assert_called_once_with(draw_count=1)
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_draw_cats_rejects_insufficient_balance_before_drawing() -> None:
     user = User(
         id=1,
@@ -346,8 +351,9 @@ def test_draw_cats_rejects_insufficient_balance_before_drawing() -> None:
     policy.draw.assert_not_called()
     unit_of_work.commit.assert_not_called()
 
-@pytest.mark.parametrize("draw_count", [0, -1])
-def test_draw_cats_rejects_nonpositive_draw_count(
+
+@pytest.mark.parametrize("draw_count", [0, -1, 2, 11])
+def test_draw_cats_rejects_unsupported_draw_count(
     draw_count: int,
 ) -> None:
     policy = MagicMock(spec=GachaPolicy)
@@ -355,7 +361,7 @@ def test_draw_cats_rejects_nonpositive_draw_count(
 
     with pytest.raises(
         InvalidQuantityError,
-        match="draw_count must be positive",
+        match="draw_count must be 1 or 10",
     ):
         draw_cats(
             unit_of_work=unit_of_work,
@@ -368,6 +374,7 @@ def test_draw_cats_rejects_nonpositive_draw_count(
     unit_of_work.__enter__.assert_not_called()
     policy.calculate_balance_cost.assert_not_called()
     policy.draw.assert_not_called()
+
 
 def test_draw_cats_rejects_same_request_id_from_different_user() -> None:
     first_user = User(
@@ -442,6 +449,7 @@ def test_draw_cats_rejects_same_request_id_from_different_user() -> None:
     policy.draw.assert_called_once_with(draw_count=1)
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_draw_cats_rejects_wrong_number_of_policy_rewards() -> None:
     user = User(
         id=1,
@@ -486,13 +494,14 @@ def test_draw_cats_rejects_wrong_number_of_policy_rewards() -> None:
             policy=policy,
             user_public_id=user.public_id,
             request_id=uuid.uuid4(),
-            draw_count=2,
+            draw_count=10,
         )
 
     assert user.balance == 1000
     assert user.mileage == 0
     assert unit_of_work.assets.assets == []
     unit_of_work.commit.assert_not_called()
+
 
 def test_draw_cats_rejects_negative_policy_cost() -> None:
     user = User(
@@ -530,6 +539,7 @@ def test_draw_cats_rejects_negative_policy_cost() -> None:
     assert user.mileage == 0
     policy.draw.assert_not_called()
     unit_of_work.commit.assert_not_called()
+
 
 def test_draw_cats_rejects_negative_duplicate_mileage() -> None:
     user = User(
@@ -592,6 +602,7 @@ def test_draw_cats_rejects_negative_duplicate_mileage() -> None:
     assert len(unit_of_work.assets.assets) == 1
     unit_of_work.commit.assert_not_called()
 
+
 def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
     user = User(
         id=1,
@@ -599,7 +610,7 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
         email="multi-draw@example.com",
         username="multi-draw-user",
         role="STUDENT",
-        balance=1000,
+        balance=3000,
         mileage=10,
         house_level=1,
     )
@@ -612,16 +623,13 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
     )
 
     policy = MagicMock(spec=GachaPolicy)
-    policy.calculate_balance_cost.return_value = 400
+    policy.calculate_balance_cost.return_value = 2000
     policy.draw.return_value = [
         GachaReward(
             cat_public_id=cat.public_id,
             duplicate_mileage=25,
-        ),
-        GachaReward(
-            cat_public_id=cat.public_id,
-            duplicate_mileage=25,
-        ),
+        )
+        for _ in range(11)
     ]
 
     unit_of_work = MagicMock()
@@ -636,13 +644,13 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
         policy=policy,
         user_public_id=user.public_id,
         request_id=uuid.uuid4(),
-        draw_count=2,
+        draw_count=10,
     )
 
     asset = unit_of_work.assets.get_cat_asset(user.id, cat.id)
 
-    assert user.balance == 600
-    assert user.mileage == 35
+    assert user.balance == 1000
+    assert user.mileage == 260
     assert asset is not None
     assert asset.quantity == 1
     assert len(unit_of_work.assets.assets) == 1
@@ -650,7 +658,14 @@ def test_draw_cats_handles_duplicate_within_same_multi_draw() -> None:
     assert result["results"][0]["mileage_awarded"] == 0
     assert result["results"][1]["is_duplicate"] is True
     assert result["results"][1]["mileage_awarded"] == 25
+    assert result["draw_count"] == 10
+    assert result["bonus_draw_count"] == 1
+    assert len(result["results"]) == 11
+    assert all(draw["is_duplicate"] is True for draw in result["results"][1:])
+    policy.calculate_balance_cost.assert_called_once_with(draw_count=10)
+    policy.draw.assert_called_once_with(draw_count=11)
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_draw_cats_rejects_missing_user() -> None:
     policy = MagicMock(spec=GachaPolicy)

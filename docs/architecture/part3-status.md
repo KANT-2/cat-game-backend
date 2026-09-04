@@ -220,9 +220,22 @@
 - 구매·가챠 요청과 가구 좌표 요청은 알 수 없는 필드를 거부한다.
 - 브라우저 호출을 위해 CORS 허용 메서드에 `PUT`, `PATCH`, `DELETE`를 포함했다.
 - 가챠 비용·확률·중복 마일리지는 아직 확정되지 않았다. 따라서 기본 `get_gacha_policy()`는 `503 Service Unavailable`을 반환하며, 확정 정책을 주입한 환경과 테스트에서만 추첨을 실행한다.
+- 가챠 요청은 프런트의 별도 `1회 뽑기`, `10+1회 뽑기` 버튼에 맞춰 `draw_count`를 `1` 또는 `10`으로 제한한다.
+- `draw_count=10`은 10회 비용만 계산하고 보너스 1회를 더해 `bonus_draw_count=1`, 결과 11개를 반환한다. `draw_count=1`은 보너스 없이 결과 한 개다.
 - 중복된 `test_router.py` 모듈명 때문에 전체 Pytest 수집 충돌이 발생해 기능별 테스트 파일을 `test_cats_router.py`, `test_shop_router.py`, `test_housing_router.py`, `test_gacha_router.py`로 구분했다.
 - 전체 검증 결과는 Ruff 통과, `206 passed, 13 skipped, 1 warning`이다. 13개 skip은 실제 PostgreSQL 검증 대상이며 경고는 기존 TestClient/httpx deprecation이다.
 - 인증 보조 API를 포함한 Frontend ↔ Backend 전체 요약표, 요청·응답 필드와 오류 상태는 `part3-integration-contract.md`에 기록했다.
+
+### 19. 고양이 도감 API — 완료
+
+- `GET /api/v1/cats/collection`이 전체 고양이 마스터와 인증 사용자의 보유 고양이 자산을 조합해 반환한다.
+- 응답은 `total_count`, `owned_count`, `cats`를 포함하고 각 항목은 `cat_public_id`, nullable `cat_asset_public_id`, `name`, `persona`, `rarity`, `is_owned`만 노출한다.
+- 보유한 고양이에만 `cat_asset_public_id`를 제공해 프런트엔드가 대화 컨텍스트 API로 연결할 수 있다.
+- `CatRepository.list_all()`은 마스터 등록 순서를 보장하고 `AssetRepository.list_cat_assets_by_user_id()`는 인증 사용자의 고양이 자산만 조회한다.
+- 도감은 읽기 전용이며 Repository는 조회만 수행하고 서비스는 commit하지 않는다.
+- 인증되지 않은 요청은 `401`, 서비스의 사용자 부재는 `404`로 변환한다.
+- 페이지네이션, 검색, 희귀도 필터와 이미지 URL은 현재 데이터·프런트 계약에 없어 임의로 추가하지 않았다.
+- 도감 Repository·서비스·라우터 대상 검증은 `61 passed, 1 warning`으로 통과했다.
 
 다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
 

@@ -86,6 +86,7 @@ def test_get_cat_conversation_context_returns_persona_and_memories() -> None:
     assert "cat_id" not in dumped
     assert "cat_asset_id" not in dumped
 
+
 def test_get_cat_conversation_context_hides_another_users_asset() -> None:
     requester = User(
         id=1,
@@ -133,6 +134,7 @@ def test_get_cat_conversation_context_hides_another_users_asset() -> None:
             cat_asset_public_id=cat_asset.public_id,
         )
 
+
 def test_get_cat_conversation_context_rejects_item_asset() -> None:
     user = User(
         id=1,
@@ -170,6 +172,7 @@ def test_get_cat_conversation_context_rejects_item_asset() -> None:
             cat_asset_public_id=item_asset.public_id,
         )
 
+
 def test_add_cat_memory_appends_without_overwriting_existing_memory() -> None:
     user = User(
         id=1,
@@ -201,9 +204,7 @@ def test_add_cat_memory_appends_without_overwriting_existing_memory() -> None:
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.assets = FakeAssetRepository([cat_asset])
-    unit_of_work.cat_memories = FakeCatMemoryRepository(
-        [existing_memory]
-    )
+    unit_of_work.cat_memories = FakeCatMemoryRepository([existing_memory])
 
     result = add_cat_memory(
         unit_of_work=unit_of_work,
@@ -216,12 +217,8 @@ def test_add_cat_memory_appends_without_overwriting_existing_memory() -> None:
 
     assert len(memories) == 2
     assert memories[0] is existing_memory
-    assert memories[0].context_summary == (
-        "사용자는 변수에 관해 질문했다."
-    )
-    assert memories[1].context_summary == (
-        "사용자는 반복문 예제를 이해했다."
-    )
+    assert memories[0].context_summary == ("사용자는 변수에 관해 질문했다.")
+    assert memories[1].context_summary == ("사용자는 반복문 예제를 이해했다.")
 
     assert result.public_id == memories[1].public_id
     assert result.cat_asset_public_id == cat_asset.public_id
@@ -229,6 +226,7 @@ def test_add_cat_memory_appends_without_overwriting_existing_memory() -> None:
     assert "cat_asset_id" not in result.model_dump()
 
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_delete_cat_memory_removes_only_selected_memory() -> None:
     user = User(
@@ -268,9 +266,7 @@ def test_delete_cat_memory_removes_only_selected_memory() -> None:
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.assets = FakeAssetRepository([cat_asset])
-    unit_of_work.cat_memories = FakeCatMemoryRepository(
-        [first_memory, second_memory]
-    )
+    unit_of_work.cat_memories = FakeCatMemoryRepository([first_memory, second_memory])
 
     delete_cat_memory(
         unit_of_work=unit_of_work,
@@ -282,6 +278,7 @@ def test_delete_cat_memory_removes_only_selected_memory() -> None:
     assert unit_of_work.cat_memories.memories == [second_memory]
     assert unit_of_work.assets.assets == [cat_asset]
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_delete_all_cat_memories_removes_only_target_cats_memories() -> None:
     user = User(
@@ -337,12 +334,8 @@ def test_delete_all_cat_memories_removes_only_target_cats_memories() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
-    unit_of_work.assets = FakeAssetRepository(
-        [target_asset, other_asset]
-    )
-    unit_of_work.cat_memories = FakeCatMemoryRepository(
-        [*target_memories, other_memory]
-    )
+    unit_of_work.assets = FakeAssetRepository([target_asset, other_asset])
+    unit_of_work.cat_memories = FakeCatMemoryRepository([*target_memories, other_memory])
 
     delete_all_cat_memories(
         unit_of_work=unit_of_work,
@@ -356,6 +349,7 @@ def test_delete_all_cat_memories_removes_only_target_cats_memories() -> None:
         other_asset,
     ]
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_delete_cat_memory_rejects_memory_from_another_cat() -> None:
     user = User(
@@ -395,12 +389,8 @@ def test_delete_cat_memory_rejects_memory_from_another_cat() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
-    unit_of_work.assets = FakeAssetRepository(
-        [requested_asset, other_asset]
-    )
-    unit_of_work.cat_memories = FakeCatMemoryRepository(
-        [other_memory]
-    )
+    unit_of_work.assets = FakeAssetRepository([requested_asset, other_asset])
+    unit_of_work.cat_memories = FakeCatMemoryRepository([other_memory])
 
     with pytest.raises(
         ResourceNotFoundError,
@@ -415,6 +405,7 @@ def test_delete_cat_memory_rejects_memory_from_another_cat() -> None:
 
     assert unit_of_work.cat_memories.memories == [other_memory]
     unit_of_work.commit.assert_not_called()
+
 
 def test_delete_all_cat_memories_hides_another_users_asset() -> None:
     requester = User(
@@ -473,6 +464,7 @@ def test_delete_all_cat_memories_hides_another_users_asset() -> None:
     assert unit_of_work.assets.assets == [cat_asset]
     unit_of_work.commit.assert_not_called()
 
+
 def test_get_cat_conversation_context_orders_memories_oldest_first() -> None:
     user = User(
         id=1,
@@ -519,9 +511,7 @@ def test_get_cat_conversation_context_orders_memories_oldest_first() -> None:
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.cats = FakeCatRepository([cat])
     unit_of_work.assets = FakeAssetRepository([cat_asset])
-    unit_of_work.cat_memories = FakeCatMemoryRepository(
-        [newer_memory, older_memory]
-    )
+    unit_of_work.cat_memories = FakeCatMemoryRepository([newer_memory, older_memory])
 
     result = get_cat_conversation_context(
         unit_of_work=unit_of_work,
@@ -529,13 +519,11 @@ def test_get_cat_conversation_context_orders_memories_oldest_first() -> None:
         cat_asset_public_id=cat_asset.public_id,
     )
 
-    assert [
-        memory.context_summary
-        for memory in result.memories
-    ] == [
+    assert [memory.context_summary for memory in result.memories] == [
         "먼저 생성된 기억",
         "나중에 생성된 기억",
     ]
+
 
 def test_add_cat_memory_rejects_blank_context_summary() -> None:
     unit_of_work = MagicMock()
@@ -552,6 +540,7 @@ def test_add_cat_memory_rejects_blank_context_summary() -> None:
         )
 
     unit_of_work.__enter__.assert_not_called()
+
 
 def test_add_cat_memory_hides_another_users_asset() -> None:
     requester = User(

@@ -16,6 +16,111 @@ from app.modules.cats import service as cat_service
 from app.modules.cats.router import get_cat_unit_of_work
 
 
+def test_cat_collection_route_is_registered() -> None:
+    path = "/api/v1/cats/collection"
+
+    assert path in app.openapi()["paths"]
+    assert "get" in app.openapi()["paths"][path]
+
+
+def test_cat_collection_requires_authentication() -> None:
+    response = TestClient(app).get("/api/v1/cats/collection")
+
+    assert response.status_code == 401
+
+
+def test_get_cat_collection_returns_public_response(
+    monkeypatch,
+) -> None:
+    user = SimpleNamespace(public_id=uuid.uuid4())
+    unit_of_work = MagicMock()
+    cat_public_id = uuid.uuid4()
+    cat_asset_public_id = uuid.uuid4()
+    get_collection = MagicMock(
+        return_value={
+            "total_count": 1,
+            "owned_count": 1,
+            "cats": [
+                {
+                    "cat_public_id": cat_public_id,
+                    "cat_asset_public_id": cat_asset_public_id,
+                    "name": "나비",
+                    "persona": "차분하고 다정한 고양이",
+                    "rarity": "COMMON",
+                    "is_owned": True,
+                }
+            ],
+        }
+    )
+    monkeypatch.setattr(
+        cat_service,
+        "get_cat_collection",
+        get_collection,
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_cat_unit_of_work] = lambda: unit_of_work
+
+    try:
+        response = TestClient(app).get("/api/v1/cats/collection")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    get_collection.assert_called_once_with(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+    )
+
+    body = response.json()
+    assert body["total_count"] == 1
+    assert body["owned_count"] == 1
+    assert body["cats"][0]["cat_public_id"] == str(cat_public_id)
+    assert body["cats"][0]["cat_asset_public_id"] == str(cat_asset_public_id)
+    assert body["cats"][0]["is_owned"] is True
+
+    forbidden = {"id", "user_id", "cat_id", "asset_id"}
+    assert forbidden.isdisjoint(body)
+    assert forbidden.isdisjoint(body["cats"][0])
+
+
+def test_get_cat_collection_converts_not_found_to_404(
+    monkeypatch,
+) -> None:
+    user = SimpleNamespace(public_id=uuid.uuid4())
+    unit_of_work = MagicMock()
+    get_collection = MagicMock(side_effect=ResourceNotFoundError("user not found"))
+    monkeypatch.setattr(
+        cat_service,
+        "get_cat_collection",
+        get_collection,
+    )
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_cat_unit_of_work] = lambda: unit_of_work
+
+    try:
+        response = TestClient(
+            app,
+            raise_server_exceptions=False,
+        ).get("/api/v1/cats/collection")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "user not found"}
+
+
+def test_cat_collection_response_schema_excludes_internal_ids() -> None:
+    schemas = app.openapi()["components"]["schemas"]
+    forbidden = {"id", "user_id", "cat_id", "asset_id"}
+
+    for schema_name in (
+        "CatCollectionRead",
+        "CatCollectionItemRead",
+    ):
+        properties = set(schemas[schema_name]["properties"])
+        assert forbidden.isdisjoint(properties)
+
+
 def test_cat_conversation_context_route_is_registered() -> None:
     path = "/api/v1/cats/{cat_asset_public_id}/conversation-context"
 

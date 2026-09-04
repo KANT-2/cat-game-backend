@@ -47,14 +47,13 @@ def purchase_item(
         )
         if claim.status == ClaimStatus.HASH_CONFLICT:
             raise IdempotencyConflictError("request_id conflict")
-        
+
         if claim.status == ClaimStatus.COMPLETED:
             result_data = claim.execution.result_data
             if result_data is None:
                 raise RuntimeError("completed execution has no result data")
 
             return dict(result_data)
-
 
         item = uow.items.get_by_public_id(item_public_id)
         if item is None:
