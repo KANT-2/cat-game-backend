@@ -22,9 +22,9 @@ def draw_cats(
     request_id: UUID,
     draw_count: int,
 ) -> dict[str, object]:
-    if draw_count <= 0:
-        raise InvalidQuantityError("draw_count must be positive")
-    
+    if draw_count not in {1, 10}:
+        raise InvalidQuantityError("draw_count must be 1 or 10")
+
     request_payload: dict[str, object] = {
         "draw_count": draw_count,
     }
@@ -60,9 +60,7 @@ def draw_cats(
         )
 
         if balance_cost < 0:
-            raise RuntimeError(
-                "gacha policy returned negative balance cost"
-            )
+            raise RuntimeError("gacha policy returned negative balance cost")
 
         locked_user = uow.users.get_for_update(user.id)
         if locked_user is None:
@@ -71,20 +69,15 @@ def draw_cats(
         if locked_user.balance < balance_cost:
             raise InsufficientBalanceError("insufficient balance")
 
-        rewards = policy.draw(draw_count=draw_count)
+        bonus_draw_count = 1 if draw_count == 10 else 0
+        reward_count = draw_count + bonus_draw_count
+        rewards = policy.draw(draw_count=reward_count)
 
-        if any(
-            reward.duplicate_mileage < 0
-            for reward in rewards
-        ):
-            raise RuntimeError(
-                "gacha policy returned negative duplicate mileage"
-            )
+        if any(reward.duplicate_mileage < 0 for reward in rewards):
+            raise RuntimeError("gacha policy returned negative duplicate mileage")
 
-        if len(rewards) != draw_count:
-            raise RuntimeError(
-                "gacha policy returned wrong reward count"
-            )
+        if len(rewards) != reward_count:
+            raise RuntimeError("gacha policy returned wrong reward count")
 
         selected = []
         for reward in rewards:
@@ -125,6 +118,7 @@ def draw_cats(
             "execution_public_id": str(claim.execution.public_id),
             "request_id": str(request_id),
             "draw_count": draw_count,
+            "bonus_draw_count": bonus_draw_count,
             "balance_cost": balance_cost,
             "balance": locked_user.balance,
             "mileage": locked_user.mileage,
@@ -140,4 +134,3 @@ def draw_cats(
         uow.commit()
 
         return result_data
-

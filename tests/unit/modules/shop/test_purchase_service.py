@@ -73,6 +73,7 @@ def test_purchase_item_updates_everything_in_one_transaction() -> None:
     }
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_purchase_item_reuses_result_without_charging_twice() -> None:
     user = User(
         id=1,
@@ -122,6 +123,7 @@ def test_purchase_item_reuses_result_without_charging_twice() -> None:
     assert asset is not None
     assert asset.quantity == 2
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_purchase_item_rejects_same_request_id_with_different_quantity() -> None:
     user = User(
@@ -173,6 +175,7 @@ def test_purchase_item_rejects_same_request_id_with_different_quantity() -> None
     assert asset is not None
     assert asset.quantity == 1
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_purchase_item_rejects_same_request_id_from_different_user() -> None:
     first_user = User(
@@ -244,6 +247,7 @@ def test_purchase_item_rejects_same_request_id_from_different_user() -> None:
     assert second_asset is None
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_purchase_item_rejects_insufficient_balance() -> None:
     user = User(
         id=1,
@@ -284,6 +288,7 @@ def test_purchase_item_rejects_insufficient_balance() -> None:
     assert user.balance == 100
     assert asset is None
     unit_of_work.commit.assert_not_called()
+
 
 @pytest.mark.parametrize("quantity", [0, -1])
 def test_purchase_item_rejects_nonpositive_quantity(quantity: int) -> None:
@@ -326,6 +331,7 @@ def test_purchase_item_rejects_nonpositive_quantity(quantity: int) -> None:
     assert unit_of_work.executions.executions == {}
     unit_of_work.commit.assert_not_called()
 
+
 def test_purchase_item_rejects_missing_user() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
@@ -343,6 +349,7 @@ def test_purchase_item_rejects_missing_user() -> None:
 
     assert unit_of_work.executions.executions == {}
     unit_of_work.commit.assert_not_called()
+
 
 def test_purchase_item_rejects_missing_item() -> None:
     user = User(
@@ -375,6 +382,7 @@ def test_purchase_item_rejects_missing_item() -> None:
     assert user.balance == 1000
     assert unit_of_work.assets.assets == []
     unit_of_work.commit.assert_not_called()
+
 
 def test_purchase_item_adds_quantity_to_existing_asset() -> None:
     user = User(

@@ -68,6 +68,7 @@ def test_apply_surface_item_sets_owned_wallpaper_in_one_transaction() -> None:
     assert "wallpaper_item_id" not in result.model_dump()
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_apply_surface_item_sets_owned_floor_without_changing_wallpaper() -> None:
     user = User(
         id=1,
@@ -115,6 +116,7 @@ def test_apply_surface_item_sets_owned_floor_without_changing_wallpaper() -> Non
     assert result.item_public_id == floor.public_id
     assert result.category == "FLOOR"
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_apply_surface_item_rejects_furniture_category() -> None:
     user = User(
@@ -165,6 +167,7 @@ def test_apply_surface_item_rejects_furniture_category() -> None:
     assert user.floor_item_id is None
     unit_of_work.commit.assert_not_called()
 
+
 def test_apply_surface_item_rejects_unowned_surface() -> None:
     user = User(
         id=1,
@@ -206,6 +209,7 @@ def test_apply_surface_item_rejects_unowned_surface() -> None:
     assert user.floor_item_id is None
     unit_of_work.commit.assert_not_called()
 
+
 def test_apply_surface_item_rejects_missing_user() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
@@ -222,6 +226,7 @@ def test_apply_surface_item_rejects_missing_user() -> None:
         )
 
     unit_of_work.commit.assert_not_called()
+
 
 def test_apply_surface_item_rejects_missing_item() -> None:
     user = User(

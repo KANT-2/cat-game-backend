@@ -5,10 +5,22 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 EXPECTED_TABLES = [
-    "users", "cats", "cat_memories", "concepts", "items",
-    "tasks", "task_attempts", "attendances", "attendance_tasks",
-    "rooms", "room_participants", "room_tasks", "assets",
-    "user_proficiency", "placed_objects", "gacha_executions",
+    "users",
+    "cats",
+    "cat_memories",
+    "concepts",
+    "items",
+    "tasks",
+    "task_attempts",
+    "attendances",
+    "attendance_tasks",
+    "rooms",
+    "room_participants",
+    "room_tasks",
+    "assets",
+    "user_proficiency",
+    "placed_objects",
+    "gacha_executions",
 ]
 
 
@@ -26,10 +38,7 @@ def test_all_16_tables_exist(engine):
     """16개 테이블이 실제 DB에 전부 존재하는지 확인"""
     with engine.connect() as conn:
         result = conn.execute(
-            text(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema = 'public'"
-            )
+            text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
         )
         actual_tables = {row[0] for row in result}
 
@@ -44,8 +53,7 @@ def test_asset_naming_migration_is_applied(engine):
             row[0]
             for row in conn.execute(
                 text(
-                    "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_schema = 'public'"
+                    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
                 )
             )
         }
@@ -84,10 +92,7 @@ def test_placed_object_position_uses_xyz_coordinates(db_session):
         )
     ).scalar_one()
     db_session.execute(
-        text(
-            "INSERT INTO assets (user_id, item_id, quantity) "
-            "VALUES (:user_id, :item_id, 1)"
-        ),
+        text("INSERT INTO assets (user_id, item_id, quantity) VALUES (:user_id, :item_id, 1)"),
         {"user_id": user_id, "item_id": item_id},
     )
 
@@ -95,7 +100,7 @@ def test_placed_object_position_uses_xyz_coordinates(db_session):
         text(
             "INSERT INTO placed_objects (user_id, item_id, position_data) "
             "VALUES (:user_id, :item_id, "
-            "'{\"x\": 10, \"y\": 20, \"z\": 30}'::jsonb) "
+            '\'{"x": 10, "y": 20, "z": 30}\'::jsonb) '
             "RETURNING position_data"
         ),
         {"user_id": user_id, "item_id": item_id},
@@ -170,6 +175,7 @@ def test_gacha_execution_balance_cost_nonnegative(db_session):
             ),
             {"user_id": user_id},
         )
+
 
 def test_gacha_execution_balance_cost_defaults_to_zero(db_session):
     """claim 단계에서 비용을 생략하면 DB가 0을 사용한다."""

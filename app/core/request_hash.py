@@ -19,10 +19,7 @@ def _normalize_value(value: object) -> object:
         return str(value)
 
     if isinstance(value, Mapping):
-        return {
-            str(key): _normalize_value(item)
-            for key, item in value.items()
-        }
+        return {str(key): _normalize_value(item) for key, item in value.items()}
 
     if isinstance(value, (list, tuple)):
         return [_normalize_value(item) for item in value]
