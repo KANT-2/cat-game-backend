@@ -284,3 +284,11 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - [ ] 동일 키의 다른 사용자 또는 다른 내용은 `409 Conflict`로 처리한다.
 - [x] DB 구현 전 단위 테스트는 동일 Repository 계약의 Fake를 사용한다.
 - [ ] PostgreSQL 통합 테스트에서 동시 멱등 요청과 자산 잠금을 검증한다.
+
+## 8. 브라우저 클라이언트 연결
+
+- 브라우저 허용 origin은 `CORS_ORIGINS`의 쉼표 구분 목록으로 설정한다.
+- `APP_ENV=local` 또는 `test`일 때만 `POST /api/v1/session/development`가 개발 사용자를 생성하거나 재사용한다.
+- 로컬·테스트 환경의 보호 API는 `X-User-Public-ID`에서 공개 UUID를 받아 사용자를 조회한다.
+- 운영 환경에서는 개발 세션과 UUID 헤더 인증을 사용하지 않으며 호스트 인증 공급자가 `get_current_user`를 대체해야 한다.
+- 학습 추천 응답은 화면 분류에 사용할 `concept_name`을 포함하되 채점 답과 내부 정수 ID는 계속 제외한다.
