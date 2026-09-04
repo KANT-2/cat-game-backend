@@ -52,6 +52,17 @@ Part 2 확장 설계: [학습 문제·객관식·숙련도·추천 MVP](docs/fea
 
 전체 엔드포인트와 인증·응답 규칙: [API 명세 요약](docs/api/README.md)
 
+### 로그인 연동
+
+- Integration·Production은 별도 게임 로그인을 만들지 않고 Django `sessionid`를 홈페이지 Auth Bridge에 전달한다.
+- 홈페이지 `accounts_user.id`는 게임 DB의 `homepage_user_id BIGINT UNIQUE`로 연결한다.
+- 최초 인증 시 게임 사용자를 자동 생성하고 이후 `display_name`, `role`, 선택적 `email`을 동기화한다.
+- 홈페이지의 인증 거절은 `401/403`, 장애·timeout·응답 계약 오류는 `503`으로 처리한다.
+- 로컬·테스트 환경에서만 `X-User-Public-ID` 개발 인증과 `/session/development`를 제공한다.
+- 실제 연동에 필요한 홈페이지 API 경로, 응답 필드, 쿠키 설정과 환경별 주소는 홈페이지 팀과 최종 확정해야 한다.
+
+상세 계약과 환경변수: [Django Session Auth Bridge](docs/features/host-auth-integration.md)
+
 ## Codex cloud에서 작업
 
 웹에서는 GitHub 저장소를 Codex cloud 환경에 연결한 뒤 이 저장소를 선택한다. 환경의 Python 버전은 3.12로 지정하고 setup script에는 다음을 사용한다.
