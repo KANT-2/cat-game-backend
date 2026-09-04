@@ -11,6 +11,7 @@ from app.modules.grading.runners import (
     Verdict,
 )
 from app.modules.learning.proficiency import ConceptAssessment, calculate_proficiency
+from app.modules.learning.router import list_tasks
 from app.schemas.task import TaskRead
 from app.schemas.task_attempt import TaskAttemptCreate
 from scripts.seed_learning_tasks import build_tasks
@@ -87,3 +88,90 @@ def test_sql_seed_has_150_balanced_unique_tasks_and_all_concepts():
         "SQL:subqueries", "SQL:advanced_queries", "SQL:data_manipulation",
         "SQL:schema", "SQL:transactions",
     }
+
+
+class _Rows:
+    def __init__(self, values):
+        self.values = values
+
+    def all(self):
+        return self.values
+
+
+class _LearningTaskSession:
+    def __init__(self, concept, tasks, completed_ids):
+        self.concept = concept
+        self.tasks = tasks
+        self.completed_ids = completed_ids
+        self.scalar_statement = None
+        self.scalar_statements = []
+
+    def scalar(self, statement):
+        self.scalar_statement = statement
+        return self.concept
+
+    def scalars(self, statement):
+        self.scalar_statements.append(statement)
+        if len(self.scalar_statements) == 1:
+            return _Rows(self.tasks)
+        return _Rows(self.completed_ids)
+
+    def get(self, _model, _identifier):
+        return self.concept
+
+
+def test_learning_task_selection_applies_filters_and_completed_state():
+    concept_public_id = uuid.uuid4()
+    concept = SimpleNamespace(id=9, public_id=concept_public_id, name="PYTHON:functions")
+    task = SimpleNamespace(
+        id=21,
+        public_id=uuid.uuid4(),
+        concept_id=9,
+        title="함수 문제",
+        type="CODE",
+        domain="PYTHON",
+        difficulty="SILVER",
+        description="desc",
+        template_code="def solve():",
+        options=None,
+        hint_text=None,
+        is_active=True,
+    )
+    db = _LearningTaskSession(concept, [task], [task.id])
+
+    response = list_tasks(
+        db=db,
+        user=SimpleNamespace(id=7),
+        task_type="CODE",
+        domain="PYTHON",
+        concept_public_id=concept_public_id,
+        difficulty="SILVER",
+        limit=5,
+    )
+
+    assert len(response) == 1
+    assert response[0].public_id == task.public_id
+    assert response[0].completed is True
+
+    sql = str(db.scalar_statements[0])
+    assert "tasks.is_active IS true" in sql
+    assert "tasks.type =" in sql
+    assert "tasks.domain =" in sql
+    assert "tasks.difficulty =" in sql
+    assert "tasks.concept_id =" in sql
+    assert "ORDER BY tasks.id" in sql
+    assert "LIMIT" in sql
+
+
+def test_learning_task_selection_returns_empty_for_unknown_concept():
+    db = _LearningTaskSession(None, [], [])
+
+    response = list_tasks(
+        db=db,
+        user=SimpleNamespace(id=7),
+        concept_public_id=uuid.uuid4(),
+        limit=20,
+    )
+
+    assert response == []
+    assert db.scalar_statements == []

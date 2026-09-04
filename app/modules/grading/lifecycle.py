@@ -24,7 +24,12 @@ def finish_attempt(
     attempt.status = "FAILED" if result.is_system_failure else "COMPLETED"
     attempt.is_correct = None if result.is_system_failure else result.is_correct
     attempt.result_detail = json.dumps(
-        {"verdict": str(result.verdict), "detail": result.detail}
+        {
+            "verdict": str(result.verdict),
+            "detail": result.detail,
+            "passed": result.passed,
+            "total": result.total,
+        }
     )
 
     if attempt.is_correct is not None:
@@ -47,5 +52,7 @@ def fail_attempt(
 ) -> None:
     attempt.status = "FAILED"
     attempt.is_correct = None
-    attempt.result_detail = json.dumps({"verdict": verdict, "detail": detail})
+    attempt.result_detail = json.dumps(
+        {"verdict": verdict, "detail": detail, "passed": None, "total": None}
+    )
     db.commit()

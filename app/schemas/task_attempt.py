@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime
 from typing import Literal
@@ -42,6 +43,30 @@ class TaskAttemptAccepted(BaseModel):
     status: Literal["PENDING"]
 
 
+class GradingResultDetail(BaseModel):
+    verdict: Literal[
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "SYNTAX_ERROR",
+        "RUNTIME_ERROR",
+        "TIMEOUT",
+        "OUTPUT_LIMIT",
+        "SYSTEM_ERROR",
+    ]
+    detail: str | None = None
+    passed: int | None = Field(default=None, ge=0)
+    total: int | None = Field(default=None, ge=0)
+
+
+def _parse_result_detail(raw: str | None) -> GradingResultDetail | None:
+    if raw is None:
+        return None
+    try:
+        return GradingResultDetail.model_validate(json.loads(raw))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
 class TaskAttemptRead(ReadSchema):
     task_public_id: uuid.UUID
     context_type: str
@@ -49,7 +74,7 @@ class TaskAttemptRead(ReadSchema):
     is_correct: bool | None
     used_hint: bool
     attempted_at: datetime
-    result_detail: str | None = Field(default=None)
+    result_detail: GradingResultDetail | None = None
 
 
 def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
@@ -61,5 +86,5 @@ def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
         is_correct=attempt.is_correct,
         used_hint=attempt.used_hint,
         attempted_at=attempt.attempted_at,
-        result_detail=attempt.result_detail,
+        result_detail=_parse_result_detail(attempt.result_detail),
     )
