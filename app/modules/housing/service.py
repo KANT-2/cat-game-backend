@@ -6,12 +6,57 @@ from app.core.exceptions import (
     ResourceNotFoundError,
 )
 from app.core.unit_of_work import UnitOfWork
+from app.schemas.housing import SurfaceApplicationRead
 from app.schemas.placed_object import (
     PlacedObjectRead,
     PositionData,
     to_placed_object_read,
 )
 
+
+def apply_surface_item(
+    *,
+    unit_of_work: UnitOfWork,
+    user_public_id: UUID,
+    item_public_id: UUID,
+) -> SurfaceApplicationRead:
+    with unit_of_work as uow:
+        user = uow.users.get_by_public_id(user_public_id)
+        if user is None:
+            raise ResourceNotFoundError("user not found")
+
+        item = uow.items.get_by_public_id(item_public_id)
+        if item is None:
+            raise ResourceNotFoundError("item not found")
+
+        if item.category not in {"WALLPAPER", "FLOOR"}:
+            raise InvalidItemCategoryError(
+                "item is not wallpaper or floor"
+            )
+
+        asset = uow.assets.get_item_asset_for_update(
+            user.id,
+            item.id,
+        )
+        if asset is None:
+            raise ResourceNotFoundError("item asset not found")
+
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
+        if item.category == "WALLPAPER":
+            locked_user.wallpaper_item_id = item.id
+        else:
+            locked_user.floor_item_id = item.id
+
+        uow.commit()
+
+        return SurfaceApplicationRead(
+            user_public_id=locked_user.public_id,
+            item_public_id=item.public_id,
+            category=item.category,
+        )
 
 def place_furniture(
     *,

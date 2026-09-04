@@ -252,6 +252,9 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 일반 아이템의 동일 `(user_id, item_id)` 자산은 하나만 존재한다.
 - 재구매하면 새 행을 만들지 않고 `quantity`를 합산한다.
 - 벽지와 바닥은 소유 여부와 카테고리를 확인한 뒤 `USERS`의 선택 FK를 변경한다.
+- 표면 적용은 `WALLPAPER`와 `FLOOR`만 허용하고 보유 자산 행과 사용자 행을 잠근다.
+- 벽지를 변경할 때 바닥 선택은 유지하고, 바닥을 변경할 때 벽지 선택은 유지한다.
+- 표면 적용 응답에는 내부 정수 FK 대신 `user_public_id`, `item_public_id`와 카테고리만 포함한다.
 
 ### 하우징
 
