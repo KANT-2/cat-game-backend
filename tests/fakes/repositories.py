@@ -126,11 +126,33 @@ class FakeCatRepository:
             (cat for cat in self.cats if cat.public_id == public_id),
             None,
         )
+    def get_by_id(self, cat_id: int) -> Cat | None:
+            return next(
+                (
+                    cat
+                    for cat in self.cats
+                    if cat.id == cat_id
+                ),
+                None,
+            )
 
 
 class FakeAssetRepository:
     def __init__(self, assets: list[Asset] | None = None) -> None:
         self.assets = list(assets or [])
+
+    def get_by_public_id(
+        self,
+        public_id: uuid.UUID,
+    ) -> Asset | None:
+        return next(
+            (
+                asset
+                for asset in self.assets
+                if asset.public_id == public_id
+            ),
+            None,
+        )
 
     def get_cat_asset(
         self,
@@ -266,15 +288,35 @@ class FakeCatMemoryRepository:
     ) -> None:
         self.memories = list(memories or [])
 
+    def get_by_public_id_for_update(
+        self,
+        public_id: uuid.UUID,
+    ) -> CatMemory | None:
+        return next(
+            (
+                memory
+                for memory in self.memories
+                if memory.public_id == public_id
+            ),
+            None,
+        )
+
     def list_by_cat_asset_id(
         self,
         cat_asset_id: int,
     ) -> list[CatMemory]:
-        return [
+        memories = [
             memory
             for memory in self.memories
             if memory.cat_asset_id == cat_asset_id
         ]
+        return sorted(
+            memories,
+            key=lambda memory: (
+                memory.created_at,
+                memory.id,
+            ),
+        )
 
     def add(
         self,
@@ -290,3 +332,19 @@ class FakeCatMemoryRepository:
         )
         self.memories.append(memory)
         return memory
+
+    def remove(
+        self,
+        memory: CatMemory,
+    ) -> None:
+        self.memories.remove(memory)
+
+    def remove_all_by_cat_asset_id(
+        self,
+        cat_asset_id: int,
+    ) -> None:
+        self.memories[:] = [
+            memory
+            for memory in self.memories
+            if memory.cat_asset_id != cat_asset_id
+        ]

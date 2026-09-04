@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -54,9 +54,29 @@ class SqlAlchemyCatRepository:
         statement = select(Cat).where(Cat.public_id == public_id)
         return self._session.execute(statement).scalar_one_or_none()
 
+    def get_by_id(
+        self,
+        cat_id: int,
+    ) -> Cat | None:
+        statement = select(Cat).where(Cat.id == cat_id)
+        return self._session.execute(
+            statement
+        ).scalar_one_or_none()
+
 class SqlAlchemyAssetRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def get_by_public_id(
+        self,
+        public_id: UUID,
+    ) -> Asset | None:
+        statement = select(Asset).where(
+            Asset.public_id == public_id
+        )
+        return self._session.execute(
+            statement
+        ).scalar_one_or_none()
 
     def get_cat_asset(
         self,
@@ -180,6 +200,19 @@ class SqlAlchemyCatMemoryRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def get_by_public_id_for_update(
+        self,
+        public_id: UUID,
+    ) -> CatMemory | None:
+        statement = (
+            select(CatMemory)
+            .where(CatMemory.public_id == public_id)
+            .with_for_update()
+        )
+        return self._session.execute(
+            statement
+        ).scalar_one_or_none()
+
     def list_by_cat_asset_id(
         self,
         cat_asset_id: int,
@@ -202,6 +235,21 @@ class SqlAlchemyCatMemoryRepository:
         )
         self._session.add(memory)
         return memory
+
+    def remove(
+        self,
+        memory: CatMemory,
+    ) -> None:
+        self._session.delete(memory)
+
+    def remove_all_by_cat_asset_id(
+        self,
+        cat_asset_id: int,
+    ) -> None:
+        statement = delete(CatMemory).where(
+            CatMemory.cat_asset_id == cat_asset_id
+        )
+        self._session.execute(statement)
 
 class SqlAlchemyExecutionRepository:
     def __init__(self, session: Session) -> None:

@@ -17,6 +17,7 @@ from app.db.repositories import (
     SqlAlchemyUserRepository,
 )
 from app.models.asset import Asset
+from app.models.cat_memory import CatMemory
 from app.models.gacha_execution import GachaExecution
 from app.models.placed_object import PlacedObject
 
@@ -96,6 +97,43 @@ def test_cat_repository_gets_by_public_id() -> None:
 
     assert result is expected_cat
     assert "WHERE cats.public_id =" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+def test_cat_repository_gets_by_internal_id() -> None:
+    session = Mock(spec=Session)
+    expected_cat = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_cat
+    )
+    repository = SqlAlchemyCatRepository(session)
+
+    result = repository.get_by_id(20)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_cat
+    assert "WHERE cats.id = 20" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+def test_asset_repository_gets_by_public_id() -> None:
+    session = Mock(spec=Session)
+    expected_asset = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_asset
+    )
+    repository = SqlAlchemyAssetRepository(session)
+    public_id = uuid.uuid4()
+
+    result = repository.get_by_public_id(public_id)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_asset
+    assert "WHERE assets.public_id =" in sql
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
 
@@ -230,6 +268,48 @@ def test_placed_object_repository_adds_object() -> None:
     assert result.item_id == 20
     assert result.position_data == position_data
     session.add.assert_called_once_with(result)
+    session.commit.assert_not_called()
+
+def test_cat_memory_repository_locks_by_public_id() -> None:
+    session = Mock(spec=Session)
+    expected_memory = object()
+    session.execute.return_value.scalar_one_or_none.return_value = (
+        expected_memory
+    )
+    repository = SqlAlchemyCatMemoryRepository(session)
+    public_id = uuid.uuid4()
+
+    result = repository.get_by_public_id_for_update(public_id)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result is expected_memory
+    assert "WHERE cat_memories.public_id =" in sql
+    assert "FOR UPDATE" in sql
+    session.commit.assert_not_called()
+
+def test_cat_memory_repository_removes_memory() -> None:
+    session = Mock(spec=Session)
+    repository = SqlAlchemyCatMemoryRepository(session)
+    memory = Mock(spec=CatMemory)
+
+    repository.remove(memory)
+
+    session.delete.assert_called_once_with(memory)
+    session.commit.assert_not_called()
+
+def test_cat_memory_repository_removes_all_for_cat_asset() -> None:
+    session = Mock(spec=Session)
+    repository = SqlAlchemyCatMemoryRepository(session)
+
+    repository.remove_all_by_cat_asset_id(cat_asset_id=30)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert "DELETE FROM cat_memories" in sql
+    assert "cat_memories.cat_asset_id = 30" in sql
     session.commit.assert_not_called()
 
 def test_cat_memory_repository_lists_memories_in_order() -> None:
