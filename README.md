@@ -28,16 +28,17 @@ uvicorn app.main:app --reload
 
 - [x] 코드 제출 및 채점 결과 조회 API
 - [x] 테스트 케이스 실행과 정답·오답·오류·시간 초과 판정
-- [x] PostgreSQL 마이그레이션 및 전체 테스트 `88 passed`
+- [x] PostgreSQL 마이그레이션 및 전체 회귀 테스트
 - [x] Docker grader 이미지 빌드
 - [x] 실제 컨테이너의 ACCEPTED, WRONG_ANSWER, TIMEOUT 판정
+- [x] 격리된 PostgreSQL SQL grader와 읽기 전용·timeout·결과 제한
 - [ ] 팀 로그인·인증 연결
 - [ ] DAILY/BATTLE 서비스 통합 검증
 - [ ] 프런트엔드 연결
 
-자세한 내용: [Part 2 코딩 학습·채점 진행상황](docs/features/part2-status.md)
+전체 구현·검증 현황: [Part 2 학습·채점 시스템 진행상황](docs/features/part2-status.md)
 
-Part 2 확장 설계: [학습 문제·객관식·숙련도·추천 MVP](docs/features/part2-learning-system.md)
+문제 유형 및 추천 정책: [학습 문제 유형·숙련도·추천](docs/features/part2-learning-system.md)
 
 ### Part 3 — 상점·가챠·하우징
 

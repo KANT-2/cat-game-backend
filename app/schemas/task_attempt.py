@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.models.task import Task
+from app.models.task_attempt import TaskAttempt
 from app.schemas.base import ReadSchema
 
 
@@ -43,9 +45,21 @@ class TaskAttemptAccepted(BaseModel):
 class TaskAttemptRead(ReadSchema):
     task_public_id: uuid.UUID
     context_type: str
-    submitted_code: str
     status: str
     is_correct: bool | None
     used_hint: bool
     attempted_at: datetime
     result_detail: str | None = Field(default=None)
+
+
+def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
+    return TaskAttemptRead(
+        public_id=attempt.public_id,
+        task_public_id=task.public_id,
+        context_type=attempt.context_type,
+        status=attempt.status,
+        is_correct=attempt.is_correct,
+        used_hint=attempt.used_hint,
+        attempted_at=attempt.attempted_at,
+        result_detail=attempt.result_detail,
+    )

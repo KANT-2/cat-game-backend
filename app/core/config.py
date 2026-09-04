@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,11 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         """Return normalized browser origins accepted by the API."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+    sql_grading_database_url: SecretStr | None = None
+    sql_grading_connect_timeout_seconds: int = 3
+    sql_grading_statement_timeout_ms: int = 1000
+    sql_grading_max_rows: int = 1000
+    sql_grading_output_bytes: int = 65536
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

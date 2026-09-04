@@ -5,31 +5,18 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.models.concept import Concept
 from app.models.task_attempt import TaskAttempt
 from app.modules.learning.proficiency import recommended_tasks, weak_concepts
-from app.schemas.task import TaskRead
+from app.schemas.task import TaskRead, to_task_read
+from app.schemas.user_proficiency import WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
 
-def _task_payload(db: DbSession, task, *, completed: bool):
+def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
     concept = db.get(Concept, task.concept_id)
-    return {
-        "public_id": task.public_id,
-        "concept_public_id": concept.public_id,
-        "concept_name": concept.name,
-        "title": task.title,
-        "type": task.type,
-        "domain": task.domain,
-        "difficulty": task.difficulty,
-        "description": task.description,
-        "template_code": task.template_code,
-        "options": task.options,
-        "hint_text": task.hint_text,
-        "is_active": task.is_active,
-        "completed": completed,
-    }
+    return to_task_read(task, concept, completed=completed)
 
 
-@router.get("/recommendations")
+@router.get("/recommendations", response_model=list[TaskRead])
 def recommendations(
     db: DbSession, user: CurrentUser, limit: int = Query(10, ge=1, le=50)
 ) -> list[TaskRead]:
@@ -46,15 +33,15 @@ def recommendations(
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
 
 
-@router.get("/weak-concepts")
-def weaknesses(db: DbSession, user: CurrentUser):
+@router.get("/weak-concepts", response_model=list[WeakConceptRead])
+def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
     rows = []
     for assessment in weak_concepts(db, user.id):
         concept = db.get(Concept, assessment.concept_id)
-        rows.append({
-            "concept_public_id": concept.public_id,
-            "name": concept.name,
-            "attempts": assessment.attempts,
-            "proficiency_level": assessment.proficiency_level,
-        })
+        rows.append(WeakConceptRead(
+            concept_public_id=concept.public_id,
+            name=concept.name,
+            attempts=assessment.attempts,
+            proficiency_level=assessment.proficiency_level,
+        ))
     return rows

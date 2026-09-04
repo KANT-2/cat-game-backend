@@ -1,4 +1,4 @@
-# Part 2 코딩 학습·채점 진행상황
+# Part 2 학습·채점 시스템 진행상황
 
 기준일: 2026-09-03  
 작업 브랜치: `feature/part2-learning`
@@ -7,11 +7,12 @@
 
 채점 백엔드 MVP 구현과 로컬 검증을 완료했다.
 
-- 전체 테스트: **88개 통과, 실패 0개**
+- 전체 테스트: **로컬 회귀 테스트 통과**
 - PostgreSQL 마이그레이션: **통과**
 - FastAPI 서버 및 `/health`: **정상**
 - Swagger `/docs`의 grading API 등록: **확인**
 - Docker grader 이미지 build/run: **정상**
+- PostgreSQL SQL grader 통합 테스트: **4개 통과**
 
 실제 서비스 적용 전에는 팀 인증, 보안 제한의 세부 검증, 프런트엔드 연결이 필요하다.
 
@@ -44,11 +45,16 @@
 - [x] 실제 컨테이너 오답 판정 확인
 - [x] 실제 컨테이너 시간 초과 판정 확인
 - [x] 내부 INTEGER ID와 비공개 테스트 케이스 API 비노출
+- [x] CODE 문제의 PYTHON/SQL dispatcher 분기
+- [x] SQL 전용 PostgreSQL, read-only 트랜잭션, statement timeout
+- [x] SQL 위험 구문·multi-statement 차단 및 row/output 제한
+- [x] SQL 문제별 seed 스키마 생성 및 실행 후 초기화
+- [x] Part 2 응답 DTO와 OpenAPI response model 명시
 
 ## 아직 남은 작업
 
 - [ ] 팀 로그인·인증 기능을 `get_current_user`에 연결
-- [ ] Docker 네트워크·읽기 전용·권한·메모리 제한의 개별 공격 시나리오 검증
+- [ ] 운영 배포 환경에서 Python/SQL grader 네트워크와 자원 제한 재검증
 - [ ] 인증을 포함한 제출·조회 API 통합 테스트
 - [ ] PENDING → RUNNING → 완료 상태 전이 DB 통합 테스트
 - [ ] DAILY 완료 처리 통합 테스트
