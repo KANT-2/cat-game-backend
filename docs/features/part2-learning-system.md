@@ -10,7 +10,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 | SILVER | 50 | 정렬·파싱·컬렉션·반복 등 여러 개념을 섞은 응용 |
 | GOLD | 50 | 함수 작성, 탐색, 동적 계획법, 그래프 기초 등 종합 문제 |
 
-각 문제는 대표 개념 하나만 `concept_id`로 가진다. 개념 이름은 `PYTHON:variables`처럼 domain 접두사를 써서 향후 `SQL:DISTINCT`와 충돌하지 않는다. `tasks.domain`은 `PYTHON`과 `SQL`, 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다.
+각 문제는 대표 개념 하나만 `concept_id`로 가진다. Python은 7개, SQL은 9개의 공식 Concept 이름을 사용하며 난이도는 Concept와 분리한다. `tasks.domain`은 `PYTHON`과 `SQL`, 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다. 상세 목록과 SQL 권한 제한 사유는 [Python·SQL Concept 기준](concept-policy.md)에 기록한다.
 
 시드는 `scripts/seed_learning_tasks.py`로 실행한다. 안정적인 `[SAMPLE:PYTHON:...]` 제목을 기준으로 새 행은 만들고 기존 행은 갱신해 재실행해도 150개를 유지한다. `[BENCHMARK]`, `BENCHMARK:`, `LOAD TEST:`, `PERF TEST:`로 시작하는 문제와 그 시도만 정리한다. `scripts/benchmark_grader_load.py`는 DB 데이터를 만들지 않는 개발 도구라 유지한다.
 

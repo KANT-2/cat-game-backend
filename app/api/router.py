@@ -2,6 +2,8 @@ from fastapi import APIRouter
 
 from app.modules.cats.router import router as cats_router
 from app.modules.gacha.router import router as gacha_router
+from app.modules.battle.router import router as battle_router
+from app.modules.daily_mission.router import router as daily_router
 from app.modules.grading.router import router as grading_router
 from app.modules.housing.router import router as housing_router
 from app.modules.identity.router import router as identity_router
@@ -16,3 +18,5 @@ api_router.include_router(cats_router)
 api_router.include_router(gacha_router)
 api_router.include_router(shop_router)
 api_router.include_router(housing_router)
+api_router.include_router(daily_router)
+api_router.include_router(battle_router)

@@ -32,13 +32,32 @@ uvicorn app.main:app --reload
 - [x] Docker grader 이미지 빌드
 - [x] 실제 컨테이너의 ACCEPTED, WRONG_ANSWER, TIMEOUT 판정
 - [x] 격리된 PostgreSQL SQL grader와 읽기 전용·timeout·결과 제한
-- [ ] 팀 로그인·인증 연결
-- [ ] DAILY/BATTLE 서비스 통합 검증
+- [x] Python 7개·SQL 9개 공식 Concept 분류 기준
+- [x] Django Session Auth Bridge 게임 측 연동과 사용자 자동 연결
+- [ ] 홈페이지 `/api/auth/me/` 제공 후 로그인 종단간 검증
+- [x] DAILY 출석·자동 배정·완료·중복 없는 보상 수령 API
+- [x] BATTLE 방·참가·준비·시작·점수·종료/승자 API
+- [ ] DAILY/BATTLE 실제 로그인 포함 종단간 검증
 - [ ] 프런트엔드 연결
 
 전체 구현·검증 현황: [Part 2 학습·채점 시스템 진행상황](docs/features/part2-status.md)
 
 문제 유형 및 추천 정책: [학습 문제 유형·숙련도·추천](docs/features/part2-learning-system.md)
+
+Concept 및 SQL 권한 정책: [Python·SQL Concept 기준](docs/features/concept-policy.md)
+
+로그인 연동 계약: [Django 세션 기반 Auth Bridge](docs/features/host-auth-integration.md)
+
+문제 데이터는 아래 명령으로 각각 150개(브론즈·실버·골드 각 50개)를 넣는다.
+
+```powershell
+python scripts\seed_learning_tasks.py
+python scripts\seed_sql_tasks.py
+```
+
+DAILY 보상액과 BATTLE 정답 점수는 승인되지 않은 정책을 코드에 고정하지 않는다.
+배포 환경에서 `DAILY_REWARD_BALANCE`, `BATTLE_CORRECT_SCORE`를 설정해야 해당 기능이
+활성화된다.
 
 ### Part 3 — 상점·가챠·하우징
 

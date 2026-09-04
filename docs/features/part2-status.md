@@ -12,7 +12,7 @@
 - FastAPI 서버 및 `/health`: **정상**
 - Swagger `/docs`의 grading API 등록: **확인**
 - Docker grader 이미지 build/run: **정상**
-- PostgreSQL SQL grader 통합 테스트: **4개 통과**
+- PostgreSQL SQL grader 통합 테스트: **QUERY/MUTATION/SCHEMA 검증 포함**
 
 실제 서비스 적용 전에는 팀 인증, 보안 제한의 세부 검증, 프런트엔드 연결이 필요하다.
 
@@ -36,6 +36,13 @@
 - [x] 채점 상태 및 상세 결과 DB 저장
   - PENDING → RUNNING → COMPLETED 또는 FAILED
 - [x] DAILY 정답 제출 시 일일 문제 완료 처리
+- [x] 서버 날짜 기준 DAILY 출석 생성과 연속 출석 계산
+- [x] 사용자 추천 기반 일일 문제 자동 배정과 조회
+- [x] 전체 완료 후 설정 기반 보상 지급 및 중복 수령 방지
+- [x] BATTLE 방 생성, 참가, 준비, host 시작
+- [x] host가 공개 UUID로 지정한 배틀 문제 배정
+- [x] 최초 정답만 설정 기반 점수 반영
+- [x] 전원 제출 완료 시 종료 및 공동 승자 계산
 - [x] Docker 샌드박스 실행 코드 및 제한 옵션 구현
   - 네트워크 차단
   - 읽기 전용 파일시스템
@@ -46,25 +53,29 @@
 - [x] 실제 컨테이너 시간 초과 판정 확인
 - [x] 내부 INTEGER ID와 비공개 테스트 케이스 API 비노출
 - [x] CODE 문제의 PYTHON/SQL dispatcher 분기
-- [x] SQL 전용 PostgreSQL, read-only 트랜잭션, statement timeout
+- [x] SQL 전용 PostgreSQL, QUERY read-only 트랜잭션, statement timeout
+- [x] SQL MUTATION/SCHEMA 모드와 제출 후 강제 rollback
 - [x] SQL 위험 구문·multi-statement 차단 및 row/output 제한
 - [x] SQL 문제별 seed 스키마 생성 및 실행 후 초기화
 - [x] Part 2 응답 DTO와 OpenAPI response model 명시
 
 ## 아직 남은 작업
 
-- [ ] 팀 로그인·인증 기능을 `get_current_user`에 연결
+- [x] Django Session Auth Bridge 게임 측 어댑터와 사용자 JIT 연결
+- [ ] 홈페이지 `/api/auth/me/` 구현본과 로그인 종단간 검증
 - [ ] 운영 배포 환경에서 Python/SQL grader 네트워크와 자원 제한 재검증
 - [ ] 인증을 포함한 제출·조회 API 통합 테스트
 - [ ] PENDING → RUNNING → 완료 상태 전이 DB 통합 테스트
-- [ ] DAILY 완료 처리 통합 테스트
-- [ ] BATTLE 점수·보너스·감점 정책 확정 및 서비스 연결
+- [x] DAILY/BATTLE 서비스 PostgreSQL 통합 테스트 추가
+- [ ] 실제 인증·BackgroundTasks를 포함한 DAILY/BATTLE API 종단간 테스트
+- [ ] DAILY 보상액과 BATTLE 점수값 최종 확정 및 환경변수 설정
+- [ ] BATTLE 시간 보너스·힌트 감점 등 추가 정책 확정
 - [ ] AI 문제 생성 측 test_cases 생성·검수 정책 확정
 - [ ] 프런트엔드 제출·진행 상태·결과 화면 연결
 
 ## 현재 API 사용 시 주의사항
 
-팀 인증 기능이 아직 연결되지 않았다. 따라서 Swagger에서 grading API를 바로 호출하면 `401 Unauthorized`가 반환되는 것이 정상이다.
+로그인은 홈페이지의 `/api/auth/me/` Bridge API 계약을 사용한다. 홈페이지 세션 쿠키 없이 grading API를 호출하면 `401 Unauthorized`, Bridge 주소가 설정되지 않으면 `503 Service Unavailable`이 반환된다.
 
 인증 연결 후 다음 흐름을 최종 검증해야 한다.
 

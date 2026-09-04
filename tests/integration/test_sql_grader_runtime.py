@@ -72,3 +72,26 @@ def test_each_submission_gets_clean_seed_state():
     first = runner.grade("SELECT count(*) FROM cats", [case("[[2]]")])
     second = runner.grade("SELECT count(*) FROM cats", [case("[[2]]")])
     assert first.verdict is second.verdict is Verdict.ACCEPTED
+
+
+def test_mutation_and_schema_modes_are_graded_then_rolled_back():
+    runner = SQLSandbox()
+    mutation = Case(
+        case().input,
+        '{"mode":"MUTATION","verification_query":"SELECT name FROM cats WHERE id=1",'
+        '"expected_rows":[["Bori"]]}',
+    )
+    assert runner.grade("UPDATE cats SET name='Bori' WHERE id=1", [mutation]).verdict is Verdict.ACCEPTED
+    assert runner.grade("UPDATE cats SET name='Wrong' WHERE id=1", [mutation]).verdict is Verdict.WRONG_ANSWER
+
+    schema = Case(
+        "SELECT 1",
+        '{"mode":"SCHEMA","verification_query":"SELECT column_name FROM '
+        "information_schema.columns WHERE table_schema=current_schema() AND table_name='toys' "
+        'ORDER BY ordinal_position","expected_rows":[["id"],["name"]]}',
+    )
+    assert runner.grade("CREATE TABLE toys (id int, name text)", [schema]).verdict is Verdict.ACCEPTED
+    assert runner.grade("CREATE TABLE toys (id int)", [schema]).verdict is Verdict.WRONG_ANSWER
+
+    # A following query starts from the original seed, never from a prior submission.
+    assert runner.grade("SELECT name FROM cats WHERE id=1", [case('[["Miso"]]')]).verdict is Verdict.ACCEPTED
