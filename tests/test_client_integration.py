@@ -26,6 +26,7 @@ class ExistingUserSession:
 def user_fixture():
     return SimpleNamespace(
         public_id=uuid.uuid4(),
+        homepage_user_id=42,
         email="player@local.nyang",
         username="{ 냥 } 플레이어",
         role="STUDENT",
@@ -97,7 +98,9 @@ def test_current_session_exposes_only_public_user_fields() -> None:
     response = current_session(user)
 
     assert response.public_id == user.public_id
-    assert "id" not in response.model_dump()
+    payload = response.model_dump()
+    assert "id" not in payload
+    assert "homepage_user_id" not in payload
 
 
 def test_development_session_is_hidden_in_production(monkeypatch) -> None:
