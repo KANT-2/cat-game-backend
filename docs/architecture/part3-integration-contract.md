@@ -99,9 +99,15 @@ class PlacedObjectRepository(Protocol):
 
 
 class CatMemoryRepository(Protocol):
+    def get_by_public_id_for_update(self, public_id: UUID) -> "CatMemory | None": ...
+
     def list_by_cat_asset_id(self, cat_asset_id: int) -> "list[CatMemory]": ...
 
     def add(self, cat_asset_id: int, context_summary: str) -> "CatMemory": ...
+
+    def remove(self, memory: "CatMemory") -> None: ...
+
+    def remove_all_by_cat_asset_id(self, cat_asset_id: int) -> None: ...
 ```
 
 `ExecutionRepository.claim()`의 결과는 다음 의미를 가진다.
@@ -273,6 +279,12 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 아이템 자산에는 기억을 연결할 수 없다.
 - 인증 사용자가 소유한 고양이 자산에만 기억을 추가하거나 조회할 수 있다.
 - 대화 요약은 새 `CAT_MEMORIES` 행으로 누적 기록한다.
+- 공백뿐인 대화 요약은 저장하지 않는다.
+- 기억 목록은 `created_at`, `id` 오름차순으로 반환한다.
+- 선택 삭제는 `memory_public_id`로 대상 기억을 잠금 조회하고, 요청한 고양이 자산의 기억인지 다시 확인한다.
+- 전체 삭제는 지정한 `cat_asset_id`에 연결된 `CAT_MEMORIES` 행만 삭제한다.
+- 선택 삭제와 전체 삭제는 `CATS.persona`, `CATS` 행과 `ASSETS` 행을 삭제하거나 변경하지 않는다.
+- 다른 사용자의 고양이 자산 또는 기억 접근은 리소스 존재 여부를 숨기기 위해 `404 Not Found`로 처리한다.
 
 ## 7. 통합 완료 체크리스트
 

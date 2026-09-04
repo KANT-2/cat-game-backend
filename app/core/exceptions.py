@@ -17,8 +17,14 @@ class InvalidQuantityError(ApplicationError):
 class ResourceNotFoundError(ApplicationError):
     """The requested application resource was not found."""
 
+
 class InvalidItemCategoryError(ApplicationError):
     """The item category is not valid for the requested operation."""
 
+
 class PlacementLimitExceededError(ApplicationError):
     """The placement count would exceed the owned item quantity."""
+
+
+class InvalidMemorySummaryError(ApplicationError):
+    """The cat memory summary must contain non-whitespace text."""

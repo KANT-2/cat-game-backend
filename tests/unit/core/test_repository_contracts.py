@@ -12,12 +12,16 @@ EXPECTED_METHODS = {
     ExecutionRepository: {"claim", "complete"},
     UserRepository: {"get_by_public_id", "get_for_update"},
     ItemRepository: {"get_by_public_id", "get_by_id"},
-    CatRepository: {"get_by_public_id"},
+    CatRepository: {
+    "get_by_public_id",
+    "get_by_id",
+    },
     AssetRepository: {
-        "get_cat_asset",
-        "get_item_asset_for_update",
-        "add_item_quantity",
-        "grant_cat",
+    "get_by_public_id",
+    "get_cat_asset",
+    "get_item_asset_for_update",
+    "add_item_quantity",
+    "grant_cat",
     },
     PlacedObjectRepository: {
         "get_by_public_id_for_update",
@@ -25,7 +29,13 @@ EXPECTED_METHODS = {
         "add",
         "remove",
     },
-    CatMemoryRepository: {"list_by_cat_asset_id", "add"},
+    CatMemoryRepository: {
+    "get_by_public_id_for_update",
+    "list_by_cat_asset_id",
+    "add",
+    "remove",
+    "remove_all_by_cat_asset_id",
+    },
 }
 
 
@@ -53,6 +63,9 @@ def test_locking_methods_are_named_for_update() -> None:
         PlacedObjectRepository: {
             "get_by_public_id_for_update",
             "count_for_update",
+        },
+        CatMemoryRepository: {
+            "get_by_public_id_for_update",
         },
     }
 
