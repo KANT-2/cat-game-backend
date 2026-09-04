@@ -7,14 +7,14 @@
 
 채점 백엔드 MVP 구현과 로컬 검증을 완료했다.
 
-- 전체 테스트: **로컬 회귀 테스트 통과**
+- 전체 테스트: **248 passed**
 - PostgreSQL 마이그레이션: **통과**
 - FastAPI 서버 및 `/health`: **정상**
 - Swagger `/docs`의 grading API 등록: **확인**
 - Docker grader 이미지 build/run: **정상**
 - PostgreSQL SQL grader 통합 테스트: **QUERY/MUTATION/SCHEMA 검증 포함**
 
-실제 서비스 적용 전에는 팀 인증, 보안 제한의 세부 검증, 프런트엔드 연결이 필요하다.
+게임 백엔드 담당 범위의 구현은 완료됐다. 아래 잔여 항목은 내부 추가 검증과 외부 팀 의존 작업으로 구분한다.
 
 ## 완료된 작업
 
@@ -59,16 +59,19 @@
 - [x] SQL 문제별 seed 스키마 생성 및 실행 후 초기화
 - [x] Part 2 응답 DTO와 OpenAPI response model 명시
 
-## 아직 남은 작업
+## 잔여 검증과 외부 의존 작업
 
-- [x] Django Session Auth Bridge 게임 측 어댑터와 사용자 JIT 연결
-- [ ] 홈페이지 `/api/auth/me/` 구현본과 로그인 종단간 검증
+### 백엔드에서 추가 가능한 검증
+
+- [ ] 인증 대역을 포함한 제출·조회 API 통합 테스트 강화
+- [ ] PENDING → RUNNING → COMPLETED/FAILED 상태 전이 DB 통합 테스트 강화
+- [ ] mock Auth Bridge와 BackgroundTasks를 포함한 DAILY/BATTLE API 통합 테스트
 - [ ] 운영 배포 환경에서 Python/SQL grader 네트워크와 자원 제한 재검증
-- [ ] 인증을 포함한 제출·조회 API 통합 테스트
-- [ ] PENDING → RUNNING → 완료 상태 전이 DB 통합 테스트
-- [x] DAILY/BATTLE 서비스 PostgreSQL 통합 테스트 추가
-- [ ] 실제 인증·BackgroundTasks를 포함한 DAILY/BATTLE API 종단간 테스트
-- [ ] DAILY 보상액과 BATTLE 점수값 최종 확정 및 환경변수 설정
+
+### 다른 팀 또는 정책 확정 필요
+
+- [ ] 홈페이지 `/api/auth/me/` 구현본과 실제 로그인 종단간 검증
+- [ ] DAILY 보상액과 BATTLE 점수값 최종 확정 및 배포 환경변수 설정
 - [ ] BATTLE 시간 보너스·힌트 감점 등 추가 정책 확정
 - [ ] AI 문제 생성 측 test_cases 생성·검수 정책 확정
 - [ ] 프런트엔드 제출·진행 상태·결과 화면 연결
