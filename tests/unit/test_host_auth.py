@@ -61,7 +61,7 @@ async def test_host_session_jit_provisions_and_updates_user(monkeypatch):
     user = await dependencies.resolve_current_user(request("secret"), db, None)
     assert (user.homepage_user_id, user.username, user.role) == (42, "여름", "STUDENT")
     user.username = "old"
-    updated = await dependencies.get_current_user(request("secret"), db)
+    updated = await dependencies.resolve_current_user(request("secret"), db, None)
     assert updated is user
     assert updated.username == "여름"
 
