@@ -20,48 +20,51 @@ python -m pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
-## 기능 진행상황
+## API
 
-### Part 2 — 코딩 학습·채점
+업무 API의 기본 경로는 `/api/v1`이다. 실행 중인 서버의 `/docs`에서 OpenAPI 명세를 확인할 수 있다.
 
-채점 백엔드 MVP 구현과 로컬 검증을 완료했다.
+| 영역 | 대표 경로 | 기능 |
+|---|---|---|
+| 인증 | `/session/*` | 현재 사용자, 로컬 개발 세션 |
+| 학습 | `/learning/*` | 추천 문제, 취약 개념 |
+| 채점 | `/attempts/*` | Python·SQL·객관식 제출 및 결과 조회 |
+| 일일 미션 | `/daily/*` | 출석, 자동 배정, 완료, 보상 |
+| 배틀 | `/battle/rooms/*` | 방, 참가, 준비, 시작, 점수, 승자 |
+| 상점·가챠 | `/shop/*`, `/gacha/*` | 구매 및 고양이 뽑기 |
+| 하우징·고양이 | `/housing/*`, `/cats/*` | 꾸미기와 고양이 기억 |
 
-- [x] 코드 제출 및 채점 결과 조회 API
-- [x] 테스트 케이스 실행과 정답·오답·오류·시간 초과 판정
-- [x] PostgreSQL 마이그레이션 및 전체 회귀 테스트
-- [x] Docker grader 이미지 빌드
-- [x] 실제 컨테이너의 ACCEPTED, WRONG_ANSWER, TIMEOUT 판정
-- [x] 격리된 PostgreSQL SQL grader와 읽기 전용·timeout·결과 제한
-- [x] Python 7개·SQL 9개 공식 Concept 분류 기준
-- [x] Django Session Auth Bridge 게임 측 연동과 사용자 자동 연결
-- [ ] 홈페이지 `/api/auth/me/` 제공 후 로그인 종단간 검증
-- [x] DAILY 출석·자동 배정·완료·중복 없는 보상 수령 API
-- [x] BATTLE 방·참가·준비·시작·점수·종료/승자 API
-- [ ] DAILY/BATTLE 실제 로그인 포함 종단간 검증
-- [ ] 프런트엔드 연결
+전체 엔드포인트와 인증·응답 규칙: [API 명세 요약](docs/api/README.md)
 
-전체 구현·검증 현황: [Part 2 학습·채점 시스템 진행상황](docs/features/part2-status.md)
+## 구현 현황
 
-문제 유형 및 추천 정책: [학습 문제 유형·숙련도·추천](docs/features/part2-learning-system.md)
+| 담당 | 범위 | 상태 | 상세 문서 |
+|---|---|---|---|
+| Part 2 | 학습·Python/SQL 채점·일일 미션·배틀·Auth Bridge | MVP 완료, 외부 E2E 대기 | [Part 2 현황](docs/features/part2-status.md) |
+| Part 3 | 상점·가챠·하우징·고양이 기억 API | API 연결 완료, 정책·PostgreSQL 최종 검증 대기 | [Part 3 현황](docs/architecture/part3-status.md) |
 
-Concept 및 SQL 권한 정책: [Python·SQL Concept 기준](docs/features/concept-policy.md)
+### Part 2
 
-로그인 연동 계약: [Django 세션 기반 Auth Bridge](docs/features/host-auth-integration.md)
+- Python CODE: Docker sandbox 비동기 채점
+- SQL CODE: 격리된 PostgreSQL, 읽기 전용·timeout·결과 제한
+- MULTIPLE_CHOICE: 서버 정답 비교
+- 문제 데이터: Python 150개 + SQL 150개, 난이도별 각 50개
+- 학습: 최근 10회 숙련도, 취약 개념, 최근 문제 회피 추천
+- DAILY: 당일 자동 배정, 완료 반영, 중복 없는 보상
+- BATTLE: 방 생성·참가·준비·시작, 제출 검증, 점수·종료·승자
+- 인증: Django `sessionid` Auth Bridge와 로컬 개발 헤더
+- 검증: 전체 테스트 `248 passed`
 
-문제 데이터는 아래 명령으로 각각 150개(브론즈·실버·골드 각 50개)를 넣는다.
+남은 작업은 홈페이지 인증 API를 포함한 로그인 E2E, 프런트엔드 연결, 실제 배포 환경의 DAILY/BATTLE E2E다. 세부 정책은 [문제·숙련도·추천](docs/features/part2-learning-system.md), [Concept·SQL 정책](docs/features/concept-policy.md), [인증 계약](docs/features/host-auth-integration.md)에 분리한다.
+
+문제 데이터 적재:
 
 ```powershell
 python scripts\seed_learning_tasks.py
 python scripts\seed_sql_tasks.py
 ```
 
-DAILY 보상액과 BATTLE 정답 점수는 승인되지 않은 정책을 코드에 고정하지 않는다.
-배포 환경에서 `DAILY_REWARD_BALANCE`, `BATTLE_CORRECT_SCORE`를 설정해야 해당 기능이
-활성화된다.
-
-### Part 3 — 상점·가챠·하우징
-
-자세한 내용: [Part 3 진행상황](docs/architecture/part3-status.md)
+미확정 정책값인 `DAILY_REWARD_BALANCE`, `BATTLE_CORRECT_SCORE`는 환경변수로 주입한다.
 
 ## Codex cloud에서 작업
 
