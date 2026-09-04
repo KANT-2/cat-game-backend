@@ -1,6 +1,8 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-03 기준 ORM 모델과 Alembic head를 반영한 16개 업무 테이블의 현재 구조다.
+2026-09-04 기준 ORM 모델과 Alembic head를 반영한 16개 업무 테이블의 현재 구조다.
+
+팀 기준 문서는 [Notion ERD 추가수정버전](https://app.notion.com/p/3d1db49922e580e79ba1e7d318230025)이다.
 
 ## 최근 변경 사항
 
@@ -8,6 +10,8 @@
 - Python ORM 모델과 응답 DTO는 `Asset`, `AssetRead`를 사용한다.
 - `CAT_MEMORIES.cat_asset_id`는 `ASSETS.id` 중 고양이 자산 행을 참조한다.
 - `PLACED_OBJECTS.position_data`의 필수 좌표는 `x`, `y`, `z`다. 이전 `rotation` 값은 마이그레이션에서 `z`로 옮긴다.
+- `TASKS`는 `CODE`와 `MULTIPLE_CHOICE`, `PYTHON`과 `SQL`을 함께 지원하며 객관식 메타데이터를 JSONB로 저장한다.
+- `TASK_ATTEMPTS.result_detail`은 채점 결과 상세를 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
 - API에는 내부 INTEGER PK/FK를 노출하지 않고 UUID `public_id`와 `*_public_id`만 사용한다.
 
 ## Mermaid ERD
@@ -57,11 +61,14 @@ erDiagram
         uuid public_id UK "UUIDv4"
         int concept_id FK
         string title
-        string type
-        string difficulty
+        string type "CODE, MULTIPLE_CHOICE"
+        string domain "PYTHON, SQL"
+        string difficulty "BRONZE, SILVER, GOLD"
         text description
         text template_code
-        text test_cases
+        text test_cases "채점용 테스트 데이터"
+        jsonb options "객관식 보기, nullable"
+        string correct_option "객관식 정답, nullable"
         text hint_text "nullable"
         boolean is_active
     }
@@ -83,10 +90,11 @@ erDiagram
         int room_task_id FK "nullable"
         string context_type
         text submitted_code
-        string status
+        string status "PENDING, RUNNING, COMPLETED, FAILED"
         boolean is_correct "nullable"
         boolean used_hint
         datetime attempted_at
+        text result_detail "채점 결과 상세, nullable"
     }
 
     ROOMS {
