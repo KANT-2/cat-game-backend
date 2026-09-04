@@ -32,10 +32,10 @@ class HostUser(BaseModel):
     email: str | None = None
 
 
-async def get_current_user(
-    request: Request,
+def get_current_user(
     db: DbSession,
     user_public_id: Annotated[uuid.UUID | None, Header(alias="X-User-Public-ID")] = None,
+    request: Request = None,
 ) -> User:
     """Validate the Django session through the host bridge and JIT-provision a game user."""
     if settings.app_env in {"local", "test"} and user_public_id is not None:
@@ -43,17 +43,21 @@ async def get_current_user(
         if user is None:
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Development user was not found")
         return user
+    if user_public_id is not None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Development authentication is disabled")
+    session_cookie = (
+        request.cookies.get(settings.ax_auth_session_cookie_name) if request is not None else None
+    )
+    if not session_cookie:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
     if not settings.ax_auth_base_url:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, "Host authentication is not configured"
         )
-    session_cookie = request.cookies.get(settings.ax_auth_session_cookie_name)
-    if not session_cookie:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
     url = settings.ax_auth_base_url.rstrip("/") + "/" + settings.ax_auth_me_path.lstrip("/")
     try:
-        async with httpx.AsyncClient(timeout=settings.ax_auth_timeout_seconds) as client:
-            response = await client.get(
+        with httpx.Client(timeout=settings.ax_auth_timeout_seconds) as client:
+            response = client.get(
                 url,
                 cookies={settings.ax_auth_session_cookie_name: session_cookie},
                 headers={"Accept": "application/json"},
