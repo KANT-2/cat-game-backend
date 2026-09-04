@@ -71,21 +71,26 @@ def test_gacha_returns_503_when_policy_is_not_configured() -> None:
     }
 
 
-def test_gacha_returns_public_response(
+@pytest.mark.parametrize("draw_count", [1, 10])
+def test_gacha_returns_public_response_for_supported_draw_count(
     monkeypatch,
     authenticated_client,
+    draw_count: int,
 ) -> None:
     client, user, unit_of_work, policy = authenticated_client
     request_id = uuid.uuid4()
     execution_public_id = uuid.uuid4()
     cat_public_id = uuid.uuid4()
+    bonus_draw_count = 1 if draw_count == 10 else 0
+    result_count = draw_count + bonus_draw_count
 
     draw = MagicMock(
         return_value={
             "execution_public_id": str(execution_public_id),
             "request_id": str(request_id),
-            "draw_count": 1,
-            "balance_cost": 200,
+            "draw_count": draw_count,
+            "bonus_draw_count": bonus_draw_count,
+            "balance_cost": 200 * draw_count,
             "balance": 800,
             "mileage": 0,
             "results": [
@@ -96,6 +101,7 @@ def test_gacha_returns_public_response(
                     "is_duplicate": False,
                     "mileage_awarded": 0,
                 }
+                for _ in range(result_count)
             ],
         }
     )
@@ -109,7 +115,7 @@ def test_gacha_returns_public_response(
         "/api/v1/gacha/draws",
         json={
             "request_id": str(request_id),
-            "draw_count": 1,
+            "draw_count": draw_count,
         },
     )
 
@@ -120,12 +126,15 @@ def test_gacha_returns_public_response(
         policy=policy,
         user_public_id=user.public_id,
         request_id=request_id,
-        draw_count=1,
+        draw_count=draw_count,
     )
 
     body = response.json()
     assert body["execution_public_id"] == str(execution_public_id)
     assert body["request_id"] == str(request_id)
+    assert body["draw_count"] == draw_count
+    assert body["bonus_draw_count"] == bonus_draw_count
+    assert len(body["results"]) == result_count
     assert body["results"][0]["cat_public_id"] == str(cat_public_id)
 
     internal_ids = {"id", "user_id", "cat_id", "asset_id"}
@@ -176,6 +185,10 @@ def test_gacha_converts_domain_errors(
         {
             "request_id": str(uuid.uuid4()),
             "draw_count": 0,
+        },
+        {
+            "request_id": str(uuid.uuid4()),
+            "draw_count": 2,
         },
         {
             "request_id": str(uuid.uuid4()),

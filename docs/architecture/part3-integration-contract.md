@@ -247,11 +247,16 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 ### 가챠와 고양이
 
 - 가챠 비용, 확률과 중복 마일리지는 서비스에 하드코딩하지 않고 정책 객체로 주입한다.
-- 멱등 요청 payload에는 클라이언트가 결정한 `draw_count`만 포함하고 서버 정책값은 요청 해시에서 제외한다.
+- 멱등 요청 payload에는 클라이언트가 결정한 `draw_count`만 포함하며 값은 `1` 또는 `10`만 허용한다.
+- `draw_count=10`은 10회 비용을 계산한 뒤 보너스 1회를 더해 정확히 11개 결과를 반환한다.
+- `bonus_draw_count`는 서버가 결정하므로 요청과 요청 해시에는 포함하지 않는다.
 - 처음 획득한 고양이는 `ASSETS.quantity = 1`로 생성한다.
 - 이미 보유한 고양이는 새 자산 행을 만들거나 수량을 증가시키지 않는다.
 - 중복 고양이 보상은 같은 트랜잭션에서 `USERS.mileage`로 전환한다.
 - 가챠 결과에는 고양이 내부 정수 ID 대신 `cat_public_id`를 저장하고 반환한다.
+- 고양이 도감은 전체 `CATS` 마스터와 인증 사용자의 고양이 `ASSETS`를 조합한다.
+- 도감의 미보유 고양이는 `cat_asset_public_id=null`, 보유 고양이는 해당 자산의 공개 UUID를 반환한다.
+- 도감은 마스터 등록 순서로 반환하며 읽기 전용이므로 트랜잭션을 커밋하지 않는다.
 
 ### 상점
 
@@ -288,12 +293,13 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 #### Frontend ↔ Backend 데이터 계약 빠른 참조
 
-이 표는 프런트엔드 연결에 필요한 인증 보조 API 2개와 Part 3 기능 API 10개를 한곳에 정리한다. 각 기능의 상세 JSON과 오류 계약은 바로 아래 절을 따른다.
+이 표는 프런트엔드 연결에 필요한 인증 보조 API 2개와 Part 3 기능 API 11개를 한곳에 정리한다. 각 기능의 상세 JSON과 오류 계약은 바로 아래 절을 따른다.
 
 | 기능 | 메서드·경로 | Frontend → Backend | Backend → Frontend |
 | --- | --- | --- | --- |
 | 개발 사용자 준비 | `POST /api/v1/session/development` | 본문 없음 | 사용자 공개 프로필 |
 | 현재 사용자 확인 | `GET /api/v1/session/me` | 인증 헤더 | 사용자 공개 프로필 |
+| 고양이 도감 | `GET /api/v1/cats/collection` | 인증 헤더 | 전체 고양이와 사용자 보유 상태 |
 | 고양이 대화 컨텍스트 | `GET /api/v1/cats/{cat_asset_public_id}/conversation-context` | 고양이 보유 자산 UUID | 고양이·persona·기억 목록 |
 | 기억 추가 | `POST /api/v1/cats/{cat_asset_public_id}/memories` | `context_summary` | 생성된 기억 |
 | 기억 선택 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | 고양이 자산·기억 UUID | 본문 없음 |
@@ -303,7 +309,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 | 가구 배치 | `POST /api/v1/housing/placed-objects` | 아이템 UUID·좌표 | 생성된 배치 객체 |
 | 가구 위치 수정 | `PATCH /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID·새 좌표 | 수정된 배치 객체 |
 | 가구 배치 해제 | `DELETE /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID | 본문 없음 |
-| 고양이 가챠 | `POST /api/v1/gacha/draws` | 멱등 키·추첨 횟수 | 비용·잔액·마일리지·추첨 결과 |
+| 고양이 가챠 | `POST /api/v1/gacha/draws` | 멱등 키·`draw_count` 1 또는 10 | 비용·보너스 횟수·잔액·마일리지·추첨 결과 |
 
 공통 클라이언트 규칙은 다음과 같다.
 
@@ -356,6 +362,42 @@ X-User-Public-ID: 8a4a9c2f-645f-4b94-9b5d-16bc7d563f42
 ```
 
 운영 환경에서는 호스트 인증 공급자가 `CurrentUser`를 제공하며 임시 UUID 헤더를 사용하지 않는다.
+
+##### 고양이 도감 조회
+
+```http
+GET /api/v1/cats/collection
+X-User-Public-ID: 8a4a9c2f-645f-4b94-9b5d-16bc7d563f42
+```
+
+요청 본문은 없다. `200 OK` 응답:
+
+```json
+{
+  "total_count": 2,
+  "owned_count": 1,
+  "cats": [
+    {
+      "cat_public_id": "063115f5-749f-43ff-9016-eb9dc4203d30",
+      "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+      "name": "나비",
+      "persona": "차분하고 다정한 고양이",
+      "rarity": "COMMON",
+      "is_owned": true
+    },
+    {
+      "cat_public_id": "6877a193-c416-43d3-8c15-9333520c22c1",
+      "cat_asset_public_id": null,
+      "name": "별이",
+      "persona": "호기심 많은 고양이",
+      "rarity": "RARE",
+      "is_owned": false
+    }
+  ]
+}
+```
+
+프런트엔드는 `is_owned`로 획득 여부를 표시하고, 보유 고양이의 `cat_asset_public_id`를 대화 컨텍스트 경로에 사용한다. 고양이가 하나도 없으면 두 count는 `0`, `cats`는 빈 배열이다. 인증 사용자를 서비스에서 찾을 수 없으면 `404`다. 페이지네이션, 검색, 희귀도 필터와 이미지 URL은 현재 계약 범위가 아니다.
 
 ##### 페르소나와 기억 전체 조회
 
@@ -465,7 +507,7 @@ Content-Type: application/json
 }
 ```
 
-성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다.
+성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다. 아이템은 구매로만 획득하며 아이템 가챠는 제공하지 않는다.
 
 ##### 벽지·바닥 적용
 
@@ -524,6 +566,7 @@ Content-Type: application/json
   "execution_public_id": "3cded9b5-2655-471e-90c8-3a63a9c43018",
   "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
   "draw_count": 10,
+  "bonus_draw_count": 1,
   "balance_cost": 1000,
   "balance": 4200,
   "mileage": 30,
@@ -539,7 +582,7 @@ Content-Type: application/json
 }
 ```
 
-위 숫자는 응답 형태 설명용 예시이며 실제 비용·확률·중복 마일리지 정책값이 아니다. 현재 기본 `get_gacha_policy()`는 정책 미확정 상태를 숨기지 않고 `503 Service Unavailable`을 반환한다. 테스트와 배포 환경은 확정된 `GachaPolicy`를 의존성으로 주입해야 한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 추첨 수나 잘못된 본문은 `422`다.
+예시에는 결과 한 건만 표시했지만 `draw_count=10`의 실제 `results` 길이는 11이다. 10회 비용만 `calculate_balance_cost(draw_count=10)`으로 계산하고 추첨 정책에는 `draw_count=11`을 전달한다. 1회 요청은 `bonus_draw_count=0`과 결과 한 건을 반환한다. 위 숫자는 응답 형태 설명용 예시이며 실제 비용·확률·중복 마일리지 정책값이 아니다. 현재 기본 `get_gacha_policy()`는 정책 미확정 상태를 숨기지 않고 `503 Service Unavailable`을 반환한다. 테스트와 배포 환경은 확정된 `GachaPolicy`를 의존성으로 주입해야 한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, `1`·`10` 이외 추첨 수나 잘못된 본문은 `422`다.
 
 ## 7. 통합 완료 체크리스트
 

@@ -31,11 +31,9 @@ def test_submission_allows_only_current_contexts(context):
 
 def test_context_link_combinations_are_enforced():
     TaskAttemptCreate.model_validate(valid())
-    TaskAttemptCreate.model_validate(valid(
-        context_type="DAILY", attendance_task_public_id=uuid.uuid4()
-    ))
-    TaskAttemptCreate.model_validate(valid(
-        context_type="BATTLE", room_task_public_id=uuid.uuid4()
-    ))
+    TaskAttemptCreate.model_validate(
+        valid(context_type="DAILY", attendance_task_public_id=uuid.uuid4())
+    )
+    TaskAttemptCreate.model_validate(valid(context_type="BATTLE", room_task_public_id=uuid.uuid4()))
     with pytest.raises(ValidationError):
         TaskAttemptCreate.model_validate(valid(context_type="DAILY"))

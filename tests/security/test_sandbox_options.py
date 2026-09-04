@@ -19,11 +19,16 @@ def test_docker_security_flags_and_accepted_result(monkeypatch):
     command = seen["command"]
     assert result.verdict is Verdict.ACCEPTED
     for pair in [
-        ["--network", "none"], ["--read-only"], ["--cap-drop", "ALL"],
-        ["--security-opt", "no-new-privileges:true"], ["--user", "sandbox"],
-        ["--memory"], ["--cpus"], ["--pids-limit"],
+        ["--network", "none"],
+        ["--read-only"],
+        ["--cap-drop", "ALL"],
+        ["--security-opt", "no-new-privileges:true"],
+        ["--user", "sandbox"],
+        ["--memory"],
+        ["--cpus"],
+        ["--pids-limit"],
     ]:
-        assert any(command[i:i + len(pair)] == pair for i in range(len(command)))
+        assert any(command[i : i + len(pair)] == pair for i in range(len(command)))
 
 
 def test_host_timeout_is_student_failure(monkeypatch):

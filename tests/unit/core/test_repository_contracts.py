@@ -13,15 +13,17 @@ EXPECTED_METHODS = {
     UserRepository: {"get_by_public_id", "get_for_update"},
     ItemRepository: {"get_by_public_id", "get_by_id"},
     CatRepository: {
-    "get_by_public_id",
-    "get_by_id",
+        "get_by_public_id",
+        "get_by_id",
+        "list_all",
     },
     AssetRepository: {
-    "get_by_public_id",
-    "get_cat_asset",
-    "get_item_asset_for_update",
-    "add_item_quantity",
-    "grant_cat",
+        "get_by_public_id",
+        "get_cat_asset",
+        "list_cat_assets_by_user_id",
+        "get_item_asset_for_update",
+        "add_item_quantity",
+        "grant_cat",
     },
     PlacedObjectRepository: {
         "get_by_public_id_for_update",
@@ -30,11 +32,11 @@ EXPECTED_METHODS = {
         "remove",
     },
     CatMemoryRepository: {
-    "get_by_public_id_for_update",
-    "list_by_cat_asset_id",
-    "add",
-    "remove",
-    "remove_all_by_cat_asset_id",
+        "get_by_public_id_for_update",
+        "list_by_cat_asset_id",
+        "add",
+        "remove",
+        "remove_all_by_cat_asset_id",
     },
 }
 
@@ -70,10 +72,6 @@ def test_locking_methods_are_named_for_update() -> None:
     }
 
     for repository, expected_methods in locking_methods.items():
-        actual_methods = {
-            name
-            for name in vars(repository)
-            if name.endswith("for_update")
-        }
+        actual_methods = {name for name in vars(repository) if name.endswith("for_update")}
 
         assert actual_methods == expected_methods

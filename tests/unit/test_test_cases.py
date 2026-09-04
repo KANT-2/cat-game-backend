@@ -10,8 +10,9 @@ def test_parse_text_json_spec():
     assert cases[0].expected_output == "5\n"
 
 
-@pytest.mark.parametrize("raw", ["not json", "[]", "{}", '[{"input":"x"}]',
-                                 '[{"input":1,"expected_output":"x"}]'])
+@pytest.mark.parametrize(
+    "raw", ["not json", "[]", "{}", '[{"input":"x"}]', '[{"input":1,"expected_output":"x"}]']
+)
 def test_invalid_spec_stops_before_execution(raw):
     with pytest.raises(SpecError):
         parse_test_cases(raw)

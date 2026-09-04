@@ -58,10 +58,14 @@ class ItemRepository(Protocol):
 
     def get_by_id(self, item_id: int) -> Item | None: ...
 
+
 class CatRepository(Protocol):
     def get_by_public_id(self, public_id: UUID) -> Cat | None: ...
 
     def get_by_id(self, cat_id: int) -> Cat | None: ...
+
+    def list_all(self) -> list[Cat]: ...
+
 
 class AssetRepository(Protocol):
     def get_by_public_id(
@@ -74,6 +78,11 @@ class AssetRepository(Protocol):
         user_id: int,
         cat_id: int,
     ) -> Asset | None: ...
+
+    def list_cat_assets_by_user_id(
+        self,
+        user_id: int,
+    ) -> list[Asset]: ...
 
     def get_item_asset_for_update(
         self,
@@ -118,6 +127,7 @@ class PlacedObjectRepository(Protocol):
         self,
         placed_object: PlacedObject,
     ) -> None: ...
+
 
 class CatMemoryRepository(Protocol):
     def get_by_public_id_for_update(

@@ -87,18 +87,12 @@ def test_fake_placed_object_repository_counts_and_adds() -> None:
     assert repository.count_for_update(2, 20) == 0
     assert placed.position_data == {"x": 10, "y": 20, "z": 0}
 
-    assert (
-        repository.get_by_public_id_for_update(placed.public_id)
-        is placed
-    )
+    assert repository.get_by_public_id_for_update(placed.public_id) is placed
 
     repository.remove(placed)
 
     assert repository.count_for_update(1, 20) == 0
-    assert (
-        repository.get_by_public_id_for_update(placed.public_id)
-        is None
-    )
+    assert repository.get_by_public_id_for_update(placed.public_id) is None
 
 
 def test_fake_cat_memory_repository_accumulates() -> None:

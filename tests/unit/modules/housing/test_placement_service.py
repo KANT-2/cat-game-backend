@@ -88,6 +88,7 @@ def test_place_furniture_uses_owned_quantity_in_one_transaction() -> None:
     assert "item_id" not in result.model_dump()
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_place_furniture_rejects_non_furniture_item() -> None:
     user = User(
         id=1,
@@ -140,6 +141,7 @@ def test_place_furniture_rejects_non_furniture_item() -> None:
     assert unit_of_work.placed_objects.placed_objects == []
     unit_of_work.commit.assert_not_called()
 
+
 def test_place_furniture_rejects_more_than_owned_quantity() -> None:
     user = User(
         id=1,
@@ -183,9 +185,7 @@ def test_place_furniture_rejects_more_than_owned_quantity() -> None:
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.items = FakeItemRepository([item])
     unit_of_work.assets = FakeAssetRepository([asset])
-    unit_of_work.placed_objects = FakePlacedObjectRepository(
-        [existing_placement]
-    )
+    unit_of_work.placed_objects = FakePlacedObjectRepository([existing_placement])
 
     with pytest.raises(
         PlacementLimitExceededError,
@@ -202,10 +202,9 @@ def test_place_furniture_rejects_more_than_owned_quantity() -> None:
             ),
         )
 
-    assert unit_of_work.placed_objects.placed_objects == [
-        existing_placement
-    ]
+    assert unit_of_work.placed_objects.placed_objects == [existing_placement]
     unit_of_work.commit.assert_not_called()
+
 
 def test_place_furniture_rejects_unowned_item() -> None:
     user = User(
@@ -251,6 +250,7 @@ def test_place_furniture_rejects_unowned_item() -> None:
     assert unit_of_work.placed_objects.placed_objects == []
     unit_of_work.commit.assert_not_called()
 
+
 def test_update_furniture_placement_changes_only_position() -> None:
     user = User(
         id=1,
@@ -285,9 +285,7 @@ def test_update_furniture_placement_changes_only_position() -> None:
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.items = FakeItemRepository([item])
-    unit_of_work.placed_objects = FakePlacedObjectRepository(
-        [placed_object]
-    )
+    unit_of_work.placed_objects = FakePlacedObjectRepository([placed_object])
 
     result = update_furniture_placement(
         unit_of_work=unit_of_work,
@@ -312,6 +310,7 @@ def test_update_furniture_placement_changes_only_position() -> None:
     assert "user_id" not in result.model_dump()
     assert "item_id" not in result.model_dump()
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_update_furniture_placement_hides_other_users_object() -> None:
     owner = User(
@@ -350,9 +349,7 @@ def test_update_furniture_placement_hides_other_users_object() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([owner, attacker])
-    unit_of_work.placed_objects = FakePlacedObjectRepository(
-        [placed_object]
-    )
+    unit_of_work.placed_objects = FakePlacedObjectRepository([placed_object])
 
     with pytest.raises(
         ResourceNotFoundError,
@@ -371,6 +368,7 @@ def test_update_furniture_placement_hides_other_users_object() -> None:
 
     assert placed_object.position_data == original_position
     unit_of_work.commit.assert_not_called()
+
 
 def test_remove_furniture_placement_keeps_owned_quantity() -> None:
     user = User(
@@ -414,9 +412,7 @@ def test_remove_furniture_placement_keeps_owned_quantity() -> None:
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([user])
     unit_of_work.assets = FakeAssetRepository([asset])
-    unit_of_work.placed_objects = FakePlacedObjectRepository(
-        [placed_object]
-    )
+    unit_of_work.placed_objects = FakePlacedObjectRepository([placed_object])
 
     result = remove_furniture_placement(
         unit_of_work=unit_of_work,
@@ -429,6 +425,7 @@ def test_remove_furniture_placement_keeps_owned_quantity() -> None:
     assert asset.quantity == 2
     assert unit_of_work.assets.assets == [asset]
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_remove_furniture_placement_hides_other_users_object() -> None:
     owner = User(
@@ -466,9 +463,7 @@ def test_remove_furniture_placement_hides_other_users_object() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
     unit_of_work.users = FakeUserRepository([owner, attacker])
-    unit_of_work.placed_objects = FakePlacedObjectRepository(
-        [placed_object]
-    )
+    unit_of_work.placed_objects = FakePlacedObjectRepository([placed_object])
 
     with pytest.raises(
         ResourceNotFoundError,
@@ -480,7 +475,5 @@ def test_remove_furniture_placement_hides_other_users_object() -> None:
             placed_object_public_id=placed_object.public_id,
         )
 
-    assert unit_of_work.placed_objects.placed_objects == [
-        placed_object
-    ]
+    assert unit_of_work.placed_objects.placed_objects == [placed_object]
     unit_of_work.commit.assert_not_called()

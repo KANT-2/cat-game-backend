@@ -30,9 +30,7 @@ def apply_surface_item(
             raise ResourceNotFoundError("item not found")
 
         if item.category not in {"WALLPAPER", "FLOOR"}:
-            raise InvalidItemCategoryError(
-                "item is not wallpaper or floor"
-            )
+            raise InvalidItemCategoryError("item is not wallpaper or floor")
 
         asset = uow.assets.get_item_asset_for_update(
             user.id,
@@ -58,6 +56,7 @@ def apply_surface_item(
             category=item.category,
         )
 
+
 def place_furniture(
     *,
     unit_of_work: UnitOfWork,
@@ -73,7 +72,7 @@ def place_furniture(
         item = uow.items.get_by_public_id(item_public_id)
         if item is None:
             raise ResourceNotFoundError("item not found")
-        
+
         if item.category != "FURNITURE":
             raise InvalidItemCategoryError("item is not furniture")
 
@@ -89,9 +88,7 @@ def place_furniture(
             item.id,
         )
         if placed_count >= asset.quantity:
-            raise PlacementLimitExceededError(
-                "placement exceeds owned quantity"
-            )
+            raise PlacementLimitExceededError("placement exceeds owned quantity")
 
         placed_object = uow.placed_objects.add(
             user.id,
@@ -106,6 +103,7 @@ def place_furniture(
             item_public_id=item.public_id,
         )
 
+
 def update_furniture_placement(
     *,
     unit_of_work: UnitOfWork,
@@ -118,24 +116,15 @@ def update_furniture_placement(
         if user is None:
             raise ResourceNotFoundError("user not found")
 
-        placed_object = (
-            uow.placed_objects.get_by_public_id_for_update(
-                placed_object_public_id
-            )
-        )
-        if (
-            placed_object is None
-            or placed_object.user_id != user.id
-        ):
+        placed_object = uow.placed_objects.get_by_public_id_for_update(placed_object_public_id)
+        if placed_object is None or placed_object.user_id != user.id:
             raise ResourceNotFoundError("placed object not found")
 
         item = uow.items.get_by_id(placed_object.item_id)
         if item is None:
             raise ResourceNotFoundError("item not found")
 
-        placed_object.position_data = position_data.model_dump(
-            mode="json"
-        )
+        placed_object.position_data = position_data.model_dump(mode="json")
 
         uow.commit()
 
@@ -143,6 +132,7 @@ def update_furniture_placement(
             placed_object,
             item_public_id=item.public_id,
         )
+
 
 def remove_furniture_placement(
     *,
@@ -155,15 +145,8 @@ def remove_furniture_placement(
         if user is None:
             raise ResourceNotFoundError("user not found")
 
-        placed_object = (
-            uow.placed_objects.get_by_public_id_for_update(
-                placed_object_public_id
-            )
-        )
-        if (
-            placed_object is None
-            or placed_object.user_id != user.id
-        ):
+        placed_object = uow.placed_objects.get_by_public_id_for_update(placed_object_public_id)
+        if placed_object is None or placed_object.user_id != user.id:
             raise ResourceNotFoundError("placed object not found")
 
         uow.placed_objects.remove(placed_object)
