@@ -1,4 +1,4 @@
-# Part 2 학습 문제·채점·추천 MVP
+# Part 2 학습 문제 유형·숙련도·추천
 
 Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코드형/객관식 공통 제출, 개념별 숙련도 및 추천 기능을 추가했다. 로그인과 프로필 기능은 변경하지 않았다.
 
@@ -10,7 +10,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 | SILVER | 50 | 정렬·파싱·컬렉션·반복 등 여러 개념을 섞은 응용 |
 | GOLD | 50 | 함수 작성, 탐색, 동적 계획법, 그래프 기초 등 종합 문제 |
 
-각 문제는 대표 개념 하나만 `concept_id`로 가진다. 개념 이름은 `PYTHON:variables`처럼 domain 접두사를 써서 향후 `SQL:DISTINCT`와 충돌하지 않는다. `tasks.domain`은 `PYTHON`과 `SQL`, 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다.
+각 문제는 대표 개념 하나만 `concept_id`로 가진다. Python은 7개, SQL은 9개의 공식 Concept 이름을 사용하며 난이도는 Concept와 분리한다. `tasks.domain`은 `PYTHON`과 `SQL`, 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다. 상세 목록과 SQL 권한 제한 사유는 [Python·SQL Concept 기준](concept-policy.md)에 기록한다.
 
 시드는 `scripts/seed_learning_tasks.py`로 실행한다. 안정적인 `[SAMPLE:PYTHON:...]` 제목을 기준으로 새 행은 만들고 기존 행은 갱신해 재실행해도 150개를 유지한다. `[BENCHMARK]`, `BENCHMARK:`, `LOAD TEST:`, `PERF TEST:`로 시작하는 문제와 그 시도만 정리한다. `scripts/benchmark_grader_load.py`는 DB 데이터를 만들지 않는 개발 도구라 유지한다.
 
@@ -31,7 +31,11 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 
 ## 실행 계층
 
-공통 서비스는 `RunnerDispatcher`에 문제를 넘긴다. 객관식은 서버 비교, `PYTHON/CODE`는 기존 `DockerSandbox`, `SQL/CODE`는 비활성 placeholder다. SQL runner를 활성화할 때는 별도 격리, 읽기 전용 DB 사용자·트랜잭션, statement timeout, DDL/DML 차단을 먼저 구현해야 한다. 현재 SQL 코드 제출은 안전하게 `SYSTEM_ERROR`로 종료된다.
+공통 서비스는 `RunnerDispatcher`에 문제를 넘긴다. 객관식은 서버 비교, `PYTHON/CODE`는 기존 `DockerSandbox`, `SQL/CODE`는 운영 DB와 분리된 PostgreSQL SQL sandbox로 분기한다.
+
+SQL 문제도 기존 `test_cases` TEXT 컬럼을 사용한다. 각 배열 항목의 `input`은 케이스별 스키마와 seed data를 만드는 신뢰된 SQL이고, `expected_output`은 순서까지 비교할 JSON 행 배열이다. 예: `{"input":"CREATE TABLE ...; INSERT ...","expected_output":"[[1,\"Miso\"]]"}`. 날짜·numeric 등 JSON 기본형이 아닌 PostgreSQL 값은 문자열로 정규화된다. 각 케이스는 무작위 전용 스키마에서 seed를 적용하고, 제출문은 별도 read-only 트랜잭션과 statement timeout 아래 실행한 뒤 스키마를 삭제한다.
+
+로컬에서는 `docker compose -f infra/compose/sql-grader.yml up -d`로 전용 PostgreSQL을 시작하고 `SQL_GRADING_DATABASE_URL=postgresql://grader_admin:local-grader-only@localhost:55432/sql_grader`를 설정한다. 운영에서는 이 URL에 운영 애플리케이션 DB가 아닌 전용 빈 데이터베이스와 비-superuser 계정을 사용해야 한다. 제출 SQL이나 오류 응답에는 이 자격증명을 포함하지 않는다.
 
 ## 로컬 적용
 

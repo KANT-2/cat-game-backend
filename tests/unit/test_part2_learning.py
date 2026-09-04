@@ -14,6 +14,7 @@ from app.modules.learning.proficiency import ConceptAssessment, calculate_profic
 from app.schemas.task import TaskRead
 from app.schemas.task_attempt import TaskAttemptCreate
 from scripts.seed_learning_tasks import build_tasks
+from scripts.seed_sql_tasks import build_tasks as build_sql_tasks
 
 
 def submission(**values):
@@ -55,7 +56,15 @@ def test_seed_has_150_balanced_unique_tasks_and_hidden_answers():
     assert {level: sum(row["difficulty"] == level for row in rows) for level in ("BRONZE", "SILVER", "GOLD")} == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}
     choices = [row for row in rows if row["type"] == "MULTIPLE_CHOICE"]
     assert choices and all(row["options"] and row["correct_option"] for row in choices)
-    assert all(row["concept"].startswith("PYTHON:") for row in rows)
+    assert {row["concept"] for row in rows} == {
+        "PYTHON:basics",
+        "PYTHON:conditionals",
+        "PYTHON:loops",
+        "PYTHON:strings",
+        "PYTHON:collections",
+        "PYTHON:functions",
+        "PYTHON:exceptions",
+    }
 
 
 def test_public_task_schema_never_contains_grading_answers():
@@ -64,3 +73,17 @@ def test_public_task_schema_never_contains_grading_answers():
     assert "options" in TaskRead.model_fields
     assert "completed" in TaskRead.model_fields
     assert "concept_name" in TaskRead.model_fields
+
+
+def test_sql_seed_has_150_balanced_unique_tasks_and_all_concepts():
+    rows = build_sql_tasks()
+    assert len(rows) == len({row["title"] for row in rows}) == 150
+    assert {
+        level: sum(row["difficulty"] == level for row in rows)
+        for level in ("BRONZE", "SILVER", "GOLD")
+    } == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}
+    assert {row["concept"] for row in rows} == {
+        "SQL:basics", "SQL:filtering", "SQL:aggregation", "SQL:joins",
+        "SQL:subqueries", "SQL:advanced_queries", "SQL:data_manipulation",
+        "SQL:schema", "SQL:transactions",
+    }

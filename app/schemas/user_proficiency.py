@@ -1,9 +1,13 @@
 import uuid
 
-from app.schemas.base import ReadSchema
+from pydantic import BaseModel
 
 
-class AttendanceTaskRead(ReadSchema):
-    task_public_id: uuid.UUID
-    task_order: int
-    is_completed: bool
+class UserProficiencyRead(BaseModel):
+    concept_public_id: uuid.UUID
+    proficiency_level: int
+
+
+class WeakConceptRead(UserProficiencyRead):
+    name: str
+    attempts: int

@@ -4,6 +4,7 @@ from app.schemas.base import ReadSchema
 
 
 class UserRead(ReadSchema):
+    homepage_user_id: int | None = None
     email: str
     username: str
     role: str

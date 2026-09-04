@@ -3,7 +3,9 @@
 import uuid
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+import httpx
+from fastapi import Depends, Header, HTTPException, Request, status
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,22 +25,86 @@ def get_db():
 DbSession = Annotated[Session, Depends(get_db)]
 
 
+class HostUser(BaseModel):
+    id: int
+    display_name: str
+    role: str
+    email: str | None = None
+
+
 def get_current_user(
     db: DbSession,
     user_public_id: Annotated[uuid.UUID | None, Header(alias="X-User-Public-ID")] = None,
-) -> User:
-    """Resolve an explicit development user without weakening production authentication."""
-    if settings.app_env not in {"local", "test"}:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Host authentication integration is required",
-        )
+) -> User | None:
+    """Resolve the explicit local/test user selected by the development header."""
     if user_public_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Development user is required")
+        return None
+    if settings.app_env not in {"local", "test"}:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Development authentication is disabled")
     user = db.scalar(select(User).where(User.public_id == user_public_id))
     if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Development user was not found")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Development user was not found")
     return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+DevelopmentUser = Annotated[User | None, Depends(get_current_user)]
+
+
+async def resolve_current_user(
+    request: Request,
+    db: DbSession,
+    development_user: DevelopmentUser,
+) -> User:
+    """Use local header auth when present, otherwise validate the Django session bridge."""
+    if development_user is not None:
+        return development_user
+    session_cookie = request.cookies.get(settings.ax_auth_session_cookie_name)
+    if not session_cookie:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
+    if not settings.ax_auth_base_url:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Host authentication is not configured"
+        )
+    url = settings.ax_auth_base_url.rstrip("/") + "/" + settings.ax_auth_me_path.lstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=settings.ax_auth_timeout_seconds) as client:
+            response = await client.get(
+                url,
+                cookies={settings.ax_auth_session_cookie_name: session_cookie},
+                headers={"Accept": "application/json"},
+            )
+        if response.status_code in {401, 403}:
+            raise HTTPException(response.status_code, "Host account is not authorized")
+        response.raise_for_status()
+        payload = response.json()
+        if "display_name" not in payload:
+            payload["display_name"] = payload.get("name") or payload.get("first_name") or "Player"
+        host_user = HostUser.model_validate(payload)
+    except HTTPException:
+        raise
+    except (httpx.HTTPError, ValueError, ValidationError) as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Host authentication is temporarily unavailable"
+        ) from exc
+
+    user = db.scalar(select(User).where(User.homepage_user_id == host_user.id))
+    normalized_role = host_user.role.upper()
+    if user is None:
+        user = User(
+            homepage_user_id=host_user.id,
+            email=host_user.email or f"host-{host_user.id}@invalid.local",
+            username=host_user.display_name,
+            role=normalized_role,
+        )
+        db.add(user)
+    else:
+        user.username = host_user.display_name
+        user.role = normalized_role
+        if host_user.email:
+            user.email = host_user.email
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+CurrentUser = Annotated[User, Depends(resolve_current_user)]
