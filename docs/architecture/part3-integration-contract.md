@@ -295,3 +295,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 로컬·테스트 환경의 보호 API는 `X-User-Public-ID`에서 공개 UUID를 받아 사용자를 조회한다.
 - 운영 환경에서는 개발 세션과 UUID 헤더 인증을 사용하지 않으며 호스트 인증 공급자가 `get_current_user`를 대체해야 한다.
 - 학습 추천 응답은 화면 분류에 사용할 `concept_name`을 포함하되 채점 답과 내부 정수 ID는 계속 제외한다.
+- 저장소 루트 `Dockerfile`은 로컬 통합 환경에서 API가 호스트 Docker 데몬에 격리 채점 컨테이너를 요청할 수
+  있도록 Docker CLI를 포함한다. Docker 소켓은 운영 배포의 기본 계약이 아니며 신뢰할 수 있는 로컬 환경에서만
+  마운트한다.
+- Alembic은 고정 예제 URL 대신 `DATABASE_URL`을 사용하므로 컨테이너와 호스트에서 동일한 설정 계약을 따른다.
