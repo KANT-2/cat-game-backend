@@ -36,6 +36,8 @@ uvicorn app.main:app --reload
 - [x] 전체 회귀 테스트 `248 passed`
 - [ ] 홈페이지 인증 API와 프런트엔드를 포함한 종단간 검증
 
+최근 정리에서는 채점 실행과 상태 전이·숙련도·DAILY/BATTLE 후처리를 분리해 서비스 책임을 명확히 했다. 외부 API와 채점 정책은 변경하지 않았으며 Ruff와 전체 회귀 테스트를 다시 통과했다.
+
 자세한 내용: [Part 2 코딩 학습·채점 진행상황](docs/features/part2-status.md)
 
 Part 2 확장 설계: [학습 문제·객관식·숙련도·추천 MVP](docs/features/part2-learning-system.md)
