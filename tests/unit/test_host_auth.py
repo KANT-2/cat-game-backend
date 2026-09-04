@@ -58,7 +58,7 @@ async def test_host_session_jit_provisions_and_updates_user(monkeypatch):
     monkeypatch.setattr(settings, "ax_auth_base_url", "http://host.test")
     monkeypatch.setattr(dependencies.httpx, "AsyncClient", Client)
     db = DB()
-    user = await dependencies.get_current_user(request("secret"), db)
+    user = await dependencies.resolve_current_user(request("secret"), db, None)
     assert (user.homepage_user_id, user.username, user.role) == (42, "여름", "STUDENT")
     user.username = "old"
     updated = await dependencies.get_current_user(request("secret"), db)
@@ -70,5 +70,5 @@ async def test_host_session_jit_provisions_and_updates_user(monkeypatch):
 async def test_host_session_cookie_is_required(monkeypatch):
     monkeypatch.setattr(settings, "ax_auth_base_url", "http://host.test")
     with pytest.raises(HTTPException) as exc:
-        await dependencies.get_current_user(request(), DB())
+        await dependencies.resolve_current_user(request(), DB(), None)
     assert exc.value.status_code == 401
