@@ -38,6 +38,10 @@ def purchase_item(
         if user is None:
             raise ResourceNotFoundError("user not found")
 
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
         claim = uow.executions.claim(
             user_id=user.id,
             request_id=request_id,
@@ -58,10 +62,6 @@ def purchase_item(
         item = uow.items.get_by_public_id(item_public_id)
         if item is None:
             raise ResourceNotFoundError("item not found")
-
-        locked_user = uow.users.get_for_update(user.id)
-        if locked_user is None:
-            raise ResourceNotFoundError("user not found")
 
         balance_cost = item.price * quantity
         if locked_user.balance < balance_cost:

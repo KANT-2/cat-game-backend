@@ -2,6 +2,8 @@
 
 이 문서는 학습 문제, Python/SQL/객관식 채점, 숙련도, 추천, 일일 미션, 배틀 제출 흐름을 프런트엔드와 FastAPI 백엔드가 안전하게 통합하기 위한 계약을 정의한다.
 
+Part 2와 Part 3의 전체 endpoint를 한 번에 찾으려면 [통합 API 계약](../api/README.md)을 먼저 본다. 이 문서는 Part 2의 상세 업무 규칙과 예외를 설명한다.
+
 현재 `feature/part2-learning` 구현을 기준으로 작성하며, DB 내부 식별자와 API 공개 식별자를 분리하고 모든 보호 API는 공통 `CurrentUser` 인증 의존성을 사용한다.
 
 ---

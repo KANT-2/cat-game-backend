@@ -71,7 +71,7 @@ def test_gacha_returns_503_when_policy_is_not_configured() -> None:
     }
 
 
-@pytest.mark.parametrize("draw_count", [1, 10])
+@pytest.mark.parametrize("draw_count", [1, 11])
 def test_gacha_returns_public_response_for_supported_draw_count(
     monkeypatch,
     authenticated_client,
@@ -81,8 +81,8 @@ def test_gacha_returns_public_response_for_supported_draw_count(
     request_id = uuid.uuid4()
     execution_public_id = uuid.uuid4()
     cat_public_id = uuid.uuid4()
-    bonus_draw_count = 1 if draw_count == 10 else 0
-    result_count = draw_count + bonus_draw_count
+    bonus_draw_count = 1 if draw_count == 11 else 0
+    result_count = draw_count
 
     draw = MagicMock(
         return_value={
@@ -90,7 +90,7 @@ def test_gacha_returns_public_response_for_supported_draw_count(
             "request_id": str(request_id),
             "draw_count": draw_count,
             "bonus_draw_count": bonus_draw_count,
-            "balance_cost": 200 * draw_count,
+            "balance_cost": 200 * (draw_count - bonus_draw_count),
             "balance": 800,
             "mileage": 0,
             "results": [
@@ -189,6 +189,10 @@ def test_gacha_converts_domain_errors(
         {
             "request_id": str(uuid.uuid4()),
             "draw_count": 2,
+        },
+        {
+            "request_id": str(uuid.uuid4()),
+            "draw_count": 10,
         },
         {
             "request_id": str(uuid.uuid4()),

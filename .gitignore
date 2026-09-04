@@ -9,3 +9,4 @@ htmlcov/
 work/
 alembic.ini
 *.egg-info/
+/cat_game.db
