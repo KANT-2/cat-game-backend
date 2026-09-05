@@ -5,6 +5,12 @@ from app.core.exceptions import (
     ResourceNotFoundError,
 )
 from app.core.unit_of_work import UnitOfWork
+from app.integrations.ai.contracts import AIMessage, AITextClient
+from app.modules.cats.prompts import build_cat_system_instruction
+from app.schemas.cat_chat import (
+    CatChatGeneration,
+    CatChatResponse,
+)
 from app.schemas.cat_collection import (
     CatCollectionItemRead,
     CatCollectionRead,
@@ -86,6 +92,76 @@ def get_cat_conversation_context(
                 for memory in memories
             ],
         )
+
+
+def chat_with_cat(
+    *,
+    unit_of_work: UnitOfWork,
+    ai_client: AITextClient,
+    user_public_id: UUID,
+    cat_asset_public_id: UUID,
+    message: str,
+    recent_messages: list[AIMessage],
+    max_output_tokens: int,
+    max_memory_count: int,
+) -> CatChatResponse:
+    with unit_of_work as uow:
+        user = uow.users.get_by_public_id(user_public_id)
+        if user is None:
+            raise ResourceNotFoundError("user not found")
+
+        cat_asset = uow.assets.get_by_public_id(cat_asset_public_id)
+        if cat_asset is None or cat_asset.user_id != user.id or cat_asset.cat_id is None:
+            raise ResourceNotFoundError("cat asset not found")
+
+        cat = uow.cats.get_by_id(cat_asset.cat_id)
+        if cat is None:
+            raise ResourceNotFoundError("cat not found")
+
+        memories = uow.cat_memories.list_by_cat_asset_id(cat_asset.id)
+        selected_memories = memories[-max_memory_count:]
+        memory_summaries = [memory.context_summary for memory in selected_memories]
+        existing_summaries = {memory.context_summary.strip() for memory in memories}
+        cat_name = cat.name
+        persona = cat.persona
+
+    generated = ai_client.generate_structured(
+        system_instruction=build_cat_system_instruction(
+            cat_name=cat_name,
+            persona=persona,
+            memory_summaries=memory_summaries,
+        ),
+        messages=[*recent_messages, AIMessage(role="user", text=message)],
+        max_output_tokens=max_output_tokens,
+        response_schema=CatChatGeneration,
+    )
+
+    memory_read = None
+    memory_summary = generated.data.memory_summary
+    if memory_summary is not None and memory_summary not in existing_summaries:
+        with unit_of_work as uow:
+            user = uow.users.get_by_public_id(user_public_id)
+            if user is None:
+                raise ResourceNotFoundError("user not found")
+
+            cat_asset = uow.assets.get_by_public_id(cat_asset_public_id)
+            if cat_asset is None or cat_asset.user_id != user.id or cat_asset.cat_id is None:
+                raise ResourceNotFoundError("cat asset not found")
+
+            memory = uow.cat_memories.add(cat_asset.id, memory_summary)
+            uow.commit()
+            memory_read = to_cat_memory_read(
+                memory,
+                cat_asset_public_id=cat_asset.public_id,
+            )
+
+    return CatChatResponse(
+        cat_asset_public_id=cat_asset_public_id,
+        reply=generated.data.reply,
+        memory=memory_read,
+        input_tokens=generated.input_tokens,
+        output_tokens=generated.output_tokens,
+    )
 
 
 def add_cat_memory(

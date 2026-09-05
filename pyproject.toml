@@ -8,6 +8,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
+  "google-genai>=2.22,<3",
   "pydantic-settings>=2.6",
   "sqlalchemy>=2.0",
   "uvicorn[standard]>=0.32",
