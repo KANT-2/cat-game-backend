@@ -36,3 +36,7 @@ class PlacementOutsideRoomError(ApplicationError):
 
 class PlacementOccupiedError(ApplicationError):
     """The furniture footprint overlaps another placed object."""
+
+
+class AlreadyClaimedError(ApplicationError):
+    """A once-per-period reward was already claimed."""

@@ -56,6 +56,10 @@ class GameSnapshotRead(BaseModel):
     active_cat_key: str
     active_wallpaper_key: str | None
     active_floor_key: str | None
+    attendance_last_claim_date: str
+    attendance_streak: int
+    attendance_longest_streak: int
+    attendance_claimed_dates: list[str]
     settings: GameSettingsRead
     cats: list[GameCatRead]
     items: list[GameItemRead]
@@ -88,6 +92,14 @@ class ThemeCommand(BaseModel):
 
 class CatHomeCommand(BaseModel):
     visible: bool
+
+
+class SettingsCommand(BaseModel):
+    bgm_enabled: bool | None = None
+    bgm_volume: int | None = Field(default=None, ge=0, le=100)
+    effects_enabled: bool | None = None
+    effects_volume: int | None = Field(default=None, ge=0, le=100)
+    reduced_motion: bool | None = None
 
 
 class GachaCommand(BaseModel):

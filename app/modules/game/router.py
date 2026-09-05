@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.exceptions import (
+    AlreadyClaimedError,
     ApplicationError,
     IdempotencyConflictError,
     InsufficientBalanceError,
@@ -19,7 +20,12 @@ from app.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.models.item import Item
 from app.models.user import User
 from app.modules.game.bootstrap import GameCatalogNotSeededError
-from app.modules.game.commands import select_active_cat, set_cat_home
+from app.modules.game.commands import (
+    claim_attendance,
+    select_active_cat,
+    set_cat_home,
+    update_game_settings,
+)
 from app.modules.game.gacha import draw_game_gacha
 from app.modules.game.schemas import (
     CatHomeCommand,
@@ -29,6 +35,7 @@ from app.modules.game.schemas import (
     MovePlacementCommand,
     PlacementCommand,
     PurchaseCommand,
+    SettingsCommand,
     ThemeCommand,
 )
 from app.modules.game.service import get_game_snapshot
@@ -198,6 +205,43 @@ def change_cat_home(
         raise _http_error(error) from error
 
 
+@router.patch("/settings", response_model=GameMutationRead)
+def change_settings(
+    payload: SettingsCommand,
+    db: DbSession,
+    user: CurrentUser,
+) -> GameMutationRead:
+    """Merge a validated settings patch into the authenticated player's state."""
+    aliases = {
+        "bgm_enabled": "bgmEnabled",
+        "bgm_volume": "bgmVolume",
+        "effects_enabled": "effectsEnabled",
+        "effects_volume": "effectsVolume",
+        "reduced_motion": "reducedMotion",
+    }
+    patch = {
+        aliases[key]: value
+        for key, value in payload.model_dump(exclude_none=True).items()
+    }
+    try:
+        update_game_settings(db, user, patch)
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user))
+    except ApplicationError as error:
+        db.rollback()
+        raise _http_error(error) from error
+
+
+@router.post("/attendance/claims", response_model=GameMutationRead)
+def claim_daily_attendance(db: DbSession, user: CurrentUser) -> GameMutationRead:
+    """Claim today's UTC attendance reward once and return the resulting state."""
+    try:
+        result = claim_attendance(db, user)
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
+    except ApplicationError as error:
+        db.rollback()
+        raise _http_error(error) from error
+
+
 def _catalog_item(db: DbSession, catalog_key: str) -> Item:
     item = db.scalar(select(Item).where(Item.catalog_key == catalog_key))
     if item is None:
@@ -214,6 +258,8 @@ def _fresh_snapshot(db: DbSession, user: User) -> GameSnapshotRead:
 
 
 def _http_error(error: ApplicationError) -> HTTPException:
+    if isinstance(error, AlreadyClaimedError):
+        return HTTPException(status_code=409, detail="already-claimed")
     if isinstance(error, ResourceNotFoundError):
         return HTTPException(status_code=404, detail="resource-not-found")
     if isinstance(error, InsufficientBalanceError):

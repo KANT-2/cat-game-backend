@@ -13,6 +13,10 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
         active_cat_key="fluffy",
         active_wallpaper_key=None,
         active_floor_key=None,
+        attendance_last_claim_date="",
+        attendance_streak=0,
+        attendance_longest_streak=0,
+        attendance_claimed_dates=[],
         settings={
             "bgm_enabled": True,
             "bgm_volume": 70,

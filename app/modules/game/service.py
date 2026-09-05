@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.asset import Asset
+from app.models.attendance import Attendance
 from app.models.cat import Cat
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
@@ -43,6 +44,13 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
             select(PlacedObject).where(PlacedObject.user_id == user.id).order_by(PlacedObject.id)
         ).all()
     )
+    attendances = list(
+        db.scalars(
+            select(Attendance)
+            .where(Attendance.user_id == user.id)
+            .order_by(Attendance.check_in_date)
+        ).all()
+    )
 
     cat_assets = {asset.cat_id: asset for asset in assets if asset.cat_id is not None}
     item_assets = {asset.item_id: asset for asset in assets if asset.item_id is not None}
@@ -62,6 +70,15 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
         active_cat_key=active_cat.catalog_key,
         active_wallpaper_key=_item_key(item_by_id, user.wallpaper_item_id),
         active_floor_key=_item_key(item_by_id, user.floor_item_id),
+        attendance_last_claim_date=(
+            attendances[-1].check_in_date.isoformat() if attendances else ""
+        ),
+        attendance_streak=attendances[-1].streak_count if attendances else 0,
+        attendance_longest_streak=max(
+            (attendance.streak_count for attendance in attendances),
+            default=0,
+        ),
+        attendance_claimed_dates=[attendance.check_in_date.isoformat() for attendance in attendances],
         settings=_read_settings(user.game_settings),
         cats=[
             GameCatRead(
