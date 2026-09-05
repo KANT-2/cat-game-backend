@@ -79,8 +79,8 @@ def test_placed_object_position_uses_xyz_coordinates(db_session):
     ).scalar_one()
     item_id = db_session.execute(
         text(
-            "INSERT INTO items (category, name, price) "
-            "VALUES ('FURNITURE', 'XYZ Chair', 0) RETURNING id"
+            "INSERT INTO items (catalog_key, category, name, price) "
+            "VALUES ('test.xyz-chair', 'FURNITURE', 'XYZ Chair', 0) RETURNING id"
         )
     ).scalar_one()
     db_session.execute(
