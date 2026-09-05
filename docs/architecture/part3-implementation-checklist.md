@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-04): 구매·가챠·벽지·바닥·가구와 고양이 페르소나·기억 FastAPI 연결 및 최종 PostgreSQL 통합 검증을 완료했다. 최신 `origin/main` 통합 후 전체 Ruff와 `277 passed, 5 skipped, 1 warning`을 확인했으며 실제 HTTP, rollback, 동시 요청, 행 잠금, 마이그레이션과 공개 UUID 응답을 검증했다. 가챠는 정책값 확정 전까지 기본 호출에 `503`을 반환한다.
+현재 진행 상태(2026-09-05): 구매·가챠·벽지·바닥·가구, 고양이 페르소나·기억과 Gemini 대화 FastAPI 연결 및 최종 PostgreSQL 통합 검증을 완료했다. 실제 HTTP, rollback, 동시 요청, 행 잠금, 마이그레이션, 공개 UUID 응답과 실제 Gemini 구조화 출력을 검증했다. 최종 검사는 Ruff 통과, `296 passed, 5 skipped, 2 warnings`다. 가챠는 정책값 확정 전까지 기본 호출에 `503`을 반환한다.
 
 구현 기준은 다음 문서다.
 
@@ -369,6 +369,33 @@ python -m ruff check .
 
 - [ ] 최종 테스트와 상태 문서 갱신을 커밋했다.
 
+## 13. Gemini 생성형 AI 연동
+
+- [x] Google Gemini API와 안정 모델 `gemini-3.6-flash`를 선택한다.
+- [x] API 키, 모델, timeout, 출력 token과 기억 개수 제한을 환경 설정으로 분리한다.
+- [x] 실제 API 키를 `.env`에만 두고 `.env.example`에는 변수 이름만 남긴다.
+- [x] 공급자 중립 `AITextClient` Protocol과 Google SDK 어댑터를 분리한다.
+- [x] `POST /api/v1/cats/{cat_asset_public_id}/chat`을 인증과 소유권 검사에 연결한다.
+- [x] `ASSETS.cat_id`를 통해 DB의 `CATS.persona`를 읽어 system instruction에 넣는다.
+- [x] 최신 `CAT_MEMORIES` 최대 20개와 프런트 최근 대화 최대 10개를 문맥으로 사용한다.
+- [x] 답변과 선택적 장기 기억 요약을 한 번의 구조화 호출로 생성한다.
+- [x] 새 요약만 `CAT_MEMORIES`에 누적하고 원문 대화는 영구 저장하지 않는다.
+- [x] AI 호출 전에 조회 트랜잭션을 닫고 기억 저장 전 소유권을 다시 검사한다.
+- [x] 키 미설정, 무료 할당량 초과, timeout과 잘못된 AI 응답을 안전한 `503`으로 변환한다.
+- [x] 유료 모델이나 크레딧으로 자동 전환하지 않는다.
+- [x] 요청 길이·개수·role·추가 필드와 응답의 내부 ID 비노출을 테스트한다.
+- [x] 실제 Gemini 구조화 응답과 token metadata를 확인한다.
+- [x] 실제 HTTP와 PostgreSQL에서 persona·기존 기억 입력 및 새 기억 저장을 검증한다.
+- [x] 기존 ERD만 사용하며 Alembic 신규 upgrade가 없음을 확인한다.
+- [x] API 계약, 설계 문서와 상태 문서를 갱신한다.
+
+완료 기준:
+
+- 고양이별 고정 persona가 실제 모델 답변에 반영된다.
+- 장기 기억은 유용한 요약만 저장되고 원문·민감 정보는 저장하지 않는다.
+- 프런트 요청과 백엔드 응답이 공개 UUID 계약을 지킨다.
+- 공급자 장애가 내부 정보 노출이나 자동 유료 전환 없이 처리된다.
+
 ## 전체 진행 상태
 
 - [x] 0. 작업 브랜치 준비
@@ -384,3 +411,4 @@ python -m ruff check .
 - [x] 10. 고양이 AI 기억
 - [x] 11. FastAPI 라우터 연결
 - [x] 12. 최종 PostgreSQL 통합 검증
+- [x] 13. Gemini 생성형 AI 연동

@@ -253,11 +253,29 @@
 - 최신 `main` 통합 후 전체 회귀 검사 결과는 `277 passed, 5 skipped, 1 warning`이다. 5개 skip은 전체 검사 당시 별도 SQL grader 데이터베이스가 실행 중이지 않아 생겼으며, 같은 테스트를 전용 환경에서 별도로 모두 통과시켰다.
 - 남은 경고는 기존 FastAPI TestClient와 httpx 호환성 deprecation 경고다.
 
+### 21. Gemini 고양이 대화 API — 완료
+
+- 공급자는 Google Gemini API, 기본 모델은 무료 등급의 `gemini-3.6-flash`다.
+- `google-genai` SDK 타입은 `app/integrations/ai`에 격리하고 고양이 서비스는 `AITextClient` Protocol에 의존한다.
+- `POST /api/v1/cats/{cat_asset_public_id}/chat`은 현재 메시지와 최근 대화 최대 10개를 받아 답변, 선택적 새 기억과 token 사용량을 반환한다.
+- 서비스는 현재 사용자 소유권을 확인한 뒤 `ASSETS.cat_id`로 `CATS.name`과 고정 `CATS.persona`를 DB에서 직접 읽는다. 프런트가 persona를 요청에 넣거나 변경하지 않는다.
+- 고정 persona와 최신 `CAT_MEMORIES` 최대 20개를 system instruction에 넣고, 최근 대화와 현재 메시지는 Gemini message로 전달한다.
+- 한 번의 구조화 호출에서 `reply`와 nullable `memory_summary`를 함께 생성해 무료 token 사용과 지연을 줄인다.
+- 새 요약이 기존 기억과 정확히 중복되지 않을 때만 `CAT_MEMORIES`에 누적한다. 대화 원문은 DB에 저장하지 않고 프런트가 최근 문맥을 임시 보관한다.
+- 외부 AI 호출 전에 조회 Unit of Work를 닫고, 기억 저장이 필요하면 새 Unit of Work에서 소유권을 다시 확인한다. 따라서 네트워크 대기 중 DB 트랜잭션을 점유하지 않는다.
+- API 키 누락, 무료 할당량 초과, timeout, 공급자 오류와 유효하지 않은 구조화 응답은 내부 정보를 숨긴 `503`으로 처리하며 유료 모델로 자동 전환하지 않는다.
+- 메시지 길이, 최근 대화 개수·role과 추가 필드는 Pydantic에서 검증하며 API 응답에는 내부 INTEGER ID가 없다.
+- 실제 Gemini 호출에서 persona가 반영된 한국어 고양이 말투의 반복문 답변을 받았고 input 217, output 134 token을 확인했다.
+- 실제 HTTP·PostgreSQL 통합 테스트에서 DB persona와 기존 기억이 프롬프트에 포함되고 새 기억 행이 commit되는 것을 확인했다.
+- AI 전용 계약·어댑터·서비스·라우터·스키마 및 PostgreSQL HTTP 검사는 `19 passed, 2 warnings`, 전체 회귀 검사는 `296 passed, 5 skipped, 2 warnings`다.
+- 기존 `CATS`, `ASSETS`, `CAT_MEMORIES` 구조만 사용하며 `alembic check` 결과 `No new upgrade operations detected.`이므로 ERD와 마이그레이션 변경은 없다.
+- 5개 skip은 기존 SQL grader 전용 PostgreSQL이 실행 중이지 않아 생긴 선택형 skip이다. 경고는 기존 TestClient/httpx와 `google-genai 2.22.0`의 Python 3.14 내부 API deprecation이다.
+- 자세한 데이터 흐름과 실패·비용 정책은 `docs/architecture/cat-ai-integration.md`, 프런트 요청·응답 계약은 `docs/api/README.md`에 기록했다.
+
 ## 남은 정책 작업
 
 1. 가챠 비용·확률·중복 마일리지 정책 확정 및 운영 `GachaPolicy` 주입
-2. 생성형 AI 공급자·모델·프롬프트·요약·실패 처리·비용 정책 확정과 연동
-3. 일일 보상액, 배틀 정답 점수와 Part 2 일반 학습 보상·직접 문제 선택의 MVP 포함 여부 확정
+2. 일일 보상액, 배틀 정답 점수와 Part 2 일반 학습 보상·직접 문제 선택의 MVP 포함 여부 확정
 
 ## 프런트엔드 학습 연결 기반
 

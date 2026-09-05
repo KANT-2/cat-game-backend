@@ -28,3 +28,11 @@ class PlacementLimitExceededError(ApplicationError):
 
 class InvalidMemorySummaryError(ApplicationError):
     """The cat memory summary must contain non-whitespace text."""
+
+
+class AIProviderUnavailableError(ApplicationError):
+    """The configured AI provider could not complete the request."""
+
+
+class InvalidAIResponseError(ApplicationError):
+    """The AI provider returned an unusable response."""

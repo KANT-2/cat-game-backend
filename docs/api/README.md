@@ -36,7 +36,7 @@
 | `404` | 리소스 없음, 타인 소유 리소스 또는 현재 제출 서비스 검증 실패 |
 | `409` | 상태 충돌, 잔액 부족, 멱등 키 충돌 또는 배치 수량 초과 |
 | `422` | UUID·enum·범위·요청 DTO 또는 도메인 입력 오류 |
-| `503` | Auth Bridge, 가챠 정책 또는 일일 보상 정책 미설정·장애 |
+| `503` | Auth Bridge·Gemini 장애, AI 키·가챠·일일 보상 정책 미설정 또는 Gemini 무료 할당량 초과 |
 
 ## 2. 전체 Endpoint 목록
 
@@ -65,7 +65,7 @@
 | `PATCH` | `/api/v1/battle/rooms/{room_public_id}/ready` | `200` | 참가자 준비 상태 변경 |
 | `POST` | `/api/v1/battle/rooms/{room_public_id}/start` | `200` | 호스트가 문제를 확정하고 배틀 시작 |
 
-### Part 3 — 구매·가챠·하우징·고양이
+### Part 3 — 구매·가챠·하우징·고양이·생성형 AI
 
 | Method | Path | 성공 | 용도 |
 | --- | --- | --- | --- |
@@ -77,6 +77,7 @@
 | `DELETE` | `/api/v1/housing/placed-objects/{placed_object_public_id}` | `204` | 가구 배치 해제 |
 | `GET` | `/api/v1/cats/collection` | `200` | 전체 고양이 도감과 보유 상태 조회 |
 | `GET` | `/api/v1/cats/{cat_asset_public_id}/conversation-context` | `200` | 고양이 persona와 기억 전체 조회 |
+| `POST` | `/api/v1/cats/{cat_asset_public_id}/chat` | `200` | persona·기억 기반 Gemini 대화 |
 | `POST` | `/api/v1/cats/{cat_asset_public_id}/memories` | `201` | 고양이 기억 추가 |
 | `DELETE` | `/api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | `204` | 기억 선택 삭제 |
 | `DELETE` | `/api/v1/cats/{cat_asset_public_id}/memories` | `204` | 해당 고양이 기억 전체 삭제 |
@@ -539,6 +540,52 @@ CODE 문제 요청:
 
 둘 다 `204`다. 전체 삭제도 기억 행만 제거하며 `CATS.persona`, 고양이 마스터와 보유 자산은 유지한다. 다른 사용자의 고양이 자산·기억 접근은 `404`로 숨긴다.
 
+### 5.7 생성형 AI 고양이 대화
+
+`POST /api/v1/cats/{cat_asset_public_id}/chat`
+
+프런트엔드는 현재 메시지와 화면에 남아 있는 최근 대화만 전송한다. 최근 대화는 최대 10개이며 각 텍스트와 현재 메시지는 최대 2,000자다.
+
+```json
+{
+  "message": "파이썬 for 반복문을 예제로 설명해 줘.",
+  "recent_messages": [
+    {"role": "user", "text": "오늘 반복문을 공부하고 있어."},
+    {"role": "assistant", "text": "어떤 부분이 어려운지 말해 달라냥!"}
+  ]
+}
+```
+
+`200 OK` 응답:
+
+```json
+{
+  "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+  "reply": "좋아, range를 사용한 짧은 예제부터 보자냥!",
+  "memory": {
+    "public_id": "a816c517-cc27-418b-b32b-277b40d37af2",
+    "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+    "context_summary": "사용자는 파이썬 반복문을 공부하고 있다.",
+    "created_at": "2026-09-05T00:00:00Z"
+  },
+  "input_tokens": 217,
+  "output_tokens": 134
+}
+```
+
+`memory`는 이번 대화에서 새 장기 기억이 생성됐을 때만 객체이며, 기억할 내용이 없거나 동일한 요약이 이미 있으면 `null`이다. token 값은 공급자가 usage metadata를 제공하지 않으면 `null`일 수 있다.
+
+백엔드는 프런트가 persona를 보내도록 신뢰하지 않는다. 경로의 `cat_asset_public_id`로 현재 사용자의 보유 자산을 확인한 뒤 `ASSETS.cat_id`로 `CATS.persona`를 직접 조회한다. 해당 고양이의 최신 `CAT_MEMORIES` 최대 20개와 persona를 system instruction에 넣고, Gemini 한 번의 구조화 호출에서 답변과 선택적 기억 요약을 함께 생성한다.
+
+대화 원문은 DB에 저장하지 않는다. 프런트가 화면에 필요한 최근 대화를 임시 보관해 다음 요청에 다시 보내고, 장기적으로 유용한 사용자 선호·목표·학습 진도만 `CAT_MEMORIES.context_summary`에 누적한다. 비밀번호, API 키, 연락처 등 민감 정보는 기억 대상으로 지정하지 않는다.
+
+- 인증 실패: `401`
+- 고양이 자산이 없거나 현재 사용자 소유가 아님: `404`
+- 공백, 너무 긴 메시지, 10개 초과 최근 대화, 잘못된 role·추가 필드: `422`
+- Gemini 키 미설정, 무료 할당량 초과, timeout, 공급자 장애 또는 잘못된 구조화 응답: `503`
+
+`503`일 때 다른 유료 모델이나 크레딧으로 자동 전환하지 않는다. 클라이언트는 잠시 후 재시도를 안내하되 무한 자동 재시도를 하지 않는다.
+
 ## 6. 멱등성과 클라이언트 재시도
 
 구매와 가챠는 `request_id`를 사용한다.
@@ -581,6 +628,7 @@ CODE 문제 요청:
 - [Django Auth Bridge](../features/host-auth-integration.md)
 - [Part 3 상세 통합 계약](../architecture/part3-integration-contract.md)
 - [Part 3 구현 현황](../architecture/part3-status.md)
+- [고양이 생성형 AI 설계](../architecture/cat-ai-integration.md)
 - [현재 ERD](../architecture/current-erd.md)
 
 코드 기준 라우터 등록 위치는 `app/api/router.py`이며 FastAPI 애플리케이션은 이를 `/api/v1` prefix로 등록한다.

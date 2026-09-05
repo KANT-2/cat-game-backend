@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         """Return normalized browser origins accepted by the API."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     sql_grading_database_url: SecretStr | None = None
     sql_grading_connect_timeout_seconds: int = 3
     sql_grading_statement_timeout_ms: int = 1000
@@ -31,6 +32,11 @@ class Settings(BaseSettings):
     daily_reward_balance: int | None = None
     battle_correct_score: int | None = None
     game_timezone: str = "Asia/Seoul"
+    gemini_api_key: SecretStr | None = None
+    gemini_model: str = "gemini-3.6-flash"
+    gemini_timeout_seconds: float = 30.0
+    gemini_max_output_tokens: int = 512
+    gemini_max_memory_count: int = Field(default=20, ge=1, le=100)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

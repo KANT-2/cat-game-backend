@@ -1,10 +1,12 @@
 import uuid
+from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
+from app.integrations.ai.contracts import AIStructuredResult
 from app.main import app
 from app.models.asset import Asset
 from app.models.cat import Cat
@@ -13,6 +15,8 @@ from app.models.gacha_execution import GachaExecution
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
+from app.modules.cats.router import get_cat_ai_client
+from app.schemas.cat_chat import CatChatGeneration
 
 
 def test_purchase_http_request_uses_postgresql_and_is_idempotent(
@@ -612,4 +616,98 @@ def test_cat_collection_context_and_memory_http_flow(
             cleanup_session.execute(delete(Asset).where(Asset.id == cat_asset_id))
             cleanup_session.execute(delete(User).where(User.id == user_id))
             cleanup_session.execute(delete(Cat).where(Cat.id.in_([owned_cat_id, unowned_cat_id])))
+            cleanup_session.commit()
+
+
+def test_cat_chat_http_uses_database_persona_and_persists_memory(
+    engine,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "app_env", "test")
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    user = User(
+        email=f"http-cat-chat-{uuid.uuid4()}@example.com",
+        username=f"http-cat-chat-user-{uuid.uuid4()}",
+        balance=0,
+    )
+    cat = Cat(
+        name=f"chat-cat-{uuid.uuid4()}",
+        persona="Playful and explain coding step by step.",
+        rarity="COMMON",
+    )
+
+    with session_factory() as seed_session:
+        seed_session.add_all([user, cat])
+        seed_session.flush()
+        cat_asset = Asset(
+            user_id=user.id,
+            cat_id=cat.id,
+            quantity=1,
+        )
+        seed_session.add(cat_asset)
+        seed_session.flush()
+        existing_memory = CatMemory(
+            cat_asset_id=cat_asset.id,
+            context_summary="The user is learning Python loops.",
+        )
+        seed_session.add(existing_memory)
+        seed_session.commit()
+
+    user_id = user.id
+    cat_id = cat.id
+    cat_asset_id = cat_asset.id
+    user_public_id = user.public_id
+    cat_asset_public_id = cat_asset.public_id
+    ai_client = MagicMock()
+    ai_client.generate_structured.return_value = AIStructuredResult(
+        data=CatChatGeneration(
+            reply="Let's practice a for loop, meow!",
+            memory_summary="The user prefers examples.",
+        ),
+        input_tokens=42,
+        output_tokens=12,
+    )
+    app.dependency_overrides[get_cat_ai_client] = lambda: ai_client
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                f"/api/v1/cats/{cat_asset_public_id}/chat",
+                headers={"X-User-Public-ID": str(user_public_id)},
+                json={
+                    "message": "Show me a loop example.",
+                    "recent_messages": [{"role": "assistant", "text": "What shall we study?"}],
+                },
+            )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["cat_asset_public_id"] == str(cat_asset_public_id)
+        assert payload["reply"] == "Let's practice a for loop, meow!"
+        assert payload["memory"]["context_summary"] == "The user prefers examples."
+        assert payload["input_tokens"] == 42
+        assert payload["output_tokens"] == 12
+        assert "id" not in payload
+        assert "cat_asset_id" not in payload["memory"]
+
+        call = ai_client.generate_structured.call_args.kwargs
+        assert cat.persona in call["system_instruction"]
+        assert existing_memory.context_summary in call["system_instruction"]
+
+        with session_factory() as verification_session:
+            summaries = verification_session.scalars(
+                select(CatMemory.context_summary).where(CatMemory.cat_asset_id == cat_asset_id)
+            ).all()
+            assert summaries == [
+                "The user is learning Python loops.",
+                "The user prefers examples.",
+            ]
+    finally:
+        app.dependency_overrides.pop(get_cat_ai_client, None)
+        with session_factory() as cleanup_session:
+            cleanup_session.execute(delete(CatMemory).where(CatMemory.cat_asset_id == cat_asset_id))
+            cleanup_session.execute(delete(Asset).where(Asset.id == cat_asset_id))
+            cleanup_session.execute(delete(User).where(User.id == user_id))
+            cleanup_session.execute(delete(Cat).where(Cat.id == cat_id))
             cleanup_session.commit()

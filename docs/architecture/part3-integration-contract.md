@@ -295,7 +295,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 #### Frontend ↔ Backend 데이터 계약 빠른 참조
 
-이 표는 프런트엔드 연결에 필요한 인증 보조 API 2개와 Part 3 기능 API 11개를 한곳에 정리한다. 각 기능의 상세 JSON과 오류 계약은 바로 아래 절을 따른다.
+이 표는 프런트엔드 연결에 필요한 인증 보조 API 2개와 Part 3 기능 API 12개를 한곳에 정리한다. 각 기능의 상세 JSON과 오류 계약은 바로 아래 절을 따른다.
 
 | 기능 | 메서드·경로 | Frontend → Backend | Backend → Frontend |
 | --- | --- | --- | --- |
@@ -303,6 +303,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 | 현재 사용자 확인 | `GET /api/v1/session/me` | 인증 헤더 | 사용자 공개 프로필 |
 | 고양이 도감 | `GET /api/v1/cats/collection` | 인증 헤더 | 전체 고양이와 사용자 보유 상태 |
 | 고양이 대화 컨텍스트 | `GET /api/v1/cats/{cat_asset_public_id}/conversation-context` | 고양이 보유 자산 UUID | 고양이·persona·기억 목록 |
+| 고양이 AI 대화 | `POST /api/v1/cats/{cat_asset_public_id}/chat` | 현재 메시지·최근 대화 최대 10개 | 답변·선택적 새 기억·token 사용량 |
 | 기억 추가 | `POST /api/v1/cats/{cat_asset_public_id}/memories` | `context_summary` | 생성된 기억 |
 | 기억 선택 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | 고양이 자산·기억 UUID | 본문 없음 |
 | 기억 전체 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories` | 고양이 자산 UUID | 본문 없음 |
@@ -472,6 +473,54 @@ DELETE /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/memories
 
 성공 시 `204 No Content`이며 응답 본문은 없다. 지정한 고양이 자산의 `CAT_MEMORIES`만 삭제하고 `CATS.persona`, 고양이 마스터와 보유 자산은 유지한다.
 
+##### 생성형 AI 고양이 대화
+
+```http
+POST /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/chat
+Content-Type: application/json
+```
+
+요청 본문:
+
+```json
+{
+  "message": "for 반복문을 예제로 설명해 줘.",
+  "recent_messages": [
+    {"role": "user", "text": "반복문을 공부하고 있어."},
+    {"role": "assistant", "text": "어디부터 같이 볼까냥?"}
+  ]
+}
+```
+
+응답 `200 OK`:
+
+```json
+{
+  "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+  "reply": "range를 사용한 짧은 예제부터 보자냥!",
+  "memory": {
+    "public_id": "a816c517-cc27-418b-b32b-277b40d37af2",
+    "cat_asset_public_id": "39db1ddb-24c2-42dc-a28c-bc4d9dd5267e",
+    "context_summary": "사용자는 파이썬 반복문을 공부하고 있다.",
+    "created_at": "2026-09-05T00:00:00Z"
+  },
+  "input_tokens": 217,
+  "output_tokens": 134
+}
+```
+
+처리 순서는 다음과 같다.
+
+1. `CurrentUser`와 `cat_asset_public_id`로 고양이 자산 소유권을 검사한다.
+2. `ASSETS.cat_id`로 `CATS.name`, `CATS.persona`를 읽는다. persona는 프런트 요청값을 사용하지 않는다.
+3. 해당 자산의 최신 기억 최대 20개를 읽어 persona와 함께 system instruction을 만든다.
+4. 최근 대화 뒤에 현재 사용자 메시지를 붙여 Gemini `gemini-3.6-flash`에 한 번만 보낸다.
+5. 구조화 결과의 `reply`를 반환하고, `memory_summary`가 있고 기존 기억과 정확히 중복되지 않을 때만 새 `CAT_MEMORIES` 행을 commit한다.
+
+원문 대화는 저장하지 않으며 프런트가 최근 대화 최대 10개를 임시 보관한다. 장기 기억은 사용자 선호, 목표, 학습 진도처럼 이후 대화에 필요한 사실만 저장한다. 같은 종류의 고양이를 다시 뽑으면 새 자산을 만들지 않고 마일리지로 전환하므로 사용자별 고양이 종류 자산과 그 기억 흐름은 하나로 유지된다.
+
+외부 Gemini 호출 중에는 DB 트랜잭션을 열어 두지 않는다. 먼저 조회 Unit of Work를 종료하고 AI를 호출한 뒤, 새 기억이 있을 때 별도 Unit of Work에서 소유권을 다시 검사하고 저장한다. 공급자 장애와 잘못된 구조화 결과는 내부 정보를 숨긴 `503`으로 변환하며 유료 모델로 자동 전환하지 않는다.
+
 ##### 공통 오류 응답
 
 인증 및 도메인 오류는 다음 형태를 사용한다.
@@ -487,6 +536,7 @@ DELETE /api/v1/cats/39db1ddb-24c2-42dc-a28c-bc4d9dd5267e/memories
 | `401 Unauthorized` | 인증 헤더가 없거나 개발 사용자를 찾을 수 없음 |
 | `404 Not Found` | 고양이 자산·기억이 없거나 인증 사용자가 소유하지 않음 |
 | `422 Unprocessable Content` | UUID, 요청 본문 또는 기억 요약이 유효하지 않음 |
+| `503 Service Unavailable` | Gemini 설정 누락, 무료 할당량·timeout·공급자 장애 또는 잘못된 AI 응답 |
 
 FastAPI/Pydantic의 경로·본문 검증 `422`는 `detail` 배열을 사용하고, 서비스의 공백 요약 `422`는 안전한 도메인 메시지를 `detail` 문자열로 반환한다.
 
