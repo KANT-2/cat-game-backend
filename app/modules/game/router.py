@@ -24,6 +24,8 @@ from app.modules.game.bootstrap import GameCatalogNotSeededError
 from app.modules.game.commands import (
     claim_attendance,
     claim_daily_reward,
+    clear_cat_memories,
+    reset_learning_progress,
     select_active_cat,
     set_cat_home,
     update_game_settings,
@@ -254,6 +256,28 @@ def claim_daily_quest_reward(
     """Claim one server-validated UTC daily quest or completion bonus reward."""
     try:
         result = claim_daily_reward(db, user, payload.reward_key)
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
+    except ApplicationError as error:
+        db.rollback()
+        raise _http_error(error) from error
+
+
+@router.post("/learning/reset", response_model=GameMutationRead)
+def reset_player_learning(db: DbSession, user: CurrentUser) -> GameMutationRead:
+    """Clear learning progress while preserving inventory, cats, rewards, and attendance claims."""
+    try:
+        result = reset_learning_progress(db, user)
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
+    except ApplicationError as error:
+        db.rollback()
+        raise _http_error(error) from error
+
+
+@router.delete("/cat-memories", response_model=GameMutationRead)
+def clear_player_cat_memories(db: DbSession, user: CurrentUser) -> GameMutationRead:
+    """Delete every stored memory associated with the authenticated user's cats."""
+    try:
+        result = clear_cat_memories(db, user)
         return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
     except ApplicationError as error:
         db.rollback()

@@ -38,6 +38,7 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
                 "rarity": "COMMON",
                 "owned": True,
                 "is_home": True,
+                "memories": ["반복문을 연습했어요"],
             }
         ],
         items=[],

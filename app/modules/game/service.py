@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.cat import Cat
+from app.models.cat_memory import CatMemory
 from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
@@ -57,6 +58,8 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
     )
     today = datetime.now(UTC).date()
     day_start = datetime.combine(today, time.min, tzinfo=UTC)
+    if user.learning_reset_at is not None and user.learning_reset_at > day_start:
+        day_start = user.learning_reset_at
     day_end = day_start + timedelta(days=1)
     completed_rows = list(
         db.execute(
@@ -80,6 +83,18 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
             )
         ).all()
     )
+    cat_memories = list(
+        db.execute(
+            select(Asset.cat_id, CatMemory.context_summary)
+            .join(CatMemory, CatMemory.cat_asset_id == Asset.id)
+            .where(Asset.user_id == user.id, Asset.cat_id.is_not(None))
+            .order_by(CatMemory.created_at, CatMemory.id)
+        ).all()
+    )
+    memories_by_cat_id: dict[int, list[str]] = {}
+    for cat_id, context_summary in cat_memories:
+        if cat_id is not None:
+            memories_by_cat_id.setdefault(cat_id, []).append(context_summary)
 
     cat_assets = {asset.cat_id: asset for asset in assets if asset.cat_id is not None}
     item_assets = {asset.item_id: asset for asset in assets if asset.item_id is not None}
@@ -125,6 +140,7 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
                 rarity=cat.rarity,
                 owned=cat.id in cat_assets,
                 is_home=cat_assets[cat.id].is_home if cat.id in cat_assets else False,
+                memories=memories_by_cat_id.get(cat.id, []),
             )
             for cat in cats
         ],

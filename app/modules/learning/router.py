@@ -34,7 +34,7 @@ def _task_payload(db: DbSession, task, *, completed: bool):
 def recommendations(
     db: DbSession, user: CurrentUser, limit: int = Query(10, ge=1, le=50)
 ) -> list[TaskRead]:
-    tasks = recommended_tasks(db, user.id, limit)
+    tasks = recommended_tasks(db, user.id, limit, since=user.learning_reset_at)
     task_ids = [task.id for task in tasks]
     completed_ids = set(db.scalars(
         select(TaskAttempt.task_id).where(
@@ -42,6 +42,11 @@ def recommendations(
             TaskAttempt.task_id.in_(task_ids),
             TaskAttempt.status == "COMPLETED",
             TaskAttempt.is_correct.is_(True),
+            *(
+                [TaskAttempt.attempted_at >= user.learning_reset_at]
+                if user.learning_reset_at is not None
+                else []
+            ),
         )
     ).all()) if task_ids else set()
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
@@ -50,7 +55,7 @@ def recommendations(
 @router.get("/weak-concepts")
 def weaknesses(db: DbSession, user: CurrentUser):
     rows = []
-    for assessment in weak_concepts(db, user.id):
+    for assessment in weak_concepts(db, user.id, since=user.learning_reset_at):
         concept = db.get(Concept, assessment.concept_id)
         rows.append({
             "concept_public_id": concept.public_id,

@@ -94,12 +94,23 @@ def grade_attempt(attempt_public_id: uuid.UUID) -> None:
         attempt.status = status
         attempt.is_correct = is_correct
         attempt.result_detail = json.dumps({"verdict": str(result.verdict), "detail": result.detail})
+        locked_user = None
         if is_correct is not None:
-            update_proficiency(db, attempt.user_id, task.concept_id)
-        if is_correct:
             locked_user = db.scalar(select(User).where(User.id == attempt.user_id).with_for_update())
             if locked_user is None:
                 raise RuntimeError("attempt user not found")
+            is_after_reset = (
+                locked_user.learning_reset_at is None
+                or attempt.attempted_at >= locked_user.learning_reset_at
+            )
+            if is_after_reset:
+                update_proficiency(
+                    db,
+                    attempt.user_id,
+                    task.concept_id,
+                    since=locked_user.learning_reset_at,
+                )
+        if is_correct and is_after_reset:
             completion_id = db.scalar(
                 insert(TaskCompletion)
                 .values(

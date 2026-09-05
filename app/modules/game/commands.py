@@ -2,7 +2,7 @@
 
 from datetime import UTC, date, datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -12,11 +12,14 @@ from app.core.exceptions import (
 )
 from app.models.asset import Asset
 from app.models.attendance import Attendance
+from app.models.attendance_task import AttendanceTask
 from app.models.cat import Cat
+from app.models.cat_memory import CatMemory
 from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user import User
+from app.models.user_proficiency import UserProficiency
 
 ATTENDANCE_DAILY_COINS = 100
 ATTENDANCE_BONUSES = {3: 150, 7: 500}
@@ -168,7 +171,12 @@ def claim_daily_reward(
         if claimed_keys != {"solve-one", "solve-three", "finish-code"}:
             raise RewardNotReadyError("daily bonus is not ready")
     else:
-        completed_count, has_code = _daily_completion_progress(db, user.id, claim_date)
+        completed_count, has_code = _daily_completion_progress(
+            db,
+            user.id,
+            claim_date,
+            getattr(locked_user, "learning_reset_at", None),
+        )
         ready = (
             (reward_key == "solve-one" and completed_count >= 1)
             or (reward_key == "solve-three" and completed_count >= 3)
@@ -191,8 +199,15 @@ def claim_daily_reward(
     return {"reward_key": reward_key, "coins_awarded": awarded}
 
 
-def _daily_completion_progress(db: Session, user_id: int, claim_date: date) -> tuple[int, bool]:
+def _daily_completion_progress(
+    db: Session,
+    user_id: int,
+    claim_date: date,
+    learning_reset_at: datetime | None = None,
+) -> tuple[int, bool]:
     day_start = datetime.combine(claim_date, time.min, tzinfo=UTC)
+    if learning_reset_at is not None and learning_reset_at > day_start:
+        day_start = learning_reset_at
     day_end = day_start + timedelta(days=1)
     rows = db.execute(
         select(TaskAttempt.task_id, Task.type)
@@ -207,3 +222,38 @@ def _daily_completion_progress(db: Session, user_id: int, claim_date: date) -> t
         .distinct()
     ).all()
     return len(rows), any(row.type == "CODE" for row in rows)
+
+
+def reset_learning_progress(db: Session, user: User) -> dict[str, object]:
+    """Remove one user's learning history without refunding already granted rewards."""
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise ResourceNotFoundError("user not found")
+
+    reset_at = datetime.now(UTC)
+    locked_user.learning_reset_at = reset_at
+    proficiency_result = db.execute(
+        delete(UserProficiency).where(UserProficiency.user_id == user.id)
+    )
+    attendance_ids = select(Attendance.id).where(Attendance.user_id == user.id)
+    db.execute(
+        update(AttendanceTask)
+        .where(AttendanceTask.attendance_id.in_(attendance_ids))
+        .values(is_completed=False)
+    )
+    db.commit()
+    return {
+        "reset_at": reset_at.isoformat(),
+        "removed_proficiencies": proficiency_result.rowcount,
+    }
+
+
+def clear_cat_memories(db: Session, user: User) -> dict[str, object]:
+    """Delete memories belonging to the authenticated user's cat assets only."""
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise ResourceNotFoundError("user not found")
+    cat_asset_ids = select(Asset.id).where(Asset.user_id == user.id, Asset.cat_id.is_not(None))
+    result = db.execute(delete(CatMemory).where(CatMemory.cat_asset_id.in_(cat_asset_ids)))
+    db.commit()
+    return {"removed": result.rowcount}

@@ -24,6 +24,7 @@ class GameCatRead(BaseModel):
     rarity: str
     owned: bool
     is_home: bool
+    memories: list[str]
 
 
 class GameItemRead(BaseModel):
