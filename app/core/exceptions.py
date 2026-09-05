@@ -28,3 +28,11 @@ class PlacementLimitExceededError(ApplicationError):
 
 class InvalidMemorySummaryError(ApplicationError):
     """The cat memory summary must contain non-whitespace text."""
+
+
+class PlacementOutsideRoomError(ApplicationError):
+    """The furniture footprint would extend outside the room grid."""
+
+
+class PlacementOccupiedError(ApplicationError):
+    """The furniture footprint overlaps another placed object."""

@@ -1,6 +1,7 @@
 """Public JSON contracts for the authoritative game snapshot."""
 
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -59,3 +60,41 @@ class GameSnapshotRead(BaseModel):
     cats: list[GameCatRead]
     items: list[GameItemRead]
     placements: list[GamePlacementRead]
+
+
+class PurchaseCommand(BaseModel):
+    request_id: uuid.UUID
+    item_catalog_key: str = Field(min_length=1, max_length=100)
+    quantity: int = Field(default=1, ge=1, le=99)
+
+
+class PlacementCommand(BaseModel):
+    placement_public_id: uuid.UUID
+    item_catalog_key: str = Field(min_length=1, max_length=100)
+    x: int
+    y: int
+    rotation: Literal[0, 1]
+
+
+class MovePlacementCommand(BaseModel):
+    x: int
+    y: int
+    rotation: Literal[0, 1]
+
+
+class ThemeCommand(BaseModel):
+    item_catalog_key: str = Field(min_length=1, max_length=100)
+
+
+class CatHomeCommand(BaseModel):
+    visible: bool
+
+
+class GachaCommand(BaseModel):
+    request_id: uuid.UUID
+    draw_count: Literal[1, 11]
+
+
+class GameMutationRead(BaseModel):
+    snapshot: GameSnapshotRead
+    result: dict[str, object] = Field(default_factory=dict)

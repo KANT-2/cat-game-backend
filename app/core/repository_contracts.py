@@ -54,11 +54,15 @@ class UserRepository(Protocol):
 
 
 class ItemRepository(Protocol):
+    def get_by_catalog_key(self, catalog_key: str) -> Item | None: ...
+
     def get_by_public_id(self, public_id: UUID) -> Item | None: ...
 
     def get_by_id(self, item_id: int) -> Item | None: ...
 
 class CatRepository(Protocol):
+    def get_by_catalog_key(self, catalog_key: str) -> Cat | None: ...
+
     def get_by_public_id(self, public_id: UUID) -> Cat | None: ...
 
     def get_by_id(self, cat_id: int) -> Cat | None: ...
@@ -107,11 +111,14 @@ class PlacedObjectRepository(Protocol):
         item_id: int,
     ) -> int: ...
 
+    def list_for_update(self, user_id: int) -> list[PlacedObject]: ...
+
     def add(
         self,
         user_id: int,
         item_id: int,
         position_data: dict[str, object],
+        public_id: UUID | None = None,
     ) -> PlacedObject: ...
 
     def remove(

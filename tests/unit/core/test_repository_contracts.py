@@ -11,11 +11,8 @@ from app.core.repository_contracts import (
 EXPECTED_METHODS = {
     ExecutionRepository: {"claim", "complete"},
     UserRepository: {"get_by_public_id", "get_for_update"},
-    ItemRepository: {"get_by_public_id", "get_by_id"},
-    CatRepository: {
-    "get_by_public_id",
-    "get_by_id",
-    },
+    ItemRepository: {"get_by_catalog_key", "get_by_public_id", "get_by_id"},
+    CatRepository: {"get_by_catalog_key", "get_by_public_id", "get_by_id"},
     AssetRepository: {
     "get_by_public_id",
     "get_cat_asset",
@@ -26,6 +23,7 @@ EXPECTED_METHODS = {
     PlacedObjectRepository: {
         "get_by_public_id_for_update",
         "count_for_update",
+        "list_for_update",
         "add",
         "remove",
     },
@@ -63,6 +61,7 @@ def test_locking_methods_are_named_for_update() -> None:
         PlacedObjectRepository: {
             "get_by_public_id_for_update",
             "count_for_update",
+            "list_for_update",
         },
         CatMemoryRepository: {
             "get_by_public_id_for_update",
