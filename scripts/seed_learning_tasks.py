@@ -122,6 +122,7 @@ def build_tasks() -> list[dict]:
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
                     "hint_text": spec.hint,
+                    "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[difficulty],
                 })
     assert len(rows) == 150
     assert {d: sum(row["difficulty"] == d for row in rows) for d in ("BRONZE", "SILVER", "GOLD")} == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}

@@ -1,18 +1,26 @@
 """Small authoritative commands not covered by economy or housing services."""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AlreadyClaimedError, ResourceNotFoundError
+from app.core.exceptions import (
+    AlreadyClaimedError,
+    ResourceNotFoundError,
+    RewardNotReadyError,
+)
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.cat import Cat
+from app.models.daily_reward_claim import DailyRewardClaim
+from app.models.task import Task
+from app.models.task_attempt import TaskAttempt
 from app.models.user import User
 
 ATTENDANCE_DAILY_COINS = 100
 ATTENDANCE_BONUSES = {3: 150, 7: 500}
+DAILY_REWARDS = {"solve-one": 50, "solve-three": 100, "finish-code": 150, "bonus": 310}
 
 
 def select_active_cat(db: Session, user: User, catalog_key: str) -> None:
@@ -121,3 +129,81 @@ def claim_attendance(db: Session, user: User, *, today: date | None = None) -> d
         "streak_bonus": bonus,
         "coins_awarded": awarded,
     }
+
+
+def claim_daily_reward(
+    db: Session,
+    user: User,
+    reward_key: str,
+    *,
+    today: date | None = None,
+) -> dict[str, object]:
+    """Validate today's completed attempts and grant one daily reward atomically."""
+    if reward_key not in DAILY_REWARDS:
+        raise ResourceNotFoundError("daily reward not found")
+    claim_date = today or datetime.now(UTC).date()
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise ResourceNotFoundError("user not found")
+    existing = db.scalar(
+        select(DailyRewardClaim.id).where(
+            DailyRewardClaim.user_id == user.id,
+            DailyRewardClaim.claim_date == claim_date,
+            DailyRewardClaim.reward_key == reward_key,
+        )
+    )
+    if existing is not None:
+        raise AlreadyClaimedError("daily reward already claimed")
+
+    if reward_key == "bonus":
+        claimed_keys = set(
+            db.scalars(
+                select(DailyRewardClaim.reward_key).where(
+                    DailyRewardClaim.user_id == user.id,
+                    DailyRewardClaim.claim_date == claim_date,
+                    DailyRewardClaim.reward_key != "bonus",
+                )
+            ).all()
+        )
+        if claimed_keys != {"solve-one", "solve-three", "finish-code"}:
+            raise RewardNotReadyError("daily bonus is not ready")
+    else:
+        completed_count, has_code = _daily_completion_progress(db, user.id, claim_date)
+        ready = (
+            (reward_key == "solve-one" and completed_count >= 1)
+            or (reward_key == "solve-three" and completed_count >= 3)
+            or (reward_key == "finish-code" and has_code)
+        )
+        if not ready:
+            raise RewardNotReadyError("daily reward is not ready")
+
+    awarded = DAILY_REWARDS[reward_key]
+    db.add(
+        DailyRewardClaim(
+            user_id=user.id,
+            claim_date=claim_date,
+            reward_key=reward_key,
+            coins_awarded=awarded,
+        )
+    )
+    locked_user.balance += awarded
+    db.commit()
+    return {"reward_key": reward_key, "coins_awarded": awarded}
+
+
+def _daily_completion_progress(db: Session, user_id: int, claim_date: date) -> tuple[int, bool]:
+    day_start = datetime.combine(claim_date, time.min, tzinfo=UTC)
+    day_end = day_start + timedelta(days=1)
+    rows = db.execute(
+        select(TaskAttempt.task_id, Task.type)
+        .join(Task, Task.id == TaskAttempt.task_id)
+        .where(
+            TaskAttempt.user_id == user_id,
+            TaskAttempt.status == "COMPLETED",
+            TaskAttempt.is_correct.is_(True),
+            TaskAttempt.attempted_at >= day_start,
+            TaskAttempt.attempted_at < day_end,
+        )
+        .distinct()
+    ).all()
+    return len(rows), any(row.type == "CODE" for row in rows)

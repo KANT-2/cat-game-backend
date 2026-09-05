@@ -37,17 +37,18 @@ def user_fixture():
 
 
 def test_cors_preflight_accepts_configured_pwa_origin() -> None:
+    configured_origin = settings.cors_origin_list()[0]
     response = TestClient(app).options(
         "/api/v1/learning/recommendations",
         headers={
-            "Origin": "http://localhost:5173",
+            "Origin": configured_origin,
             "Access-Control-Request-Method": "GET",
             "Access-Control-Request-Headers": "X-User-Public-ID",
         },
     )
 
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.headers["access-control-allow-origin"] == configured_origin
 
 
 def test_cors_preflight_allows_cat_memory_delete() -> None:

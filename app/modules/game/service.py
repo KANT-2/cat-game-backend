@@ -1,6 +1,7 @@
 """Read model for the server-authoritative game state."""
 
 from collections import Counter
+from datetime import UTC, datetime, time, timedelta
 from typing import cast
 
 from sqlalchemy import select
@@ -9,8 +10,11 @@ from sqlalchemy.orm import Session
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.cat import Cat
+from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
+from app.models.task import Task
+from app.models.task_attempt import TaskAttempt
 from app.models.user import User
 from app.modules.game.bootstrap import bootstrap_starter_pack
 from app.modules.game.catalog import ITEM_BY_KEY
@@ -51,6 +55,31 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
             .order_by(Attendance.check_in_date)
         ).all()
     )
+    today = datetime.now(UTC).date()
+    day_start = datetime.combine(today, time.min, tzinfo=UTC)
+    day_end = day_start + timedelta(days=1)
+    completed_rows = list(
+        db.execute(
+            select(Task.public_id, Task.type)
+            .join(TaskAttempt, TaskAttempt.task_id == Task.id)
+            .where(
+                TaskAttempt.user_id == user.id,
+                TaskAttempt.status == "COMPLETED",
+                TaskAttempt.is_correct.is_(True),
+                TaskAttempt.attempted_at >= day_start,
+                TaskAttempt.attempted_at < day_end,
+            )
+            .distinct()
+        ).all()
+    )
+    daily_claims = list(
+        db.scalars(
+            select(DailyRewardClaim).where(
+                DailyRewardClaim.user_id == user.id,
+                DailyRewardClaim.claim_date == today,
+            )
+        ).all()
+    )
 
     cat_assets = {asset.cat_id: asset for asset in assets if asset.cat_id is not None}
     item_assets = {asset.item_id: asset for asset in assets if asset.item_id is not None}
@@ -79,6 +108,13 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
             default=0,
         ),
         attendance_claimed_dates=[attendance.check_in_date.isoformat() for attendance in attendances],
+        daily_quest_date=today.isoformat(),
+        daily_completed_task_ids=[str(row.public_id) for row in completed_rows],
+        daily_has_code_completion=any(row.type == "CODE" for row in completed_rows),
+        claimed_daily_quest_ids=[
+            claim.reward_key for claim in daily_claims if claim.reward_key != "bonus"
+        ],
+        daily_bonus_claimed=any(claim.reward_key == "bonus" for claim in daily_claims),
         settings=_read_settings(user.game_settings),
         cats=[
             GameCatRead(

@@ -40,3 +40,7 @@ class PlacementOccupiedError(ApplicationError):
 
 class AlreadyClaimedError(ApplicationError):
     """A once-per-period reward was already claimed."""
+
+
+class RewardNotReadyError(ApplicationError):
+    """A reward's authoritative progress requirement is not complete."""

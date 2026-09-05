@@ -9,6 +9,7 @@ EXPECTED_TABLES = [
     "tasks", "task_attempts", "attendances", "attendance_tasks",
     "rooms", "room_participants", "room_tasks", "assets",
     "user_proficiency", "placed_objects", "gacha_executions",
+    "task_completions", "daily_reward_claims",
 ]
 
 
@@ -22,8 +23,8 @@ def test_pgcrypto_extension_enabled(engine):
     assert installed is True
 
 
-def test_all_16_tables_exist(engine):
-    """16개 테이블이 실제 DB에 전부 존재하는지 확인"""
+def test_all_expected_tables_exist(engine):
+    """현재 모델이 요구하는 테이블이 실제 DB에 전부 존재하는지 확인"""
     with engine.connect() as conn:
         result = conn.execute(
             text(

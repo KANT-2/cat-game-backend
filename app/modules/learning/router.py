@@ -26,6 +26,7 @@ def _task_payload(db: DbSession, task, *, completed: bool):
         "hint_text": task.hint_text,
         "is_active": task.is_active,
         "completed": completed,
+        "reward_coins": task.reward_coins,
     }
 
 

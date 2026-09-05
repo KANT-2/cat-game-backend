@@ -17,6 +17,11 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
         attendance_streak=0,
         attendance_longest_streak=0,
         attendance_claimed_dates=[],
+        daily_quest_date="2026-09-05",
+        daily_completed_task_ids=[],
+        daily_has_code_completion=False,
+        claimed_daily_quest_ids=[],
+        daily_bonus_claimed=False,
         settings={
             "bgm_enabled": True,
             "bgm_volume": 70,

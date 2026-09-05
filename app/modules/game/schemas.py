@@ -60,6 +60,11 @@ class GameSnapshotRead(BaseModel):
     attendance_streak: int
     attendance_longest_streak: int
     attendance_claimed_dates: list[str]
+    daily_quest_date: str
+    daily_completed_task_ids: list[str]
+    daily_has_code_completion: bool
+    claimed_daily_quest_ids: list[str]
+    daily_bonus_claimed: bool
     settings: GameSettingsRead
     cats: list[GameCatRead]
     items: list[GameItemRead]
@@ -100,6 +105,10 @@ class SettingsCommand(BaseModel):
     effects_enabled: bool | None = None
     effects_volume: int | None = Field(default=None, ge=0, le=100)
     reduced_motion: bool | None = None
+
+
+class DailyRewardCommand(BaseModel):
+    reward_key: Literal["solve-one", "solve-three", "finish-code", "bonus"]
 
 
 class GachaCommand(BaseModel):

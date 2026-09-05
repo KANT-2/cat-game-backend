@@ -16,12 +16,13 @@ def _insert_user(db_session, email: str) -> int:
 
 
 def _insert_item(db_session, category: str, name: str) -> int:
+    catalog_key = f"test.{category.lower()}.{name.replace(' ', '-')}"
     return db_session.execute(
         text(
-            "INSERT INTO items (category, name, price) "
-            "VALUES (:category, :name, 100) RETURNING id"
+            "INSERT INTO items (catalog_key, category, name, price) "
+            "VALUES (:catalog_key, :category, :name, 100) RETURNING id"
         ),
-        {"category": category, "name": name},
+        {"catalog_key": catalog_key, "category": category, "name": name},
     ).scalar_one()
 
 
@@ -38,9 +39,10 @@ def _insert_item_asset(db_session, user_id: int, item_id: int, quantity: int = 1
 def _insert_cat_asset(db_session, user_id: int) -> int:
     cat_id = db_session.execute(
         text(
-            "INSERT INTO cats (name, persona, rarity) "
-            "VALUES ('trigger cat', 'calm', 'COMMON') RETURNING id"
-        )
+            "INSERT INTO cats (catalog_key, name, persona, rarity) "
+            "VALUES (:catalog_key, 'trigger cat', 'calm', 'COMMON') RETURNING id"
+        ),
+        {"catalog_key": f"test.cat.{user_id}"},
     ).scalar_one()
     return db_session.execute(
         text(

@@ -15,6 +15,7 @@ from app.core.exceptions import (
     PlacementOccupiedError,
     PlacementOutsideRoomError,
     ResourceNotFoundError,
+    RewardNotReadyError,
 )
 from app.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.models.item import Item
@@ -22,6 +23,7 @@ from app.models.user import User
 from app.modules.game.bootstrap import GameCatalogNotSeededError
 from app.modules.game.commands import (
     claim_attendance,
+    claim_daily_reward,
     select_active_cat,
     set_cat_home,
     update_game_settings,
@@ -29,6 +31,7 @@ from app.modules.game.commands import (
 from app.modules.game.gacha import draw_game_gacha
 from app.modules.game.schemas import (
     CatHomeCommand,
+    DailyRewardCommand,
     GachaCommand,
     GameMutationRead,
     GameSnapshotRead,
@@ -242,6 +245,21 @@ def claim_daily_attendance(db: DbSession, user: CurrentUser) -> GameMutationRead
         raise _http_error(error) from error
 
 
+@router.post("/daily-rewards/claims", response_model=GameMutationRead)
+def claim_daily_quest_reward(
+    payload: DailyRewardCommand,
+    db: DbSession,
+    user: CurrentUser,
+) -> GameMutationRead:
+    """Claim one server-validated UTC daily quest or completion bonus reward."""
+    try:
+        result = claim_daily_reward(db, user, payload.reward_key)
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
+    except ApplicationError as error:
+        db.rollback()
+        raise _http_error(error) from error
+
+
 def _catalog_item(db: DbSession, catalog_key: str) -> Item:
     item = db.scalar(select(Item).where(Item.catalog_key == catalog_key))
     if item is None:
@@ -260,6 +278,8 @@ def _fresh_snapshot(db: DbSession, user: User) -> GameSnapshotRead:
 def _http_error(error: ApplicationError) -> HTTPException:
     if isinstance(error, AlreadyClaimedError):
         return HTTPException(status_code=409, detail="already-claimed")
+    if isinstance(error, RewardNotReadyError):
+        return HTTPException(status_code=409, detail="reward-not-ready")
     if isinstance(error, ResourceNotFoundError):
         return HTTPException(status_code=404, detail="resource-not-found")
     if isinstance(error, InsufficientBalanceError):

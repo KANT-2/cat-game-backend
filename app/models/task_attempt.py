@@ -33,6 +33,12 @@ class TaskAttempt(Base):
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     result_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    coins_awarded: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -51,4 +57,5 @@ class TaskAttempt(Base):
             "(context_type = 'BATTLE' AND attendance_task_id IS NULL AND room_task_id IS NOT NULL)",
             name="ck_task_attempts_context_fk_match",
         ),
+        CheckConstraint("coins_awarded >= 0", name="ck_task_attempts_coins_awarded_nonneg"),
     )

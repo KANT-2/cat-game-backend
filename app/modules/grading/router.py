@@ -32,4 +32,5 @@ def result(attempt_public_id: uuid.UUID, db: DbSession, user: CurrentUser):
         "context_type": attempt.context_type, "status": attempt.status,
         "is_correct": attempt.is_correct, "used_hint": attempt.used_hint,
         "attempted_at": attempt.attempted_at, "result_detail": attempt.result_detail,
+        "coins_awarded": attempt.coins_awarded,
     }

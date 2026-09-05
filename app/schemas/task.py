@@ -16,5 +16,6 @@ class TaskRead(ReadSchema):
     hint_text: str | None
     is_active: bool
     completed: bool
+    reward_coins: int
 
     # test_cases와 correct_option은 채점 전용 정보라 의도적으로 포함하지 않는다.

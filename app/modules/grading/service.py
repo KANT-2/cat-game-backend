@@ -2,6 +2,7 @@ import json
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
@@ -11,6 +12,7 @@ from app.models.room_participant import RoomParticipant
 from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
+from app.models.task_completion import TaskCompletion
 from app.models.user import User
 from app.modules.grading.runners import dispatcher
 from app.modules.grading.test_cases import TestCaseSpecError
@@ -94,6 +96,24 @@ def grade_attempt(attempt_public_id: uuid.UUID) -> None:
         attempt.result_detail = json.dumps({"verdict": str(result.verdict), "detail": result.detail})
         if is_correct is not None:
             update_proficiency(db, attempt.user_id, task.concept_id)
+        if is_correct:
+            locked_user = db.scalar(select(User).where(User.id == attempt.user_id).with_for_update())
+            if locked_user is None:
+                raise RuntimeError("attempt user not found")
+            completion_id = db.scalar(
+                insert(TaskCompletion)
+                .values(
+                    user_id=attempt.user_id,
+                    task_id=task.id,
+                    first_attempt_id=attempt.id,
+                    coins_awarded=task.reward_coins,
+                )
+                .on_conflict_do_nothing(index_elements=[TaskCompletion.user_id, TaskCompletion.task_id])
+                .returning(TaskCompletion.id)
+            )
+            if completion_id is not None:
+                attempt.coins_awarded = task.reward_coins
+                locked_user.balance += task.reward_coins
         if is_correct and attempt.context_type == "DAILY":
             db.get(AttendanceTask, attempt.attendance_task_id).is_completed = True
         db.commit()
