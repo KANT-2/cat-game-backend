@@ -10,6 +10,7 @@ from app.core.exceptions import (
     IdempotencyConflictError,
     InsufficientBalanceError,
     InvalidQuantityError,
+    ItemAlreadyOwnedError,
     ResourceNotFoundError,
 )
 from app.main import app
@@ -109,6 +110,7 @@ def test_purchase_returns_public_response(
         (ResourceNotFoundError("item not found"), 404),
         (IdempotencyConflictError("request_id conflict"), 409),
         (InsufficientBalanceError("insufficient balance"), 409),
+        (ItemAlreadyOwnedError("item already owned"), 409),
         (InvalidQuantityError("quantity must be positive"), 422),
     ],
 )

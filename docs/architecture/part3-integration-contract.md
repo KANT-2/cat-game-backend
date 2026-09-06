@@ -562,7 +562,7 @@ Content-Type: application/json
 }
 ```
 
-성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다. 아이템은 구매로만 획득하며 아이템 가챠는 제공하지 않는다.
+성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. `WALLPAPER`는 사용자별 고유 소유 상품이며, 이미 보유한 배경의 새 구매 요청은 `409 item already owned`다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다. 아이템은 구매로만 획득하며 아이템 가챠는 제공하지 않는다.
 
 ##### 간식 사용
 
