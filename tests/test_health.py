@@ -56,6 +56,44 @@ def test_production_requires_a_unique_rate_limit_secret(monkeypatch) -> None:
         create_app()
 
 
+def test_production_requires_postgresql(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "unique-production-rate-limit-secret")
+    monkeypatch.setattr(settings, "database_url", "sqlite+pysqlite:///./production.db")
+
+    with pytest.raises(RuntimeError, match="PostgreSQL"):
+        create_app()
+
+
+@pytest.mark.parametrize(
+    "origins",
+    [
+        "*",
+        "http://nyang.example.com",
+        "https://nyang.example.com,https://admin.example.com",
+        "https://user:password@nyang.example.com",
+        "https://nyang.example.com/unexpected-path",
+    ],
+)
+def test_production_requires_one_https_browser_origin(monkeypatch, origins: str) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "unique-production-rate-limit-secret")
+    monkeypatch.setattr(settings, "database_url", "postgresql+psycopg://cat_game@db/cat_game")
+    monkeypatch.setattr(settings, "cors_origins", origins)
+
+    with pytest.raises(RuntimeError, match="one HTTPS origin"):
+        create_app()
+
+
+def test_production_accepts_postgresql_and_one_https_origin(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "unique-production-rate-limit-secret")
+    monkeypatch.setattr(settings, "database_url", "postgresql+psycopg://cat_game@db/cat_game")
+    monkeypatch.setattr(settings, "cors_origins", "https://nyang.example.com")
+
+    create_app()
+
+
 def test_unhandled_error_returns_safe_reference_without_exception_detail(caplog) -> None:
     test_app = create_app()
 

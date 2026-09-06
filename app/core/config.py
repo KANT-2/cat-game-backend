@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -36,7 +38,31 @@ class Settings(BaseSettings):
         if self.app_env == "production" and self.auth_rate_limit_secret == "local-auth-rate-limit-secret":
             raise RuntimeError("AUTH_RATE_LIMIT_SECRET must be configured in production")
 
+    def validate_production_api_configuration(self) -> None:
+        """Reject storage and browser origins that cannot support production sessions."""
+        self.validate_production_secrets()
+        if self.app_env != "production":
+            return
+        if not self.database_url.startswith(("postgresql://", "postgresql+psycopg://")):
+            raise RuntimeError("DATABASE_URL must use PostgreSQL in production")
+        origins = self.cors_origin_list()
+        if len(origins) != 1 or not _is_https_origin(origins[0]):
+            raise RuntimeError("CORS_ORIGINS must contain one HTTPS origin in production")
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
+
+
+def _is_https_origin(value: str) -> bool:
+    parsed = urlsplit(value)
+    return (
+        parsed.scheme == "https"
+        and bool(parsed.netloc)
+        and parsed.path in {"", "/"}
+        and not parsed.query
+        and not parsed.fragment
+        and parsed.username is None
+        and parsed.password is None
+    )

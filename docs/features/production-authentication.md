@@ -42,6 +42,10 @@ PWA는 모든 요청에 브라우저 자격 증명을 포함하고, 상태 변�
 성공으로 대체하지 않는다. Docker 브라우저 스모크는 가입, CSRF 보호 명령, 새로고침 후 세션 복원을
 검증한다.
 
+API는 `APP_ENV=production`일 때 시작 전에 PostgreSQL 연결 URL과 단일 HTTPS CORS origin을 검사한다.
+SQLite, HTTP, 와일드카드, 여러 origin, 사용자 정보나 경로가 포함된 origin은 호스트 전용 Secure 쿠키 계약과
+맞지 않으므로 설정 오류로 즉시 종료한다.
+
 비밀번호 재설정·이메일 검증 정책은 별도 완료 항목이다. 이 문서는 현재 구현을 완료로 과장하지 않는다.
 
 설계 기준은 OWASP Password Storage, Session Management, CSRF Prevention Cheat Sheet와 FastAPI의
