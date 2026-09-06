@@ -4,3 +4,11 @@
 
 현재 16개 업무 테이블과 관계는 [현재 ERD](./current-erd.md)를 기준으로 한다.
 
+## HTTP 운영 경계
+
+모든 응답은 `X-Request-ID`를 돌려주고 완료 상태, 메서드, 경로와 처리 시간만 구조화 로그에 남긴다.
+요청 헤더, 쿼리 값, 비밀번호, 세션 토큰과 제출 코드는 기록하지 않는다. 처리되지 않은 예외는 내부 문자열
+대신 `internal-server-error`와 요청 ID를 반환한다.
+
+`GET /health`는 프로세스 liveness만 확인하고 `GET /ready`는 PostgreSQL 연결에서 `SELECT 1`이 성공해야
+ready를 반환한다. 컨테이너 오케스트레이터는 트래픽 연결 여부를 결정할 때 `/ready`를 사용한다.

@@ -8,3 +8,4 @@ __pycache__/
 htmlcov/
 alembic.ini
 *.egg-info/
+*.db
