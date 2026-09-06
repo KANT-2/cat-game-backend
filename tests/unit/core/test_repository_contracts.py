@@ -24,6 +24,7 @@ EXPECTED_METHODS = {
         "list_cat_assets_by_user_id",
         "get_item_asset_for_update",
         "add_item_quantity",
+        "consume_item_quantity_for_update",
         "grant_cat",
     },
     PlacedObjectRepository: {
@@ -63,7 +64,7 @@ def test_repository_contracts_do_not_own_transactions() -> None:
 def test_locking_methods_are_named_for_update() -> None:
     locking_methods = {
         UserRepository: {"get_for_update"},
-        AssetRepository: {"get_item_asset_for_update"},
+        AssetRepository: {"get_item_asset_for_update", "consume_item_quantity_for_update"},
         PlacedObjectRepository: {
             "get_by_public_id_for_update",
             "count_for_update",

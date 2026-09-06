@@ -157,6 +157,16 @@ class SqlAlchemyAssetRepository:
         self._session.add(asset)
         return asset
 
+    def consume_item_quantity_for_update(self, user_id: int, item_id: int) -> int | None:
+        asset = self.get_item_asset_for_update(user_id, item_id)
+        if asset is None:
+            return None
+        if asset.quantity == 1:
+            self._session.delete(asset)
+            return 0
+        asset.quantity -= 1
+        return asset.quantity
+
     def _get_pending_asset(
         self,
         *,

@@ -18,7 +18,7 @@ from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user import User
 from app.modules.game.bootstrap import bootstrap_starter_pack
-from app.modules.game.catalog import ITEM_BY_KEY
+from app.modules.game.catalog import CATALOG_VERSION, ITEM_BY_KEY
 from app.modules.game.schemas import (
     GameCatRead,
     GameItemRead,
@@ -106,7 +106,7 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
         raise RuntimeError("player has no active catalog cat")
 
     return GameSnapshotRead(
-        catalog_version=1,
+        catalog_version=CATALOG_VERSION,
         state_version=user.state_version,
         balance=user.balance,
         mileage=user.mileage,

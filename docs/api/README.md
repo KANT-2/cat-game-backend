@@ -70,6 +70,7 @@
 | Method | Path | 성공 | 용도 |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/shop/purchases` | `201` | 아이템 멱등 구매 |
+| `POST` | `/api/v1/game/consumables/use` | `200` | 보유 간식 한 개 멱등 사용 |
 | `POST` | `/api/v1/gacha/draws` | `200` | 고양이 1회 또는 10+1회 멱등 가챠 |
 | `PUT` | `/api/v1/housing/surfaces/{item_public_id}` | `200` | 보유 벽지·바닥 적용 |
 | `POST` | `/api/v1/housing/placed-objects` | `201` | 보유 가구 배치 |
@@ -386,7 +387,38 @@ CODE 문제 요청:
 
 `quantity`는 양수다. 같은 동작의 네트워크 재시도에는 같은 `request_id`를 사용한다. 동일 사용자·동일 내용이면 최초 결과를 반환하고 사용자 또는 내용이 다르면 `409`다. 아이템 없음은 `404`, 잔액 부족은 `409`다.
 
-### 5.2 고양이 가챠
+### 5.2 간식 사용
+
+`POST /api/v1/game/consumables/use`
+
+```json
+{
+  "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
+  "item_catalog_key": "consumable.salmon-cubes",
+  "cat_catalog_key": "ink"
+}
+```
+
+성공 응답은 갱신된 전체 `snapshot`과 아래 `result`를 함께 반환한다.
+
+```json
+{
+  "result": {
+    "execution_public_id": "a17169ab-d732-4e42-a717-36733f6f9e59",
+    "request_id": "01a996ae-c8f5-4388-bf1e-a911717fa2bd",
+    "item_public_id": "ee50a4a7-f05d-44b2-ac84-9b0276eeedfe",
+    "cat_public_id": "063115f5-749f-43ff-9016-eb9dc4203d30",
+    "effect": "happy",
+    "remaining_quantity": 0
+  }
+}
+```
+
+한 번의 성공 요청은 간식 수량을 정확히 하나 줄인다. 같은 내용의 `request_id` 재시도는 추가로 줄이지
+않고 최초 결과를 반환한다. 미보유 간식·고양이와 없는 카탈로그 항목은 `404`, 간식이 아닌 상품은 `422`,
+같은 요청 UUID의 내용 충돌은 `409`다. 효과는 표현용이며 허기나 능력치 상태를 만들지 않는다.
+
+### 5.3 고양이 가챠
 
 `POST /api/v1/gacha/draws`
 
@@ -422,7 +454,7 @@ CODE 문제 요청:
 
 위 숫자는 응답 형식 예시이며 운영 정책값이 아니다. `draw_count=11`의 실제 `results` 길이는 11이다. 현재 운영 `GachaPolicy`가 없으므로 기본 API는 DB를 변경하지 않고 `503 Gacha policy is not configured`를 반환한다.
 
-### 5.3 벽지·바닥 적용
+### 5.4 벽지·바닥 적용
 
 `PUT /api/v1/housing/surfaces/{item_public_id}`
 
@@ -438,7 +470,7 @@ CODE 문제 요청:
 
 사용자·아이템·보유 자산 없음은 `404`, `WALLPAPER`·`FLOOR`가 아닌 카테고리는 `422`다.
 
-### 5.4 가구 배치·수정·해제
+### 5.5 가구 배치·수정·해제
 
 배치 생성 `POST /api/v1/housing/placed-objects`:
 
@@ -469,7 +501,7 @@ CODE 문제 요청:
 
 삭제는 같은 공개 배치 UUID에 `DELETE`를 보내며 `204`다. 좌표는 유한한 `x`, `y`, `z`를 모두 요구하고 알 수 없는 필드를 거부한다. 리소스·소유권 오류는 `404`, 가구가 아닌 카테고리는 `422`, 보유 수량 초과 배치는 `409`다. 배치 해제는 자산 수량을 줄이지 않는다.
 
-### 5.5 고양이 도감
+### 5.6 고양이 도감
 
 `GET /api/v1/cats/collection`
 
@@ -500,7 +532,7 @@ CODE 문제 요청:
 
 보유 고양이만 `cat_asset_public_id`를 가진다. 이를 대화 컨텍스트와 기억 API의 경로에 사용한다.
 
-### 5.6 고양이 persona와 기억
+### 5.7 고양이 persona와 기억
 
 #### 전체 조회
 
@@ -540,7 +572,7 @@ CODE 문제 요청:
 
 둘 다 `204`다. 전체 삭제도 기억 행만 제거하며 `CATS.persona`, 고양이 마스터와 보유 자산은 유지한다. 다른 사용자의 고양이 자산·기억 접근은 `404`로 숨긴다.
 
-### 5.7 생성형 AI 고양이 대화
+### 5.8 생성형 AI 고양이 대화
 
 `POST /api/v1/cats/{cat_asset_public_id}/chat`
 
