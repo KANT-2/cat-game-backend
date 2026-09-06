@@ -18,6 +18,7 @@ class GameSettingsRead(BaseModel):
 
 class GameCatRead(BaseModel):
     public_id: uuid.UUID
+    cat_asset_public_id: uuid.UUID | None
     catalog_key: str
     name: str
     persona: str

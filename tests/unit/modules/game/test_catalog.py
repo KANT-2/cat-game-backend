@@ -19,3 +19,15 @@ def test_starter_items_reference_placeable_catalog_entries() -> None:
         assert definition.furniture_kind is not None
         assert definition.width is not None and definition.width > 0
         assert definition.height is not None and definition.height > 0
+
+
+def test_cat_personas_match_the_four_public_characters() -> None:
+    cats = {definition.catalog_key: definition for definition in CAT_DEFINITIONS}
+
+    assert {key: definition.name for key, definition in cats.items()} == {
+        "fluffy": "포근이",
+        "ink": "먹구름",
+        "siamese": "모카",
+        "tabby": "호박이",
+    }
+    assert all(len(definition.persona) >= 30 for definition in cats.values())

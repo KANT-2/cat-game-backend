@@ -134,6 +134,9 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
         cats=[
             GameCatRead(
                 public_id=cat.public_id,
+                cat_asset_public_id=(
+                    cat_assets[cat.id].public_id if cat.id in cat_assets else None
+                ),
                 catalog_key=cat.catalog_key,
                 name=cat.name,
                 persona=cat.persona,

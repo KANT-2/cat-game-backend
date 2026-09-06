@@ -23,10 +23,30 @@ class ItemDefinition:
 
 
 CAT_DEFINITIONS = (
-    CatDefinition("fluffy", "복실이", "느긋하고 다정한 첫 친구", "COMMON"),
-    CatDefinition("ink", "먹구름", "호기심 많은 검은 고양이", "RARE"),
-    CatDefinition("siamese", "샴이", "영리하고 수다스러운 친구", "COMMON"),
-    CatDefinition("tabby", "고등어", "활동적이고 장난기 많은 친구", "RARE"),
+    CatDefinition(
+        "fluffy",
+        "포근이",
+        "느긋하고 다정하다. 짧고 포근한 말투로 서두르지 않아도 괜찮다고 안심시킨다.",
+        "COMMON",
+    ),
+    CatDefinition(
+        "ink",
+        "먹구름",
+        "조용하고 관찰력이 좋다. 말수는 적지만 작은 변화를 짚으며 생각할 여백을 준다.",
+        "RARE",
+    ),
+    CatDefinition(
+        "siamese",
+        "모카",
+        "영리하고 수다스럽다. 호기심 어린 질문과 작은 예시로 생각을 이어 가게 한다.",
+        "COMMON",
+    ),
+    CatDefinition(
+        "tabby",
+        "호박이",
+        "활동적이고 낙천적이다. 장난스러운 감탄과 행동 제안으로 망설임을 가볍게 만든다.",
+        "RARE",
+    ),
 )
 
 ITEM_DEFINITIONS = (

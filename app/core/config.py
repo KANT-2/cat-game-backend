@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     auth_rate_block_seconds: int = Field(default=900, ge=60, le=86_400)
     auth_login_attempt_limit: int = Field(default=5, ge=2, le=100)
     auth_registration_attempt_limit: int = Field(default=10, ge=2, le=1_000)
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-3.7-flash"
+    gemini_timeout_ms: int = Field(default=6_000, ge=1_000, le=30_000)
 
     def session_cookie_name(self) -> str:
         """Use the browser-enforced host prefix only where HTTPS is mandatory."""
