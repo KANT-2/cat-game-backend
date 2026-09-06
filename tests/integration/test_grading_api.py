@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import UTC, datetime
 
@@ -93,7 +92,7 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
         assert payload["status"] == "COMPLETED"
         assert payload["is_correct"] is True
         assert payload["coins_awarded"] == 25
-        assert json.loads(payload["result_detail"]) == {
+        assert payload["result_detail"] == {
             "verdict": "ACCEPTED",
             "passed": 1,
             "total": 1,

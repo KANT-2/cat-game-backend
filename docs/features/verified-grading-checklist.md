@@ -68,7 +68,8 @@
 - [x] **5-11 결과 DB 저장**
   - 근거: PENDING→RUNNING→COMPLETED/FAILED 상태와 임대를 별도 워커 DB 세션에서 커밋한다.
     `result_detail`에는 verdict와 통과 개수만 저장하고 Docker 오류·stderr·테스트 명세 같은 내부 상세는
-    사용자 응답에 넣지 않는다. PostgreSQL API·Docker 통합 스모크가 상태 전이를 검증한다.
+    사용자 응답에 넣지 않는다. API는 저장용 JSON 문자열을 구조화된 공개 객체로 변환한다.
+    PostgreSQL API·Docker 통합 스모크가 상태 전이를 검증한다.
 
 - [x] **5-12 DAILY 완료 연동**
   - 근거: DAILY 정답일 때만 `AttendanceTask.is_completed = true`; false로 되돌리는 경로 없음.
@@ -84,7 +85,7 @@
   - 검증: 실제 PostgreSQL에서 소유자는 공개 결과를 조회하고 다른 사용자는 같은 UUID로도 404를 받는다.
 
 - [ ] **5-15 채점 기능 테스트**
-  - 실행 결과: 로컬 `236 passed, 24 skipped`, PostgreSQL+Docker `260 passed`; Ruff 검사 통과.
+  - 실행 결과: 로컬 `238 passed, 24 skipped`, PostgreSQL+Docker `262 passed`; Ruff 검사 통과.
   - 포함: 스키마/context, JSON 명세, 보안 옵션, 정답/오답/문법/런타임/timeout.
   - 추가 검증: PostgreSQL 마이그레이션과 만료 임대 회수, FastAPI API, 실제 Docker 정답 판정,
     브라우저 등록·세션·재연결·로그아웃 통합 흐름.
@@ -97,8 +98,8 @@
 ## 실행 증거
 
 ```text
-local pytest: 236 passed, 24 skipped
-PostgreSQL + Docker pytest: 260 passed
+local pytest: 238 passed, 24 skipped
+PostgreSQL + Docker pytest: 262 passed
 ruff: All checks passed
 docker build: cat-game-python-grader:3.12 성공
 integration smoke: API 퀴즈와 Docker 코드 채점, 브라우저 세션 수명주기 확인

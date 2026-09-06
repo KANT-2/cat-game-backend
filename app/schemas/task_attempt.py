@@ -40,12 +40,27 @@ class TaskAttemptAccepted(BaseModel):
     status: Literal["PENDING"]
 
 
+class GradingResultRead(BaseModel):
+    verdict: Literal[
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "SYNTAX_ERROR",
+        "RUNTIME_ERROR",
+        "TIMEOUT",
+        "OUTPUT_LIMIT",
+        "MEMORY_LIMIT",
+        "SYSTEM_ERROR",
+    ]
+    passed: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
 class TaskAttemptRead(ReadSchema):
     task_public_id: uuid.UUID
-    context_type: str
-    submitted_code: str
-    status: str
+    context_type: Literal["LEARNING", "DAILY", "BATTLE"]
+    status: Literal["PENDING", "RUNNING", "COMPLETED", "FAILED"]
     is_correct: bool | None
     used_hint: bool
     attempted_at: datetime
-    result_detail: str | None = Field(default=None)
+    result_detail: GradingResultRead | None = None
+    coins_awarded: int = Field(ge=0)
