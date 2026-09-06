@@ -70,20 +70,21 @@
     `result_detail`에는 verdict와 통과 개수만 저장하고 Docker 오류·stderr·테스트 명세 같은 내부 상세는
     사용자 응답에 넣지 않는다. PostgreSQL API·Docker 통합 스모크가 상태 전이를 검증한다.
 
-- [ ] **5-12 DAILY 완료 연동**
+- [x] **5-12 DAILY 완료 연동**
   - 근거: DAILY 정답일 때만 `AttendanceTask.is_completed = true`; false로 되돌리는 경로 없음.
-  - 미완료: DB 통합 테스트 미작성. 일일 보상은 의도적으로 채점기 범위 밖(TBD).
+  - 검증: 실제 PostgreSQL API 제출·채점에서 출석 과제 완료, 최초 코인 보상과 상태 버전 증가를 확인한다.
+  - 범위: 일일 퀘스트 보상 청구는 별도 서버 명령이 검증한다.
 
 - [ ] **5-13 BATTLE 결과 연동**
   - 근거: Attempt에 검증된 `room_task_id`, `is_correct`, 상태, 결과 상세 저장.
   - 미완료: 배틀 서비스 소비 계약/통합 테스트 없음. 점수·보너스·감점 정책 TBD.
 
-- [ ] **5-14 결과 조회 API**
+- [x] **5-14 결과 조회 API**
   - 근거: GET `/api/v1/attempts/{public_id}`; 소유자 조건으로 조회하여 타 사용자도 404. 내부 ID/코드/test_cases 비노출.
-  - 미완료: 인증+DB API 통합 테스트 미작성.
+  - 검증: 실제 PostgreSQL에서 소유자는 공개 결과를 조회하고 다른 사용자는 같은 UUID로도 404를 받는다.
 
 - [ ] **5-15 채점 기능 테스트**
-  - 실행 결과: 로컬 `236 passed, 23 skipped`, PostgreSQL+Docker `259 passed`; Ruff 검사 통과.
+  - 실행 결과: 로컬 `236 passed, 24 skipped`, PostgreSQL+Docker `260 passed`; Ruff 검사 통과.
   - 포함: 스키마/context, JSON 명세, 보안 옵션, 정답/오답/문법/런타임/timeout.
   - 추가 검증: PostgreSQL 마이그레이션과 만료 임대 회수, FastAPI API, 실제 Docker 정답 판정,
     브라우저 등록·세션·재연결·로그아웃 통합 흐름.
@@ -96,8 +97,8 @@
 ## 실행 증거
 
 ```text
-local pytest: 236 passed, 23 skipped
-PostgreSQL + Docker pytest: 259 passed
+local pytest: 236 passed, 24 skipped
+PostgreSQL + Docker pytest: 260 passed
 ruff: All checks passed
 docker build: cat-game-python-grader:3.12 성공
 integration smoke: API 퀴즈와 Docker 코드 채점, 브라우저 세션 수명주기 확인
