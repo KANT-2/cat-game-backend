@@ -18,6 +18,7 @@ from app.core.exceptions import (
     RewardNotReadyError,
 )
 from app.db.unit_of_work import SqlAlchemyUnitOfWork
+from app.models.cat import Cat
 from app.models.item import Item
 from app.models.user import User
 from app.modules.game.bootstrap import GameCatalogNotSeededError
@@ -33,6 +34,7 @@ from app.modules.game.commands import (
 from app.modules.game.gacha import draw_game_gacha
 from app.modules.game.schemas import (
     CatHomeCommand,
+    ConsumableCommand,
     DailyRewardCommand,
     GachaCommand,
     GameMutationRead,
@@ -50,6 +52,7 @@ from app.modules.housing.service import (
     remove_furniture_placement,
     update_furniture_placement,
 )
+from app.modules.shop.consumables import use_consumable
 from app.modules.shop.service import purchase_item
 from app.schemas.placed_object import PositionData
 
@@ -79,6 +82,24 @@ def buy_item(payload: PurchaseCommand, db: DbSession, user: CurrentUser) -> Game
             request_id=payload.request_id,
             item_public_id=item.public_id,
             quantity=payload.quantity,
+        )
+        return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
+    except ApplicationError as error:
+        raise _http_error(error) from error
+
+
+@router.post("/consumables/use", response_model=GameMutationRead)
+def consume_item(payload: ConsumableCommand, db: DbSession, user: CurrentUser) -> GameMutationRead:
+    """Consume one owned care item and return the authoritative remaining quantity."""
+    item = _catalog_item(db, payload.item_catalog_key)
+    cat = _catalog_cat(db, payload.cat_catalog_key)
+    try:
+        result = use_consumable(
+            unit_of_work=SqlAlchemyUnitOfWork(),
+            user_public_id=user.public_id,
+            request_id=payload.request_id,
+            item_public_id=item.public_id,
+            cat_public_id=cat.public_id,
         )
         return GameMutationRead(snapshot=_fresh_snapshot(db, user), result=result)
     except ApplicationError as error:
@@ -289,6 +310,13 @@ def _catalog_item(db: DbSession, catalog_key: str) -> Item:
     if item is None:
         raise HTTPException(status_code=404, detail="item-not-found")
     return item
+
+
+def _catalog_cat(db: DbSession, catalog_key: str) -> Cat:
+    cat = db.scalar(select(Cat).where(Cat.catalog_key == catalog_key))
+    if cat is None:
+        raise HTTPException(status_code=404, detail="cat-not-found")
+    return cat
 
 
 def _fresh_snapshot(db: DbSession, user: User) -> GameSnapshotRead:

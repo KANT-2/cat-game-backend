@@ -78,6 +78,12 @@ class PurchaseCommand(BaseModel):
     quantity: int = Field(default=1, ge=1, le=99)
 
 
+class ConsumableCommand(BaseModel):
+    request_id: uuid.UUID
+    item_catalog_key: str = Field(min_length=1, max_length=100)
+    cat_catalog_key: str = Field(min_length=1, max_length=100)
+
+
 class PlacementCommand(BaseModel):
     placement_public_id: uuid.UUID
     item_catalog_key: str = Field(min_length=1, max_length=100)

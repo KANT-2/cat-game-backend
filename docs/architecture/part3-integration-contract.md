@@ -82,6 +82,8 @@ class AssetRepository(Protocol):
 
     def get_item_asset_for_update(self, user_id: int, item_id: int) -> "UserAsset | None": ...
 
+    def consume_item_quantity_for_update(self, user_id: int, item_id: int) -> "int | None": ...
+
     def add_item_quantity(self, user_id: int, item_id: int, quantity: int) -> "UserAsset": ...
 
     def grant_cat(self, user_id: int, cat_id: int) -> "UserAsset": ...
@@ -308,6 +310,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 | 기억 선택 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | 고양이 자산·기억 UUID | 본문 없음 |
 | 기억 전체 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories` | 고양이 자산 UUID | 본문 없음 |
 | 아이템 구매 | `POST /api/v1/shop/purchases` | 멱등 키·아이템 UUID·수량 | 구매 결과·보유 수량·잔액 |
+| 간식 사용 | `POST /api/v1/game/consumables/use` | 멱등 키·아이템/고양이 카탈로그 키 | 새 스냅샷·효과·남은 수량 |
 | 벽지·바닥 적용 | `PUT /api/v1/housing/surfaces/{item_public_id}` | 아이템 UUID | 적용된 표면 종류 |
 | 가구 배치 | `POST /api/v1/housing/placed-objects` | 아이템 UUID·좌표 | 생성된 배치 객체 |
 | 가구 위치 수정 | `PATCH /api/v1/housing/placed-objects/{placed_object_public_id}` | 배치 UUID·새 좌표 | 수정된 배치 객체 |
@@ -560,6 +563,14 @@ Content-Type: application/json
 ```
 
 성공 시 `201 Created`이며 `execution_public_id`, `request_id`, `item_public_id`, `purchased_quantity`, `total_quantity`, `balance`를 반환한다. 동일 사용자·동일 요청 내용의 `request_id` 재시도는 저장된 결과를 반환한다. 리소스 부재는 `404`, 멱등 충돌과 잔액 부족은 `409`, 0 이하 수량이나 잘못된 본문은 `422`다. 아이템은 구매로만 획득하며 아이템 가챠는 제공하지 않는다.
+
+##### 간식 사용
+
+`POST /api/v1/game/consumables/use`는 `request_id`, `item_catalog_key`, `cat_catalog_key`를 받는다. 서비스는
+사용자, 보유 고양이와 아이템 자산을 잠금 순서에 맞춰 확인하고 간식 수량 한 개, 실행 결과와 상태 버전을
+한 트랜잭션에서 변경한다. 마지막 한 개를 사용하면 수량 0인 자산 행을 남기지 않고 삭제한다. 동일 요청
+재시도는 저장된 결과를 반환해 수량이 다시 줄지 않는다. 효과는 `happy`, `playful`, `relaxed`, `curious`
+중 하나이며 화면 표현 외의 허기·능력치·학습 보상을 만들지 않는다.
 
 ##### 벽지·바닥 적용
 

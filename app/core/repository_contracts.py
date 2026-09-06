@@ -101,6 +101,12 @@ class AssetRepository(Protocol):
         quantity: int,
     ) -> Asset: ...
 
+    def consume_item_quantity_for_update(
+        self,
+        user_id: int,
+        item_id: int,
+    ) -> int | None: ...
+
     def grant_cat(
         self,
         user_id: int,
