@@ -30,13 +30,13 @@ CAT_DEFINITIONS = (
 )
 
 ITEM_DEFINITIONS = (
-    ItemDefinition("furniture.sofa", "FURNITURE", "포근한 소파", 4_800, "sofa", 3, 1),
-    ItemDefinition("furniture.table", "FURNITURE", "낮은 탁자", 3_200, "desk", 2, 1),
-    ItemDefinition("furniture.catTower", "FURNITURE", "미니 캣타워", 4_200, "catTree", 2, 1),
-    ItemDefinition("furniture.bed", "FURNITURE", "고양이 침대", 5_600, "bed", 3, 2),
-    ItemDefinition("furniture.desk", "FURNITURE", "공부 책상", 3_900, "desk", 2, 1),
-    ItemDefinition("furniture.premiumTower", "FURNITURE", "별빛 캣타워", 90, "catTree", 2, 1),
-    ItemDefinition("decor.plant", "FURNITURE", "초록 화분", 1_700, "plant", 1, 1),
+    ItemDefinition("furniture.sofa", "FURNITURE", "버섯 숲 벤치", 4_800, "sofa", 3, 1),
+    ItemDefinition("furniture.table", "FURNITURE", "낮은 원목 탁자", 3_200, "desk", 2, 1),
+    ItemDefinition("furniture.catTower", "FURNITURE", "잎사귀 스크래처", 4_200, "catTree", 2, 1),
+    ItemDefinition("furniture.bed", "FURNITURE", "초록 발바닥 쿠션", 5_600, "bed", 3, 2),
+    ItemDefinition("furniture.desk", "FURNITURE", "통나무 숨숨집", 3_900, "desk", 2, 1),
+    ItemDefinition("furniture.premiumTower", "FURNITURE", "거목 캣타워", 90, "catTree", 2, 1),
+    ItemDefinition("decor.plant", "FURNITURE", "분홍 들꽃 덤불", 1_700, "plant", 1, 1),
     ItemDefinition("wallpaper.cream", "WALLPAPER", "크림빛 하늘", 2_100),
     ItemDefinition("wallpaper.cloud", "WALLPAPER", "구름빛 하늘", 2_400),
     ItemDefinition("wallpaper.forest", "WALLPAPER", "깊은 숲빛", 2_800),
