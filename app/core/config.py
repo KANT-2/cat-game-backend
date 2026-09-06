@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,11 @@ class Settings(BaseSettings):
     grading_output_bytes: int = 65536
     grading_max_concurrency: int = 2
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    session_days: int = Field(default=30, ge=1, le=365)
+
+    def session_cookie_name(self) -> str:
+        """Use the browser-enforced host prefix only where HTTPS is mandatory."""
+        return "__Host-nyang_session" if self.app_env == "production" else "nyang_session"
 
     def cors_origin_list(self) -> list[str]:
         """Return normalized browser origins accepted by the API."""

@@ -3,13 +3,15 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request, Response
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_current_user
 from app.core.config import settings
 from app.main import app
-from app.modules.identity.router import current_session, development_session
+from app.models.auth_session import AuthSession
+from app.modules.identity.router import _issue_session, current_session, development_session
+from app.modules.identity.security import hash_token
 
 
 class ExistingUserSession:
@@ -69,7 +71,7 @@ def test_local_header_auth_resolves_public_user(monkeypatch) -> None:
     user = user_fixture()
     monkeypatch.setattr(settings, "app_env", "local")
 
-    assert get_current_user(ExistingUserSession(user), user.public_id) is user
+    assert get_current_user(_request(), ExistingUserSession(user), user.public_id) is user
 
 
 def test_temporary_header_auth_is_rejected_in_production(monkeypatch) -> None:
@@ -77,7 +79,7 @@ def test_temporary_header_auth_is_rejected_in_production(monkeypatch) -> None:
     monkeypatch.setattr(settings, "app_env", "production")
 
     with pytest.raises(HTTPException) as error:
-        get_current_user(ExistingUserSession(user), user.public_id)
+        get_current_user(_request(), ExistingUserSession(user), user.public_id)
 
     assert error.value.status_code == 401
 
@@ -138,3 +140,54 @@ def test_cors_preflight_allows_housing_changes(
 
     assert response.status_code == 200
     assert method in response.headers["access-control-allow-methods"]
+
+
+def test_production_session_cookie_is_secure_and_http_only(monkeypatch) -> None:
+    response = Response()
+    db = ExistingUserSession(user_fixture())
+    db.add = lambda value: setattr(db, "auth_session", value)
+    monkeypatch.setattr(settings, "app_env", "production")
+
+    _issue_session(db, response, SimpleNamespace(id=17))
+
+    cookies = response.headers.getlist("set-cookie")
+    session_cookie = next(value for value in cookies if value.startswith("__Host-nyang_session="))
+    csrf_cookie = next(value for value in cookies if value.startswith("nyang_csrf="))
+    assert "HttpOnly" in session_cookie
+    assert "Secure" in session_cookie
+    assert "SameSite=lax" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
+    assert isinstance(db.auth_session, AuthSession)
+    assert len(db.auth_session.token_hash) == 64
+
+
+def test_cookie_auth_requires_matching_csrf_for_mutations(monkeypatch) -> None:
+    user = user_fixture()
+    auth_session = SimpleNamespace(
+        user_id=4,
+        csrf_token_hash=hash_token("valid-csrf"),
+    )
+    db = ExistingUserSession(auth_session)
+    db.get = lambda _model, _user_id: user
+    monkeypatch.setattr(settings, "app_env", "local")
+
+    with pytest.raises(HTTPException) as error:
+        get_current_user(
+            _request("PATCH"),
+            db,
+            csrf_token="invalid-csrf",
+            local_session="opaque-session",
+        )
+    assert error.value.status_code == 403
+
+    resolved = get_current_user(
+        _request("PATCH"),
+        db,
+        csrf_token="valid-csrf",
+        local_session="opaque-session",
+    )
+    assert resolved is user
+
+
+def _request(method: str = "GET") -> Request:
+    return Request({"type": "http", "method": method, "headers": []})

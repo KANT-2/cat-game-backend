@@ -4,6 +4,7 @@ from app.models import Base as ModelBase
 EXPECTED_TABLES = {
     "attendance_tasks",
     "attendances",
+    "auth_sessions",
     "cat_memories",
     "cats",
     "concepts",

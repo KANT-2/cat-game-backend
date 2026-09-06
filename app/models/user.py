@@ -13,6 +13,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     username: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="STUDENT")
+    password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
 
     balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     mileage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

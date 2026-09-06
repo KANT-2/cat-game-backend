@@ -10,6 +10,7 @@ EXPECTED_TABLES = [
     "rooms", "room_participants", "room_tasks", "assets",
     "user_proficiency", "placed_objects", "gacha_executions",
     "task_completions", "daily_reward_claims",
+    "auth_sessions",
 ]
 
 
