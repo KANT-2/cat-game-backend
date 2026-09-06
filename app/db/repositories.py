@@ -93,6 +93,9 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         cat_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, cat_id=cat_id)
+        if pending is not None:
+            return pending
         statement = select(Asset).where(
             Asset.user_id == user_id,
             Asset.cat_id == cat_id,
@@ -118,6 +121,9 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         item_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, item_id=item_id)
+        if pending is not None:
+            return pending
         statement = (
             select(Asset)
             .where(
@@ -150,6 +156,22 @@ class SqlAlchemyAssetRepository:
         )
         self._session.add(asset)
         return asset
+
+    def _get_pending_asset(
+        self,
+        *,
+        user_id: int,
+        cat_id: int | None = None,
+        item_id: int | None = None,
+    ) -> Asset | None:
+        for pending in self._session.new:
+            if not isinstance(pending, Asset) or pending.user_id != user_id:
+                continue
+            if cat_id is not None and pending.cat_id == cat_id:
+                return pending
+            if item_id is not None and pending.item_id == item_id:
+                return pending
+        return None
 
     def grant_cat(
         self,
