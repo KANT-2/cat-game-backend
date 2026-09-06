@@ -1,23 +1,22 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.models.task import Task
-from app.modules.grading.service import SubmissionError, create_attempt, get_attempt, grade_attempt
+from app.modules.grading.service import SubmissionError, create_attempt, get_attempt
 from app.schemas.task_attempt import TaskAttemptAccepted, TaskAttemptCreate
 
 router = APIRouter(prefix="/attempts", tags=["grading"])
 
 
 @router.post("", response_model=TaskAttemptAccepted, status_code=status.HTTP_202_ACCEPTED)
-def submit(payload: TaskAttemptCreate, background: BackgroundTasks, db: DbSession, user: CurrentUser):
+def submit(payload: TaskAttemptCreate, db: DbSession, user: CurrentUser):
     try:
         attempt = create_attempt(db, payload, user)
     except SubmissionError as exc:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    background.add_task(grade_attempt, attempt.public_id)
     return TaskAttemptAccepted(public_id=attempt.public_id, status="PENDING")
 
 

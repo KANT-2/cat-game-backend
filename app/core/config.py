@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     grading_pids_limit: int = 64
     grading_output_bytes: int = 65536
     grading_max_concurrency: int = 2
+    grading_lease_seconds: int = Field(default=60, ge=10, le=3_600)
+    grading_poll_seconds: float = Field(default=0.25, ge=0.05, le=10)
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     session_days: int = Field(default=30, ge=1, le=365)
     auth_rate_limit_secret: str = Field(default="local-auth-rate-limit-secret", min_length=16)

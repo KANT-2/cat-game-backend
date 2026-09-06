@@ -40,6 +40,32 @@ def test_all_expected_tables_exist(engine):
     assert not missing, f"누락된 테이블: {missing}"
 
 
+def test_task_attempts_have_durable_grading_lease_columns(engine):
+    """채점 워커 재시작에 필요한 임대 컬럼과 큐 인덱스가 존재하는지 확인한다."""
+    with engine.connect() as conn:
+        columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'task_attempts'"
+                )
+            )
+        }
+        indexes = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes "
+                    "WHERE schemaname = 'public' AND tablename = 'task_attempts'"
+                )
+            )
+        }
+
+    assert {"grading_started_at", "grading_lease_token"} <= columns
+    assert "ix_task_attempts_grading_queue" in indexes
+
+
 def test_asset_naming_migration_is_applied(engine):
     """보유 자산 테이블과 고양이 기억 FK가 새 이름을 사용하는지 확인"""
     with engine.connect() as conn:

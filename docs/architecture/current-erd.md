@@ -11,7 +11,8 @@
 - `CAT_MEMORIES.cat_asset_id`는 `ASSETS.id` 중 고양이 자산 행을 참조한다.
 - `PLACED_OBJECTS.position_data`의 필수 좌표는 `x`, `y`, `z`다. 이전 `rotation` 값은 마이그레이션에서 `z`로 옮긴다.
 - `TASKS`는 `CODE`와 `MULTIPLE_CHOICE`, `PYTHON`과 `SQL`을 함께 지원하며 객관식 메타데이터를 JSONB로 저장한다.
-- `TASK_ATTEMPTS.result_detail`은 채점 결과 상세를 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
+- `TASK_ATTEMPTS.result_detail`은 외부에 공개 가능한 채점 결과만 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
+- 채점 워커는 `grading_started_at`과 `grading_lease_token`으로 시도를 임대한다. 만료된 `RUNNING` 임대는 회수할 수 있고 이전 워커의 늦은 결과는 토큰으로 거부한다.
 - API에는 내부 INTEGER PK/FK를 노출하지 않고 UUID `public_id`와 `*_public_id`만 사용한다.
 - 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
 - 브라우저 인증은 `AUTH_SESSIONS`의 폐기 가능한 토큰 해시와 `AUTH_RATE_LIMITS`의 HMAC 버킷을 사용한다.
@@ -100,7 +101,9 @@ erDiagram
         boolean is_correct "nullable"
         boolean used_hint
         datetime attempted_at
-        text result_detail "채점 결과 상세, nullable"
+        datetime grading_started_at "nullable"
+        uuid grading_lease_token "nullable"
+        text result_detail "공개 가능한 채점 결과, nullable"
     }
 
     ROOMS {

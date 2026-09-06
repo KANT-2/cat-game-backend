@@ -1,13 +1,14 @@
 # 검증된 채점 체크리스트 (5-1~5-16)
 
-최종 검증일: 2026-09-03
+최종 검증일: 2026-09-06
 
 최초 기준 원본: `cat-game-backend-main.zip` (SHA-256 `EF85716C50F8F3E6BB06745EF2FDBC4458BCA908F7868DB614FE9B4695DDFFE4`)
 
 최신 DB 통합 원본: `cat-game-backend-main (1).zip` (SHA-256 `FB5E0F4D9538DDD4996BB00BA9479AA80DF37AE6A91D81F054DF074077BFD248`)
 판정 원칙: 코드 존재만으로 완료 처리하지 않고 관련 테스트 또는 실제 실행 근거가 있어야 `[x]`로 판정한다.
 
-환경 메모: 로컬 PostgreSQL 18, FastAPI 개발 서버와 Docker Desktop 환경에서 검증했다.
+환경 메모: 로컬 단위 테스트와 Docker Compose의 PostgreSQL 16, FastAPI API, 전용 채점 워커,
+실제 Docker 샌드박스 환경에서 검증했다.
 
 ## 항목별 재판정
 
@@ -17,18 +18,19 @@
   - 결과: `user_id`/추가 필드, 공백 코드, RANKING, 잘못된 context-public_id 조합 차단. 내부 ID 비노출.
   - TBD: 최대 코드 크기.
 
-- [ ] **5-2 TaskAttempt 생성 API**
+- [x] **5-2 TaskAttempt 생성 API**
   - 근거: `app/modules/grading/router.py`, `service.py`, `app/api/dependencies.py`
   - 구현: 활성 Task, DAILY 소유권/연결, BATTLE 참가/연결 검증과 rollback 경계.
-  - 미완료: 팀 인증 구현이 최신 ZIP에 포함되지 않아 `get_current_user`는 호스트 인증 주입 지점으로만 유지. DB/API 통합 테스트 미작성.
+  - 검증: 폐기 가능한 브라우저 세션과 개발용 명시적 사용자 헤더로 실제 PostgreSQL API 제출을 확인했다.
 
-- [ ] **5-3 PENDING 저장 및 202**
+- [x] **5-3 PENDING 저장 및 202**
   - 근거: `create_attempt`, POST `/api/v1/attempts`.
-  - 미완료: 코드 경로는 구현됐으나 실제 DB/API 통합 실행 근거가 아직 없음.
+  - 검증: API가 `202 PENDING`을 반환하고 워커가 같은 행을 완료 상태로 전이하는 통합 스모크를 통과했다.
 
-- [ ] **5-4 FastAPI BackgroundTasks 채점**
-  - 근거: POST 라우터의 `background.add_task`, `grade_attempt`의 별도 세션과 RUNNING 전이.
-  - 미완료: 실제 DB 상태 전이 통합 테스트 미작성.
+- [x] **5-4 PostgreSQL 큐 기반 비동기 채점**
+  - 근거: 제출 API는 `PENDING`만 커밋하고 별도 `app.modules.grading.worker` 프로세스가 채점을 수행한다.
+  - 복구: `RUNNING` 행에는 불투명 임대 토큰과 시작 시각을 저장하며, 제한 시간을 넘긴 임대는 다른 워커가
+    `FOR UPDATE SKIP LOCKED`로 회수한다. 이전 워커는 토큰이 바뀐 결과를 커밋할 수 없다.
 
 - [x] **5-5 Docker Python 3.12 slim 이미지**
   - 근거: `infra/docker/grader/Dockerfile`; 백엔드 소스 미포함, uid 10001 `sandbox` 사용자.
@@ -61,9 +63,10 @@
   - 미완료: OOM, 과도 출력, Docker 비정상 종료 통합 검증 없음.
   - 정책: 탐지된 학생 timeout/output-limit은 현재 COMPLETED+false. 팀 최종 정책 TBD.
 
-- [ ] **5-11 결과 DB 저장**
-  - 근거: PENDING→RUNNING→COMPLETED/FAILED, `result_detail`, 별도 DB 세션 구현. 최신 DB에는 `d2a4c1b9e730` 후속 마이그레이션으로 추가.
-  - 미완료: 실제 DB 상태 전이 통합 테스트 미작성.
+- [x] **5-11 결과 DB 저장**
+  - 근거: PENDING→RUNNING→COMPLETED/FAILED 상태와 임대를 별도 워커 DB 세션에서 커밋한다.
+    `result_detail`에는 verdict와 통과 개수만 저장하고 Docker 오류·stderr·테스트 명세 같은 내부 상세는
+    사용자 응답에 넣지 않는다. PostgreSQL API·Docker 통합 스모크가 상태 전이를 검증한다.
 
 - [ ] **5-12 DAILY 완료 연동**
   - 근거: DAILY 정답일 때만 `AttendanceTask.is_completed = true`; false로 되돌리는 경로 없음.
@@ -78,10 +81,11 @@
   - 미완료: 인증+DB API 통합 테스트 미작성.
 
 - [ ] **5-15 채점 기능 테스트**
-  - 실행 결과: 전체 테스트 `88 passed`; Ruff 검사 통과.
+  - 실행 결과: 로컬 `230 passed, 17 skipped`, PostgreSQL `247 passed`; Ruff 검사 통과.
   - 포함: 스키마/context, JSON 명세, 보안 옵션, 정답/오답/문법/런타임/timeout.
-  - 추가 검증: PostgreSQL 마이그레이션, FastAPI `/health`와 `/docs`, 실제 Docker 정답/오답/timeout 판정.
-  - 미완료: 인증 포함 DB/API, DAILY/BATTLE, Docker 공격·OOM·출력·동시성 테스트.
+  - 추가 검증: PostgreSQL 마이그레이션과 만료 임대 회수, FastAPI API, 실제 Docker 정답 판정,
+    브라우저 등록·세션·재연결·로그아웃 통합 흐름.
+  - 미완료: DAILY/BATTLE, Docker 공격·OOM·출력·동시성 테스트.
 
 - [ ] **5-16 문제 생성 측 test_cases 연동**
   - 구현된 소비 명세: `input`과 `expected_output` 문자열만 허용하며 추가 필드 차단.
@@ -90,11 +94,12 @@
 ## 실행 증거
 
 ```text
-pytest: 88 passed
+local pytest: 230 passed, 17 skipped
+PostgreSQL pytest: 247 passed
 ruff: All checks passed
 docker build: cat-game-python-grader:3.12 성공
-docker run: ACCEPTED, WRONG_ANSWER, TIMEOUT 확인
-FastAPI: /health 200 OK, /docs 200 OK
+integration smoke: API 퀴즈와 Docker 코드 채점, 브라우저 세션 수명주기 확인
+runtime boundary: API Docker 접근 없음, grading-worker만 Docker 접근 가능
 ```
 
 Docker 보안 제한의 남은 공격 시나리오와 인증 포함 API 통합 테스트를 추가한 뒤 5-6, 5-10, 5-15를 다시 판정해야 한다.

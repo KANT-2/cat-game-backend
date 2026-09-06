@@ -56,10 +56,11 @@ def test_cors_preflight_accepts_configured_pwa_origin() -> None:
 
 
 def test_cors_preflight_allows_cat_memory_delete() -> None:
+    configured_origin = settings.cors_origin_list()[0]
     response = TestClient(app).options(
         f"/api/v1/cats/{uuid.uuid4()}/memories",
         headers={
-            "Origin": "http://localhost:5173",
+            "Origin": configured_origin,
             "Access-Control-Request-Method": "DELETE",
             "Access-Control-Request-Headers": "X-User-Public-ID",
         },
@@ -131,10 +132,11 @@ def test_cors_preflight_allows_housing_changes(
     method: str,
     path: str,
 ) -> None:
+    configured_origin = settings.cors_origin_list()[0]
     response = TestClient(app).options(
         path,
         headers={
-            "Origin": "http://localhost:5173",
+            "Origin": configured_origin,
             "Access-Control-Request-Method": method,
             "Access-Control-Request-Headers": ("X-User-Public-ID"),
         },
