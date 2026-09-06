@@ -10,6 +10,10 @@ class InsufficientBalanceError(ApplicationError):
     """The user does not have enough balance."""
 
 
+class ItemAlreadyOwnedError(ApplicationError):
+    """The unique item is already owned by the user."""
+
+
 class InvalidQuantityError(ApplicationError):
     """The requested quantity must be positive."""
 

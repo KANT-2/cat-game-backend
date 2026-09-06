@@ -11,6 +11,7 @@ from app.core.exceptions import (
     InsufficientBalanceError,
     InvalidItemCategoryError,
     InvalidQuantityError,
+    ItemAlreadyOwnedError,
     PlacementLimitExceededError,
     PlacementOccupiedError,
     PlacementOutsideRoomError,
@@ -336,6 +337,8 @@ def _http_error(error: ApplicationError) -> HTTPException:
         return HTTPException(status_code=404, detail="resource-not-found")
     if isinstance(error, InsufficientBalanceError):
         return HTTPException(status_code=409, detail="insufficient-coins")
+    if isinstance(error, ItemAlreadyOwnedError):
+        return HTTPException(status_code=409, detail="already-owned")
     if isinstance(error, IdempotencyConflictError):
         return HTTPException(status_code=409, detail="idempotency-conflict")
     if isinstance(error, PlacementOccupiedError):

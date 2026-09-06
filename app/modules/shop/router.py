@@ -7,6 +7,7 @@ from app.core.exceptions import (
     IdempotencyConflictError,
     InsufficientBalanceError,
     InvalidQuantityError,
+    ItemAlreadyOwnedError,
     ResourceNotFoundError,
 )
 from app.core.unit_of_work import UnitOfWork
@@ -53,6 +54,7 @@ def purchase_item(
     except (
         IdempotencyConflictError,
         InsufficientBalanceError,
+        ItemAlreadyOwnedError,
     ) as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
