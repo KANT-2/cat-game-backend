@@ -11,8 +11,8 @@ class TaskAttemptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_public_id: uuid.UUID
-    submitted_code: str | None = None
-    selected_option: str | None = None
+    submitted_code: str | None = Field(default=None, max_length=32_768)
+    selected_option: str | None = Field(default=None, max_length=256)
     context_type: Literal["LEARNING", "DAILY", "BATTLE"]
     used_hint: bool = False
     attendance_task_public_id: uuid.UUID | None = None

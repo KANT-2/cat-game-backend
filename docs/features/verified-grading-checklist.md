@@ -16,7 +16,7 @@
   - 근거: `app/schemas/task_attempt.py`
   - 테스트: `tests/unit/test_grading_schema.py`
   - 결과: `user_id`/추가 필드, 공백 코드, RANKING, 잘못된 context-public_id 조합 차단. 내부 ID 비노출.
-  - TBD: 최대 코드 크기.
+  - 제한: 제출 코드는 32,768자, 객관식 선택지는 256자까지 허용한다.
 
 - [x] **5-2 TaskAttempt 생성 API**
   - 근거: `app/modules/grading/router.py`, `service.py`, `app/api/dependencies.py`
@@ -36,11 +36,12 @@
   - 근거: `infra/docker/grader/Dockerfile`; 백엔드 소스 미포함, uid 10001 `sandbox` 사용자.
   - 검증: `cat-game-python-grader:3.12` 이미지 실제 build 성공.
 
-- [ ] **5-6 Docker Sandbox 보안**
+- [x] **5-6 Docker Sandbox 보안**
   - 근거: `app/modules/grading/sandbox/runner.py`의 network none, read-only, tmpfs, memory/CPU/PID, cap-drop ALL, no-new-privileges, non-root, timeout/output/concurrency 제한.
-  - 테스트: `tests/security/test_sandbox_options.py`에서 명령 옵션과 호스트 timeout 검증.
-  - 검증: 제한 옵션을 적용한 실제 컨테이너에서 정답·오답·시간 초과 실행 성공.
-  - 미완료: 네트워크 탈출, 쓰기 시도, OOM, PID 고갈과 동시성 공격 시나리오의 개별 검증. 제한 수치는 운영 정책 TBD이며 환경변수로 설정 가능.
+  - 테스트: `tests/security/test_sandbox_options.py`에서 명령 옵션, 호스트 timeout과 워커 출력 상한을 검증한다.
+  - 검증: 실제 컨테이너에서 루트 파일 쓰기, 외부 네트워크 연결, `/proc/1/fd/1` 직접 출력 우회,
+    메모리 소진과 프로세스 고갈을 제한했다. 단위 테스트에서 워커의 동시 실행 상한도 검증한다.
+  - 운영: 제한 수치는 환경변수로 조정하며 API 컨테이너에는 Docker 접근 권한을 주지 않는다.
 
 - [x] **5-7 test_cases TEXT JSON 파싱/검증/비노출**
   - 근거: `app/modules/grading/test_cases.py`; API 응답 스키마에는 test_cases 없음.
@@ -57,11 +58,12 @@
   - 테스트: 정답, 오답, SyntaxError, RuntimeError를 실제 Python subprocess로 검증.
   - 결과: 학생 오류는 COMPLETED+false로 매핑되고 SYSTEM_ERROR만 FAILED+null로 분리.
 
-- [ ] **5-10 무한 루프/비정상 코드**
+- [x] **5-10 무한 루프/비정상 코드**
   - 테스트: runner 내부 timeout과 호스트 Docker timeout 단위 테스트 통과.
   - 검증: 실제 Docker 컨테이너에서 무한 루프가 TIMEOUT으로 종료되는 것 확인.
-  - 미완료: OOM, 과도 출력, Docker 비정상 종료 통합 검증 없음.
-  - 정책: 탐지된 학생 timeout/output-limit은 현재 COMPLETED+false. 팀 최종 정책 TBD.
+  - 검증: 학생 프로세스의 무한 루프, 과도 출력, Docker 표준 출력 직접 우회와 메모리 소진을 실제
+    컨테이너에서 각각 `TIMEOUT`, `OUTPUT_LIMIT`, `MEMORY_LIMIT` 학생 실패로 종료한다.
+  - 정책: 탐지된 학생 자원 제한은 COMPLETED+false, 채점 인프라 오류만 FAILED+null로 분리한다.
 
 - [x] **5-11 결과 DB 저장**
   - 근거: PENDING→RUNNING→COMPLETED/FAILED 상태와 임대를 별도 워커 DB 세션에서 커밋한다.
@@ -81,7 +83,7 @@
   - 미완료: 인증+DB API 통합 테스트 미작성.
 
 - [ ] **5-15 채점 기능 테스트**
-  - 실행 결과: 로컬 `232 passed, 18 skipped`, PostgreSQL `250 passed`; Ruff 검사 통과.
+  - 실행 결과: 로컬 `236 passed, 23 skipped`, PostgreSQL+Docker `259 passed`; Ruff 검사 통과.
   - 포함: 스키마/context, JSON 명세, 보안 옵션, 정답/오답/문법/런타임/timeout.
   - 추가 검증: PostgreSQL 마이그레이션과 만료 임대 회수, FastAPI API, 실제 Docker 정답 판정,
     브라우저 등록·세션·재연결·로그아웃 통합 흐름.
@@ -94,8 +96,8 @@
 ## 실행 증거
 
 ```text
-local pytest: 232 passed, 18 skipped
-PostgreSQL pytest: 250 passed
+local pytest: 236 passed, 23 skipped
+PostgreSQL + Docker pytest: 259 passed
 ruff: All checks passed
 docker build: cat-game-python-grader:3.12 성공
 integration smoke: API 퀴즈와 Docker 코드 채점, 브라우저 세션 수명주기 확인

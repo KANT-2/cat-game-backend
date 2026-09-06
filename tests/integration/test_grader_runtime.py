@@ -26,6 +26,7 @@ def run(code, expected="ok"):
     ("print(", "SYNTAX_ERROR"),
     ("raise RuntimeError('boom')", "RUNTIME_ERROR"),
     ("while True: pass", "TIMEOUT"),
+    ("print('x' * 100_000)", "OUTPUT_LIMIT"),
 ])
 def test_runtime_verdicts(code, verdict):
     assert run(code)["verdict"] == verdict

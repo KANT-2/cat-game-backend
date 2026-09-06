@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     grading_memory: str = "128m"
     grading_cpus: float = 0.5
     grading_pids_limit: int = 64
-    grading_output_bytes: int = 65536
+    grading_output_bytes: int = Field(default=65_536, ge=1_024, le=1_048_576)
     grading_max_concurrency: int = 2
     grading_lease_seconds: int = Field(default=60, ge=10, le=3_600)
     grading_poll_seconds: float = Field(default=0.25, ge=0.05, le=10)
