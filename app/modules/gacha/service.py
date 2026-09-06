@@ -137,7 +137,7 @@ def draw_cats(
             balance_cost=balance_cost,
             result_data=result_data,
         )
+        locked_user.advance_state_version()
         uow.commit()
 
         return result_data
-

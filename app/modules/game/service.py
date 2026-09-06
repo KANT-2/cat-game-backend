@@ -107,7 +107,7 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
 
     return GameSnapshotRead(
         catalog_version=1,
-        state_version=1,
+        state_version=user.state_version,
         balance=user.balance,
         mileage=user.mileage,
         house_level=user.house_level,

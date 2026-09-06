@@ -35,6 +35,10 @@ def apply_surface_item(
         if item is None:
             raise ResourceNotFoundError("item not found")
 
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
         if item.category not in {"WALLPAPER", "FLOOR"}:
             raise InvalidItemCategoryError(
                 "item is not wallpaper or floor"
@@ -47,15 +51,12 @@ def apply_surface_item(
         if asset is None:
             raise ResourceNotFoundError("item asset not found")
 
-        locked_user = uow.users.get_for_update(user.id)
-        if locked_user is None:
-            raise ResourceNotFoundError("user not found")
-
         if item.category == "WALLPAPER":
             locked_user.wallpaper_item_id = item.id
         else:
             locked_user.floor_item_id = item.id
 
+        locked_user.advance_state_version()
         uow.commit()
 
         return SurfaceApplicationRead(
@@ -75,6 +76,9 @@ def place_furniture(
     with unit_of_work as uow:
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
             raise ResourceNotFoundError("user not found")
 
         item = uow.items.get_by_public_id(item_public_id)
@@ -126,6 +130,7 @@ def place_furniture(
             public_id=placement_public_id,
         )
 
+        locked_user.advance_state_version()
         uow.commit()
 
         return to_placed_object_read(
@@ -143,6 +148,9 @@ def update_furniture_placement(
     with unit_of_work as uow:
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
             raise ResourceNotFoundError("user not found")
 
         placed_object = (
@@ -172,6 +180,7 @@ def update_furniture_placement(
             mode="json"
         )
 
+        locked_user.advance_state_version()
         uow.commit()
 
         return to_placed_object_read(
@@ -189,6 +198,9 @@ def remove_furniture_placement(
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
             raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
 
         placed_object = (
             uow.placed_objects.get_by_public_id_for_update(
@@ -202,6 +214,7 @@ def remove_furniture_placement(
             raise ResourceNotFoundError("placed object not found")
 
         uow.placed_objects.remove(placed_object)
+        locked_user.advance_state_version()
         uow.commit()
 
 

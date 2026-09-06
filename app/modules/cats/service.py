@@ -71,6 +71,9 @@ def add_cat_memory(
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
             raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
 
         cat_asset = uow.assets.get_by_public_id(
             cat_asset_public_id
@@ -87,6 +90,7 @@ def add_cat_memory(
             context_summary,
         )
 
+        locked_user.advance_state_version()
         uow.commit()
 
         return to_cat_memory_read(
@@ -104,6 +108,9 @@ def delete_cat_memory(
     with unit_of_work as uow:
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
             raise ResourceNotFoundError("user not found")
 
         cat_asset = uow.assets.get_by_public_id(
@@ -128,6 +135,7 @@ def delete_cat_memory(
             raise ResourceNotFoundError("cat memory not found")
 
         uow.cat_memories.remove(memory)
+        locked_user.advance_state_version()
         uow.commit()
 
 def delete_all_cat_memories(
@@ -139,6 +147,9 @@ def delete_all_cat_memories(
     with unit_of_work as uow:
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
             raise ResourceNotFoundError("user not found")
 
         cat_asset = uow.assets.get_by_public_id(
@@ -154,4 +165,5 @@ def delete_all_cat_memories(
         uow.cat_memories.remove_all_by_cat_asset_id(
             cat_asset.id
         )
+        locked_user.advance_state_version()
         uow.commit()

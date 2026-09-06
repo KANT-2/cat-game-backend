@@ -31,6 +31,9 @@ def select_active_cat(db: Session, user: User, catalog_key: str) -> None:
     cat = db.scalar(select(Cat).where(Cat.catalog_key == catalog_key))
     if cat is None:
         raise ResourceNotFoundError("cat not found")
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise ResourceNotFoundError("user not found")
     asset = db.scalar(
         select(Asset)
         .where(Asset.user_id == user.id, Asset.cat_id == cat.id)
@@ -38,11 +41,9 @@ def select_active_cat(db: Session, user: User, catalog_key: str) -> None:
     )
     if asset is None:
         raise ResourceNotFoundError("cat asset not found")
-    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
-    if locked_user is None:
-        raise ResourceNotFoundError("user not found")
     asset.is_home = True
     locked_user.active_cat_id = cat.id
+    locked_user.advance_state_version()
     db.commit()
 
 
@@ -51,6 +52,9 @@ def set_cat_home(db: Session, user: User, catalog_key: str, *, visible: bool) ->
     cat = db.scalar(select(Cat).where(Cat.catalog_key == catalog_key))
     if cat is None:
         raise ResourceNotFoundError("cat not found")
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise ResourceNotFoundError("user not found")
     asset = db.scalar(
         select(Asset)
         .where(Asset.user_id == user.id, Asset.cat_id == cat.id)
@@ -58,9 +62,6 @@ def set_cat_home(db: Session, user: User, catalog_key: str, *, visible: bool) ->
     )
     if asset is None:
         raise ResourceNotFoundError("cat asset not found")
-    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
-    if locked_user is None:
-        raise ResourceNotFoundError("user not found")
     asset.is_home = visible
     if not visible and locked_user.active_cat_id == cat.id:
         replacement = db.scalar(
@@ -76,6 +77,7 @@ def set_cat_home(db: Session, user: User, catalog_key: str, *, visible: bool) ->
         )
         if replacement is not None:
             locked_user.active_cat_id = replacement.cat_id
+    locked_user.advance_state_version()
     db.commit()
 
 
@@ -85,6 +87,7 @@ def update_game_settings(db: Session, user: User, patch: dict[str, object]) -> N
     if locked_user is None:
         raise ResourceNotFoundError("user not found")
     locked_user.game_settings = {**locked_user.game_settings, **patch}
+    locked_user.advance_state_version()
     db.commit()
 
 
@@ -124,6 +127,7 @@ def claim_attendance(db: Session, user: User, *, today: date | None = None) -> d
         )
     )
     locked_user.balance += awarded
+    locked_user.advance_state_version()
     db.commit()
     return {
         "claimed_date": claim_date.isoformat(),
@@ -195,6 +199,7 @@ def claim_daily_reward(
         )
     )
     locked_user.balance += awarded
+    locked_user.advance_state_version()
     db.commit()
     return {"reward_key": reward_key, "coins_awarded": awarded}
 
@@ -241,6 +246,7 @@ def reset_learning_progress(db: Session, user: User) -> dict[str, object]:
         .where(AttendanceTask.attendance_id.in_(attendance_ids))
         .values(is_completed=False)
     )
+    locked_user.advance_state_version()
     db.commit()
     return {
         "reset_at": reset_at.isoformat(),
@@ -255,5 +261,6 @@ def clear_cat_memories(db: Session, user: User) -> dict[str, object]:
         raise ResourceNotFoundError("user not found")
     cat_asset_ids = select(Asset.id).where(Asset.user_id == user.id, Asset.cat_id.is_not(None))
     result = db.execute(delete(CatMemory).where(CatMemory.cat_asset_id.in_(cat_asset_ids)))
+    locked_user.advance_state_version()
     db.commit()
     return {"removed": result.rowcount}

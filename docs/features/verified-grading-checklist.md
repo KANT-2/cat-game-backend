@@ -81,7 +81,7 @@
   - 미완료: 인증+DB API 통합 테스트 미작성.
 
 - [ ] **5-15 채점 기능 테스트**
-  - 실행 결과: 로컬 `230 passed, 17 skipped`, PostgreSQL `247 passed`; Ruff 검사 통과.
+  - 실행 결과: 로컬 `232 passed, 18 skipped`, PostgreSQL `250 passed`; Ruff 검사 통과.
   - 포함: 스키마/context, JSON 명세, 보안 옵션, 정답/오답/문법/런타임/timeout.
   - 추가 검증: PostgreSQL 마이그레이션과 만료 임대 회수, FastAPI API, 실제 Docker 정답 판정,
     브라우저 등록·세션·재연결·로그아웃 통합 흐름.
@@ -94,8 +94,8 @@
 ## 실행 증거
 
 ```text
-local pytest: 230 passed, 17 skipped
-PostgreSQL pytest: 247 passed
+local pytest: 232 passed, 18 skipped
+PostgreSQL pytest: 250 passed
 ruff: All checks passed
 docker build: cat-game-python-grader:3.12 성공
 integration smoke: API 퀴즈와 Docker 코드 채점, 브라우저 세션 수명주기 확인

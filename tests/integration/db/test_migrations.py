@@ -66,6 +66,32 @@ def test_task_attempts_have_durable_grading_lease_columns(engine):
     assert "ix_task_attempts_grading_queue" in indexes
 
 
+def test_users_have_positive_game_state_version(engine):
+    """권위 상태 응답의 순서를 보장하는 사용자 버전 컬럼과 제약을 확인한다."""
+    with engine.connect() as connection:
+        column = connection.execute(
+            text(
+                "SELECT column_default, is_nullable FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'users' "
+                "AND column_name = 'state_version'"
+            )
+        ).one()
+        constraints = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'public' AND table_name = 'users' "
+                    "AND constraint_type = 'CHECK'"
+                )
+            )
+        }
+
+    assert column.column_default == "1"
+    assert column.is_nullable == "NO"
+    assert "ck_users_state_version_positive" in constraints
+
+
 def test_asset_naming_migration_is_applied(engine):
     """보유 자산 테이블과 고양이 기억 FK가 새 이름을 사용하는지 확인"""
     with engine.connect() as conn:

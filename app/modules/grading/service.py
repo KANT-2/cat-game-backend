@@ -75,6 +75,9 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
         )
         if not participant or room_task.task_id != task.id:
             raise SubmissionError("battle task not found")
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise SubmissionError("user not found")
     attempt = TaskAttempt(
         user_id=user.id,
         task_id=task.id,
@@ -87,6 +90,7 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
         is_correct=None,
     )
     db.add(attempt)
+    locked_user.advance_state_version()
     db.commit()
     db.refresh(attempt)
     return attempt
@@ -218,12 +222,11 @@ def _persist_result(
     attempt.grading_started_at = None
     attempt.grading_lease_token = None
 
-    locked_user = None
+    locked_user = db.scalar(select(User).where(User.id == attempt.user_id).with_for_update())
+    if locked_user is None:
+        raise RuntimeError("attempt user not found")
     is_after_reset = False
     if is_correct is not None and task is not None:
-        locked_user = db.scalar(select(User).where(User.id == attempt.user_id).with_for_update())
-        if locked_user is None:
-            raise RuntimeError("attempt user not found")
         is_after_reset = (
             locked_user.learning_reset_at is None
             or attempt.attempted_at >= locked_user.learning_reset_at
@@ -235,7 +238,7 @@ def _persist_result(
                 task.concept_id,
                 since=locked_user.learning_reset_at,
             )
-    if is_correct and is_after_reset and task is not None and locked_user is not None:
+    if is_correct and is_after_reset and task is not None:
         completion_id = db.scalar(
             insert(TaskCompletion)
             .values(
@@ -255,6 +258,7 @@ def _persist_result(
         if attendance_task is None:
             raise RuntimeError("daily attempt attendance task not found")
         attendance_task.is_completed = True
+    locked_user.advance_state_version()
     db.commit()
     return True
 

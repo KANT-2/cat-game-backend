@@ -133,6 +133,7 @@ def draw_game_gacha(
         }
         claim.execution.draw_count = draw_count
         uow.executions.complete(claim.execution, balance_cost=cost, result_data=result)
+        locked_user.advance_state_version()
         uow.commit()
         return result
 

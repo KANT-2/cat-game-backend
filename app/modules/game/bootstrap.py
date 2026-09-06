@@ -105,4 +105,5 @@ def bootstrap_starter_pack(db: Session, user: User) -> bool:
 
     user.active_cat_id = cats[STARTER_ACTIVE_CAT_KEY].id
     user.starter_pack_version = STARTER_PACK_VERSION
+    user.advance_state_version()
     return True

@@ -16,6 +16,7 @@
 - API에는 내부 INTEGER PK/FK를 노출하지 않고 UUID `public_id`와 `*_public_id`만 사용한다.
 - 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
 - 브라우저 인증은 `AUTH_SESSIONS`의 폐기 가능한 토큰 해시와 `AUTH_RATE_LIMITS`의 HMAC 버킷을 사용한다.
+- `USERS.state_version`은 권위 있는 게임 상태 변경과 같은 트랜잭션에서 증가해 늦게 도착한 응답을 구별한다.
 
 ## Mermaid ERD
 
@@ -31,6 +32,7 @@ erDiagram
         int balance
         int mileage
         int house_level
+        int state_version "1 이상, 단조 증가"
         int wallpaper_item_id FK "nullable"
         int floor_item_id FK "nullable"
         int active_cat_id FK "nullable"

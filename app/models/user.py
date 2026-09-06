@@ -19,6 +19,12 @@ class User(Base):
     mileage: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     house_level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     starter_pack_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    state_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+        server_default=text("1"),
+    )
 
     wallpaper_item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
     floor_item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
@@ -45,4 +51,9 @@ class User(Base):
         CheckConstraint("balance >= 0", name="ck_users_balance_nonneg"),
         CheckConstraint("mileage >= 0", name="ck_users_mileage_nonneg"),
         CheckConstraint("starter_pack_version >= 0", name="ck_users_starter_pack_version_nonneg"),
+        CheckConstraint("state_version >= 1", name="ck_users_state_version_positive"),
     )
+
+    def advance_state_version(self) -> None:
+        """Advance the monotonic version in the same transaction as a game-state mutation."""
+        self.state_version = (self.state_version or 1) + 1

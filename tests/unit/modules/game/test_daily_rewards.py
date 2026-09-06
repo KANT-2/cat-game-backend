@@ -6,11 +6,12 @@ import pytest
 
 from app.core.exceptions import AlreadyClaimedError, RewardNotReadyError
 from app.models.daily_reward_claim import DailyRewardClaim
+from app.models.user import User
 from app.modules.game.commands import claim_daily_reward
 
 
 def test_claim_daily_reward_awards_completed_code_quest() -> None:
-    user = SimpleNamespace(id=1, balance=500)
+    user = User(id=1, balance=500, state_version=8)
     db = MagicMock()
     db.scalar.side_effect = [user, None]
     db.execute.return_value.all.return_value = [SimpleNamespace(type="CODE")]
@@ -19,6 +20,7 @@ def test_claim_daily_reward_awards_completed_code_quest() -> None:
 
     assert result == {"reward_key": "finish-code", "coins_awarded": 150}
     assert user.balance == 650
+    assert user.state_version == 9
     claim = db.add.call_args.args[0]
     assert isinstance(claim, DailyRewardClaim)
     assert claim.claim_date == date(2026, 9, 5)
@@ -27,7 +29,7 @@ def test_claim_daily_reward_awards_completed_code_quest() -> None:
 
 
 def test_claim_daily_reward_rejects_incomplete_quest_without_reward() -> None:
-    user = SimpleNamespace(id=1, balance=500)
+    user = User(id=1, balance=500, state_version=8)
     db = MagicMock()
     db.scalar.side_effect = [user, None]
     db.execute.return_value.all.return_value = [
@@ -39,12 +41,13 @@ def test_claim_daily_reward_rejects_incomplete_quest_without_reward() -> None:
         claim_daily_reward(db, user, "solve-three", today=date(2026, 9, 5))
 
     assert user.balance == 500
+    assert user.state_version == 8
     db.add.assert_not_called()
     db.commit.assert_not_called()
 
 
 def test_claim_daily_reward_rejects_duplicate_before_rechecking_progress() -> None:
-    user = SimpleNamespace(id=1, balance=500)
+    user = User(id=1, balance=500, state_version=8)
     db = MagicMock()
     db.scalar.side_effect = [user, 42]
 
@@ -57,7 +60,7 @@ def test_claim_daily_reward_rejects_duplicate_before_rechecking_progress() -> No
 
 
 def test_claim_daily_bonus_requires_all_three_quest_claims() -> None:
-    user = SimpleNamespace(id=1, balance=500)
+    user = User(id=1, balance=500, state_version=8)
     db = MagicMock()
     db.scalar.side_effect = [user, None]
     db.scalars.return_value.all.return_value = ["solve-one", "solve-three"]
