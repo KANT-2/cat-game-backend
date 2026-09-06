@@ -1,6 +1,6 @@
 import uuid
 
-from app.modules.game.schemas import GameSnapshotRead
+from app.modules.game.schemas import GameCatRead, GameSnapshotRead
 
 
 def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> None:
@@ -35,7 +35,7 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
                 "public_id": uuid.uuid4(),
                 "cat_asset_public_id": cat_asset_public_id,
                 "catalog_key": "fluffy",
-                "name": "복실이",
+                "name": "포근이",
                 "persona": "다정함",
                 "rarity": "COMMON",
                 "owned": True,
