@@ -36,6 +36,7 @@ def test_purchase_http_request_uses_postgresql_and_is_idempotent(
         balance=1000,
     )
     item = Item(
+        catalog_key=f"test.http-purchase.{uuid.uuid4()}",
         name=f"http-purchase-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -203,6 +204,7 @@ def test_furniture_http_place_update_and_remove_flow(
         balance=0,
     )
     item = Item(
+        catalog_key=f"test.http-furniture.{uuid.uuid4()}",
         name=f"http-furniture-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -337,11 +339,13 @@ def test_wallpaper_and_floor_http_application_flow(
         balance=0,
     )
     wallpaper = Item(
+        catalog_key=f"test.http-wallpaper.{uuid.uuid4()}",
         name=f"http-wallpaper-{uuid.uuid4()}",
         category="WALLPAPER",
         price=100,
     )
     floor = Item(
+        catalog_key=f"test.http-floor.{uuid.uuid4()}",
         name=f"http-floor-{uuid.uuid4()}",
         category="FLOOR",
         price=100,
@@ -442,11 +446,13 @@ def test_cat_collection_context_and_memory_http_flow(
         balance=0,
     )
     owned_cat = Cat(
+        catalog_key=f"test.owned-cat.{uuid.uuid4()}",
         name=f"owned-cat-{uuid.uuid4()}",
         persona="Calm and friendly",
         rarity="COMMON",
     )
     unowned_cat = Cat(
+        catalog_key=f"test.unowned-cat.{uuid.uuid4()}",
         name=f"unowned-cat-{uuid.uuid4()}",
         persona="Curious and playful",
         rarity="RARE",
@@ -632,6 +638,7 @@ def test_cat_chat_http_uses_database_persona_and_persists_memory(
         balance=0,
     )
     cat = Cat(
+        catalog_key=f"test.chat-cat.{uuid.uuid4()}",
         name=f"chat-cat-{uuid.uuid4()}",
         persona="Playful and explain coding step by step.",
         rarity="COMMON",

@@ -7,6 +7,7 @@ from app.models.base import Base
 class Item(Base):
     __tablename__ = "items"
 
+    catalog_key: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String, nullable=False)
     price: Mapped[int] = mapped_column(Integer, nullable=False)

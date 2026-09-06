@@ -36,3 +36,19 @@ class AIProviderUnavailableError(ApplicationError):
 
 class InvalidAIResponseError(ApplicationError):
     """The AI provider returned an unusable response."""
+
+
+class PlacementOutsideRoomError(ApplicationError):
+    """The furniture footprint would extend outside the room grid."""
+
+
+class PlacementOccupiedError(ApplicationError):
+    """The furniture footprint overlaps another placed object."""
+
+
+class AlreadyClaimedError(ApplicationError):
+    """A once-per-period reward was already claimed."""
+
+
+class RewardNotReadyError(ApplicationError):
+    """A reward's authoritative progress requirement is not complete."""

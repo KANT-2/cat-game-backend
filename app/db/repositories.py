@@ -44,6 +44,10 @@ class SqlAlchemyItemRepository:
         statement = select(Item).where(Item.public_id == public_id)
         return self._session.execute(statement).scalar_one_or_none()
 
+    def get_by_catalog_key(self, catalog_key: str) -> Item | None:
+        statement = select(Item).where(Item.catalog_key == catalog_key)
+        return self._session.execute(statement).scalar_one_or_none()
+
     def get_by_id(self, item_id: int) -> Item | None:
         statement = select(Item).where(Item.id == item_id)
         return self._session.execute(statement).scalar_one_or_none()
@@ -68,6 +72,10 @@ class SqlAlchemyCatRepository:
         statement = select(Cat).order_by(Cat.id)
         return list(self._session.execute(statement).scalars().all())
 
+
+    def get_by_catalog_key(self, catalog_key: str) -> Cat | None:
+        statement = select(Cat).where(Cat.catalog_key == catalog_key)
+        return self._session.execute(statement).scalar_one_or_none()
 
 class SqlAlchemyAssetRepository:
     def __init__(self, session: Session) -> None:
@@ -191,16 +199,31 @@ class SqlAlchemyPlacedObjectRepository:
         placed_objects = self._session.execute(statement).scalars().all()
         return len(placed_objects)
 
+    def list_for_update(self, user_id: int) -> list[PlacedObject]:
+        statement = (
+            select(PlacedObject)
+            .where(PlacedObject.user_id == user_id)
+            .order_by(PlacedObject.id)
+            .with_for_update()
+        )
+        return list(self._session.execute(statement).scalars().all())
+
     def add(
         self,
         user_id: int,
         item_id: int,
         position_data: dict[str, object],
+        public_id: UUID | None = None,
     ) -> PlacedObject:
+        values: dict[str, object] = {
+            "user_id": user_id,
+            "item_id": item_id,
+            "position_data": dict(position_data),
+        }
+        if public_id is not None:
+            values["public_id"] = public_id
         placed_object = PlacedObject(
-            user_id=user_id,
-            item_id=item_id,
-            position_data=dict(position_data),
+            **values,
         )
         self._session.add(placed_object)
         return placed_object

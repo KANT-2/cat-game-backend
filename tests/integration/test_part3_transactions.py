@@ -42,6 +42,7 @@ def test_purchase_rolls_back_all_changes_on_mid_transaction_failure(
         balance=1000,
     )
     item = Item(
+        catalog_key=f"test.rollback-item.{uuid.uuid4()}",
         name=f"rollback-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -126,6 +127,7 @@ def test_concurrent_same_purchase_request_charges_and_grants_once(
         balance=1000,
     )
     item = Item(
+        catalog_key=f"test.concurrent-item.{uuid.uuid4()}",
         name=f"concurrent-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -206,6 +208,7 @@ def test_concurrent_distinct_purchase_requests_do_not_overspend(
         balance=500,
     )
     item = Item(
+        catalog_key=f"test.row-lock-item.{uuid.uuid4()}",
         name=f"row-lock-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -294,6 +297,7 @@ def test_concurrent_gacha_requests_do_not_overspend(
         balance=500,
     )
     cat = Cat(
+        catalog_key=f"test.gacha-lock-cat.{uuid.uuid4()}",
         name=f"gacha-lock-cat-{uuid.uuid4()}",
         persona="Concurrency test cat",
         rarity="COMMON",
@@ -407,6 +411,7 @@ def test_concurrent_purchase_and_surface_application_share_lock_order(
         balance=1000,
     )
     item = Item(
+        catalog_key=f"test.housing-lock-item.{uuid.uuid4()}",
         name=f"housing-lock-item-{uuid.uuid4()}",
         category="WALLPAPER",
         price=300,
@@ -519,6 +524,7 @@ def test_same_request_id_from_different_user_conflicts_in_postgresql(
         balance=1000,
     )
     item = Item(
+        catalog_key=f"test.request-owner-item.{uuid.uuid4()}",
         name=f"request-owner-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -624,6 +630,7 @@ def test_concurrent_furniture_placements_do_not_exceed_owned_quantity(
         balance=0,
     )
     item = Item(
+        catalog_key=f"test.placement-lock-item.{uuid.uuid4()}",
         name=f"placement-lock-item-{uuid.uuid4()}",
         category="FURNITURE",
         price=300,
@@ -719,6 +726,7 @@ def test_gacha_rolls_back_duplicate_mileage_when_completion_fails(
         mileage=10,
     )
     cat = Cat(
+        catalog_key=f"test.gacha-rollback-cat.{uuid.uuid4()}",
         name=f"gacha-rollback-cat-{uuid.uuid4()}",
         persona="Rollback test cat",
         rarity="COMMON",
