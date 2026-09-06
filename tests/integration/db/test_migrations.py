@@ -11,6 +11,7 @@ EXPECTED_TABLES = [
     "user_proficiency", "placed_objects", "gacha_executions",
     "task_completions", "daily_reward_claims",
     "auth_sessions",
+    "auth_rate_limits",
 ]
 
 

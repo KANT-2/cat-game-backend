@@ -1,6 +1,6 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-04 기준 ORM 모델과 Alembic head를 반영한 16개 업무 테이블의 현재 구조다.
+2026-09-06 기준 ORM 모델과 Alembic head를 반영한 20개 업무 테이블의 현재 구조다.
 
 팀 기준 문서는 [Notion ERD 추가수정버전](https://app.notion.com/p/3d1db49922e580e79ba1e7d318230025)이다.
 
@@ -13,6 +13,8 @@
 - `TASKS`는 `CODE`와 `MULTIPLE_CHOICE`, `PYTHON`과 `SQL`을 함께 지원하며 객관식 메타데이터를 JSONB로 저장한다.
 - `TASK_ATTEMPTS.result_detail`은 채점 결과 상세를 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
 - API에는 내부 INTEGER PK/FK를 노출하지 않고 UUID `public_id`와 `*_public_id`만 사용한다.
+- 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
+- 브라우저 인증은 `AUTH_SESSIONS`의 폐기 가능한 토큰 해시와 `AUTH_RATE_LIMITS`의 HMAC 버킷을 사용한다.
 
 ## Mermaid ERD
 
@@ -24,12 +26,16 @@ erDiagram
         string email UK "lower(email) unique"
         string username
         string role
+        string password_hash "nullable"
         int balance
         int mileage
         int house_level
         int wallpaper_item_id FK "nullable"
         int floor_item_id FK "nullable"
+        int active_cat_id FK "nullable"
+        jsonb game_settings
         datetime created_at
+        datetime learning_reset_at "nullable"
     }
 
     ATTENDANCES {
@@ -181,6 +187,46 @@ erDiagram
         datetime created_at
     }
 
+    TASK_COMPLETIONS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        int task_id FK
+        int first_attempt_id FK
+        int coins_awarded
+        datetime completed_at
+    }
+
+    DAILY_REWARD_CLAIMS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        date claim_date
+        string reward_key
+        int coins_awarded
+        datetime claimed_at
+    }
+
+    AUTH_SESSIONS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        string token_hash UK "SHA-256"
+        string csrf_token_hash "SHA-256"
+        datetime expires_at
+        datetime revoked_at "nullable"
+    }
+
+    AUTH_RATE_LIMITS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        string bucket_hash UK "HMAC-SHA-256"
+        int attempts
+        datetime window_started_at
+        datetime blocked_until "nullable"
+        datetime updated_at
+    }
+
     USERS ||--o{ ATTENDANCES : checks_in
     ATTENDANCES ||--o{ ATTENDANCE_TASKS : assigns
     TASKS ||--o{ ATTENDANCE_TASKS : scheduled_as
@@ -191,6 +237,9 @@ erDiagram
 
     USERS ||--o{ TASK_ATTEMPTS : submits
     TASKS ||--o{ TASK_ATTEMPTS : attempted_as
+    USERS ||--o{ TASK_COMPLETIONS : earns
+    TASKS ||--o{ TASK_COMPLETIONS : completed_once
+    TASK_ATTEMPTS ||--o| TASK_COMPLETIONS : first_reward
     ATTENDANCE_TASKS o|--o{ TASK_ATTEMPTS : daily_context
     ROOM_TASKS o|--o{ TASK_ATTEMPTS : battle_context
 
@@ -210,6 +259,8 @@ erDiagram
     ITEMS o|--o{ USERS : selected_floor
 
     USERS ||--o{ GACHA_EXECUTIONS : executes
+    USERS ||--o{ DAILY_REWARD_CLAIMS : claims
+    USERS ||--o{ AUTH_SESSIONS : authenticates
     ASSETS ||--o{ CAT_MEMORIES : remembers
 ```
 

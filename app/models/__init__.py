@@ -1,6 +1,7 @@
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
+from app.models.auth_rate_limit import AuthRateLimit
 from app.models.auth_session import AuthSession
 from app.models.base import Base
 from app.models.cat import Cat
@@ -23,6 +24,7 @@ __all__ = [
     "Asset",
     "Attendance",
     "AttendanceTask",
+    "AuthRateLimit",
     "AuthSession",
     "Base",
     "Cat",

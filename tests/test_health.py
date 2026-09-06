@@ -1,8 +1,10 @@
 import json
 import logging
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import settings
 from app.main import app, create_app
 
 
@@ -44,6 +46,14 @@ def test_invalid_request_id_is_replaced() -> None:
     assert response.status_code == 200
     assert response.headers["X-Request-ID"] != "bad id with spaces"
     assert len(response.headers["X-Request-ID"]) == 36
+
+
+def test_production_requires_a_unique_rate_limit_secret(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "local-auth-rate-limit-secret")
+
+    with pytest.raises(RuntimeError, match="AUTH_RATE_LIMIT_SECRET"):
+        create_app()
 
 
 def test_unhandled_error_returns_safe_reference_without_exception_detail(caplog) -> None:

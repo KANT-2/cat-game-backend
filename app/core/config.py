@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     grading_max_concurrency: int = 2
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     session_days: int = Field(default=30, ge=1, le=365)
+    auth_rate_limit_secret: str = Field(default="local-auth-rate-limit-secret", min_length=16)
+    auth_rate_window_seconds: int = Field(default=900, ge=60, le=86_400)
+    auth_rate_block_seconds: int = Field(default=900, ge=60, le=86_400)
+    auth_login_attempt_limit: int = Field(default=5, ge=2, le=100)
+    auth_registration_attempt_limit: int = Field(default=10, ge=2, le=1_000)
 
     def session_cookie_name(self) -> str:
         """Use the browser-enforced host prefix only where HTTPS is mandatory."""
@@ -23,6 +28,11 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         """Return normalized browser origins accepted by the API."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    def validate_production_secrets(self) -> None:
+        """Reject the documented local throttle secret in a production process."""
+        if self.app_env == "production" and self.auth_rate_limit_secret == "local-auth-rate-limit-secret":
+            raise RuntimeError("AUTH_RATE_LIMIT_SECRET must be configured in production")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

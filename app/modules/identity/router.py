@@ -9,6 +9,14 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import settings
 from app.models.auth_session import AuthSession
 from app.models.user import User
+from app.modules.identity.rate_limit import (
+    auth_bucket_hash,
+    blocked_retry_after,
+    lock_rate_buckets,
+    record_failed_attempts,
+    record_request_attempt,
+    reset_rate_bucket,
+)
 from app.modules.identity.security import (
     DUMMY_PASSWORD_HASH,
     hash_password,
@@ -55,10 +63,21 @@ class LoginCommand(BaseModel):
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(payload: RegistrationCommand, response: Response, db: DbSession) -> UserRead:
+def register(payload: RegistrationCommand, request: Request, response: Response, db: DbSession) -> UserRead:
     """Create a password account and issue a new opaque browser session."""
+    registration_hash = auth_bucket_hash("register-ip", _client_ip(request))
+    buckets = lock_rate_buckets(db, [registration_hash])
+    retry_after = blocked_retry_after(
+        buckets,
+        attempt_limit=settings.auth_registration_attempt_limit,
+    )
+    if retry_after is not None:
+        db.commit()
+        raise _rate_limited(retry_after)
+    record_request_attempt(buckets)
     existing = db.scalar(select(User.id).where(func.lower(User.email) == payload.email))
     if existing is not None:
+        db.commit()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="account-already-exists")
     user = User(
         email=payload.email,
@@ -74,6 +93,9 @@ def register(payload: RegistrationCommand, response: Response, db: DbSession) ->
         db.flush()
     except IntegrityError as error:
         db.rollback()
+        retry_buckets = lock_rate_buckets(db, [registration_hash])
+        record_request_attempt(retry_buckets)
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="account-already-exists",
@@ -85,13 +107,40 @@ def register(payload: RegistrationCommand, response: Response, db: DbSession) ->
 
 
 @router.post("/login", response_model=UserRead)
-def login(payload: LoginCommand, response: Response, db: DbSession) -> UserRead:
+def login(payload: LoginCommand, request: Request, response: Response, db: DbSession) -> UserRead:
     """Verify an Argon2 password and rotate to a newly generated browser session."""
     normalized_email = payload.email.strip().lower()
+    account_hash = auth_bucket_hash("login-account", normalized_email)
+    ip_hash = auth_bucket_hash("login-ip", _client_ip(request))
+    ip_buckets = lock_rate_buckets(db, [ip_hash])
+    retry_after = blocked_retry_after(
+        ip_buckets,
+        attempt_limit=settings.auth_login_attempt_limit,
+    )
+    if retry_after is not None:
+        db.commit()
+        raise _rate_limited(retry_after)
+    account_buckets = lock_rate_buckets(db, [account_hash])
+    retry_after = blocked_retry_after(
+        account_buckets,
+        attempt_limit=settings.auth_login_attempt_limit,
+    )
+    if retry_after is not None:
+        db.commit()
+        raise _rate_limited(retry_after)
+    buckets = [*ip_buckets, *account_buckets]
     user = db.scalar(select(User).where(func.lower(User.email) == normalized_email))
     encoded_hash = user.password_hash if user and user.password_hash else DUMMY_PASSWORD_HASH
     if not verify_password(payload.password, encoded_hash) or user is None or user.password_hash is None:
+        retry_after = record_failed_attempts(
+            buckets,
+            attempt_limit=settings.auth_login_attempt_limit,
+        )
+        db.commit()
+        if retry_after is not None:
+            raise _rate_limited(retry_after)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid-credentials")
+    reset_rate_bucket(account_buckets[0])
     _issue_session(db, response, user)
     db.commit()
     return UserRead.model_validate(user)
@@ -170,4 +219,16 @@ def _issue_session(db: DbSession, response: Response, user: User) -> None:
         httponly=False,
         samesite="lax",
         path="/",
+    )
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limited(retry_after: int) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="too-many-authentication-attempts",
+        headers={"Retry-After": str(retry_after)},
     )

@@ -5,6 +5,7 @@ EXPECTED_TABLES = {
     "attendance_tasks",
     "attendances",
     "auth_sessions",
+    "auth_rate_limits",
     "cat_memories",
     "cats",
     "concepts",
