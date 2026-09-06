@@ -5,6 +5,7 @@ import signal
 import threading
 
 from app.core.config import settings
+from app.modules.grading.health import record_worker_heartbeat
 from app.modules.grading.service import claim_next_attempt, grade_claimed_attempt
 
 
@@ -22,6 +23,7 @@ def run() -> None:
     while not stopping.is_set():
         try:
             lease = claim_next_attempt()
+            record_worker_heartbeat()
             if lease is None:
                 stopping.wait(settings.grading_poll_seconds)
                 continue
