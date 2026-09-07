@@ -113,6 +113,7 @@ def create_cat_chat(
             user_public_id=current_user.public_id,
             cat_asset_public_id=cat_asset_public_id,
             message=payload.message,
+            recent_messages=[entry.model_dump() for entry in payload.recent_messages],
         )
     except ResourceNotFoundError as exc:
         raise HTTPException(

@@ -148,8 +148,8 @@ def build_tasks() -> list[dict]:
                 } if is_choice else None)
                 prompt = (
                     f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
-                    "[도와주세요!] 가장 올바른 설명을 골라 주세요. 오답은 실행 환경과 입력 조건을 "
-                    "임의로 가정한 설명입니다."
+                    f"[문제] {spec.prompt}\n\n"
+                    "[질문] 이 문제를 해결하는 데 가장 알맞은 방법을 하나 골라 주세요."
                     if is_choice else
                     f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
                     f"[도와주세요!] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "

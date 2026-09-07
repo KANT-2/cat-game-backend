@@ -63,6 +63,20 @@ def apply_surface_item(
         )
 
 
+def clear_wallpaper(*, unit_of_work: UnitOfWork, user_public_id: UUID) -> None:
+    """Restore the built-in background without removing owned wallpaper assets."""
+    with unit_of_work as uow:
+        user = uow.users.get_by_public_id(user_public_id)
+        if user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+        locked_user.wallpaper_item_id = None
+        locked_user.advance_state_version()
+        uow.commit()
+
+
 def place_furniture(
     *,
     unit_of_work: UnitOfWork,
@@ -231,7 +245,11 @@ def _ensure_placement_free(
         if other_item is None:
             raise ResourceNotFoundError("placed item not found")
         other_definition = ITEM_BY_KEY.get(other_item.catalog_key)
-        if other_definition is None or other_definition.width is None or other_definition.height is None:
+        if (
+            other_definition is None
+            or other_definition.width is None
+            or other_definition.height is None
+        ):
             continue
         other_x = float(placed.position_data["x"])
         other_y = float(placed.position_data["y"])

@@ -1,5 +1,4 @@
 import json
-import resource
 import subprocess
 import tempfile
 import threading
@@ -9,6 +8,11 @@ from enum import StrEnum
 
 from app.core.config import settings
 from app.modules.grading.test_cases import TestCase
+
+try:
+    import resource
+except ImportError:  # Windows can still run API/unit tests; production grading is Linux-only.
+    resource = None  # type: ignore[assignment]
 
 
 class Verdict(StrEnum):
@@ -92,9 +96,13 @@ class DockerSandbox:
                 return GradeResult(Verdict.SYSTEM_ERROR, total=len(cases), detail=str(exc))
         if output_exceeded:
             _remove_container(container_name)
-            return GradeResult(Verdict.OUTPUT_LIMIT, total=len(cases), detail="output limit exceeded")
+            return GradeResult(
+                Verdict.OUTPUT_LIMIT, total=len(cases), detail="output limit exceeded"
+            )
         if completed.returncode == 137:
-            return GradeResult(Verdict.MEMORY_LIMIT, total=len(cases), detail="memory limit exceeded")
+            return GradeResult(
+                Verdict.MEMORY_LIMIT, total=len(cases), detail="memory limit exceeded"
+            )
         combined = completed.stdout + completed.stderr
         if completed.returncode != 0:
             return GradeResult(Verdict.SYSTEM_ERROR, total=len(cases), detail=combined[-1000:])
@@ -118,6 +126,13 @@ def _run_capped(
 ) -> tuple[subprocess.CompletedProcess[str], bool]:
     """Run Docker with regular-file output caps so pipes cannot exhaust worker memory."""
     with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        preexec_fn = None
+        if resource is not None:
+
+            def limit_output_file() -> None:
+                resource.setrlimit(resource.RLIMIT_FSIZE, (output_limit, output_limit))
+
+            preexec_fn = limit_output_file
         completed = subprocess.run(
             command,
             input=payload.encode(),
@@ -125,7 +140,7 @@ def _run_capped(
             stderr=stderr_file,
             timeout=timeout,
             check=False,
-            preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_FSIZE, (output_limit, output_limit)),
+            preexec_fn=preexec_fn,
         )
         stdout_file.seek(0)
         stderr_file.seek(0)

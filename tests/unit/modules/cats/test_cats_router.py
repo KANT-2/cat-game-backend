@@ -169,6 +169,7 @@ def test_free_cat_chat_returns_guarded_public_response(monkeypatch) -> None:
         user_public_id=user.public_id,
         cat_asset_public_id=cat_asset_public_id,
         message="파이썬 함수가 어려워",
+        recent_messages=[],
     )
 
 

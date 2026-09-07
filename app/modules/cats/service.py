@@ -70,11 +70,7 @@ def get_cat_conversation_context(
             raise ResourceNotFoundError("user not found")
 
         cat_asset = uow.assets.get_by_public_id(cat_asset_public_id)
-        if (
-            cat_asset is None
-            or cat_asset.user_id != user.id
-            or cat_asset.cat_id is None
-        ):
+        if cat_asset is None or cat_asset.user_id != user.id or cat_asset.cat_id is None:
             raise ResourceNotFoundError("cat asset not found")
 
         cat = uow.cats.get_by_id(cat_asset.cat_id)
@@ -105,6 +101,7 @@ def chat_with_cat(
     user_public_id: UUID,
     cat_asset_public_id: UUID,
     message: str,
+    recent_messages: list[dict[str, str]] | None = None,
 ) -> CatChatRead:
     """Reply as an owned cat without storing raw user input.
 
@@ -142,6 +139,7 @@ def chat_with_cat(
                 persona=persona,
                 message=decision.message,
                 memories=memory_summaries,
+                recent_messages=(recent_messages or [])[-10:],
             )
         )
     except Exception:  # noqa: BLE001 - provider failures must not escape into the game response

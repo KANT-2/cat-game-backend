@@ -49,6 +49,7 @@ from app.modules.game.schemas import (
 from app.modules.game.service import get_game_snapshot
 from app.modules.housing.service import (
     apply_surface_item,
+    clear_wallpaper,
     place_furniture,
     remove_furniture_placement,
     update_furniture_placement,
@@ -190,6 +191,18 @@ def delete_placement(
 @router.post("/themes", response_model=GameMutationRead)
 def apply_theme(payload: ThemeCommand, db: DbSession, user: CurrentUser) -> GameMutationRead:
     """Apply an owned wallpaper or floor catalog item."""
+    if payload.item_catalog_key is None:
+        try:
+            clear_wallpaper(
+                unit_of_work=SqlAlchemyUnitOfWork(),
+                user_public_id=user.public_id,
+            )
+            return GameMutationRead(
+                snapshot=_fresh_snapshot(db, user),
+                result={"item_catalog_key": None, "category": "WALLPAPER"},
+            )
+        except ApplicationError as error:
+            raise _http_error(error) from error
     item = _catalog_item(db, payload.item_catalog_key)
     try:
         applied = apply_surface_item(
@@ -246,10 +259,7 @@ def change_settings(
         "effects_volume": "effectsVolume",
         "reduced_motion": "reducedMotion",
     }
-    patch = {
-        aliases[key]: value
-        for key, value in payload.model_dump(exclude_none=True).items()
-    }
+    patch = {aliases[key]: value for key, value in payload.model_dump(exclude_none=True).items()}
     try:
         update_game_settings(db, user, patch)
         return GameMutationRead(snapshot=_fresh_snapshot(db, user))

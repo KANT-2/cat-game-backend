@@ -1,16 +1,21 @@
 import json
 import py_compile
-import resource
 import signal
 import subprocess
 import sys
 import tempfile
 
+try:
+    import resource
+except ImportError:  # Host-side contract tests also run on Windows.
+    resource = None
+
 DEFAULT_OUTPUT_LIMIT_BYTES = 65_536
 
 
 def _limit_output(output_limit):
-    resource.setrlimit(resource.RLIMIT_FSIZE, (output_limit, output_limit))
+    if resource is not None:
+        resource.setrlimit(resource.RLIMIT_FSIZE, (output_limit, output_limit))
 
 
 def _read_output(stream, output_limit):
@@ -43,7 +48,7 @@ def main():
                     stderr=stderr_file,
                     timeout=2,
                     check=False,
-                    preexec_fn=lambda: _limit_output(output_limit),
+                    preexec_fn=(lambda: _limit_output(output_limit)) if resource is not None else None,
                 )
             except subprocess.TimeoutExpired:
                 print(json.dumps({"verdict": "TIMEOUT", "passed": passed}))
@@ -52,11 +57,11 @@ def main():
             stderr = _read_output(stderr_file, output_limit)
         if (
             len(stdout.encode()) + len(stderr.encode()) >= output_limit
-            or run.returncode == -signal.SIGXFSZ
+            or run.returncode == -getattr(signal, "SIGXFSZ", 25)
         ):
             print(json.dumps({"verdict": "OUTPUT_LIMIT", "passed": passed}))
             return
-        if run.returncode == -signal.SIGKILL:
+        if run.returncode == -getattr(signal, "SIGKILL", 9):
             print(json.dumps({"verdict": "MEMORY_LIMIT", "passed": passed}))
             return
         if run.returncode:

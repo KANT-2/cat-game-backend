@@ -80,6 +80,7 @@ def test_coding_chat_calls_provider_and_stores_only_server_summary() -> None:
         user_public_id=user.public_id,
         cat_asset_public_id=asset.public_id,
         message="파이썬 반복문을 어떻게 고쳐?",
+        recent_messages=[{"role": "assistant", "text": "앞에서 함수 이야기를 했어."}],
     )
 
     assert result.category == "CODING"
@@ -89,6 +90,12 @@ def test_coding_chat_calls_provider_and_stores_only_server_summary() -> None:
         "사용자와 코딩 학습에 관해 대화했다."
     )
     assert "파이썬 반복문을 어떻게 고쳐?" not in unit_of_work.cat_memories.memories[0].context_summary
+    provider.reply.assert_called_once_with(
+        persona="느긋하고 다정한 고양이.",
+        message="파이썬 반복문을 어떻게 고쳐?",
+        memories=[],
+        recent_messages=[{"role": "assistant", "text": "앞에서 함수 이야기를 했어."}],
+    )
     unit_of_work.commit.assert_called_once_with()
 
 

@@ -14,10 +14,18 @@ class CatConversationContextRead(BaseModel):
     memories: list[CatMemoryRead]
 
 
+class CatChatMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=240)
+
+
 class CatChatCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     message: str = Field(min_length=1, max_length=240)
+    recent_messages: list[CatChatMessage] = Field(default_factory=list, max_length=10)
 
 
 class CatChatRead(BaseModel):

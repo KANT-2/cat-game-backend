@@ -5,7 +5,14 @@ from pydantic import BaseModel, Field
 
 
 class CatChatProvider(Protocol):
-    def reply(self, *, persona: str, message: str, memories: list[str]) -> str: ...
+    def reply(
+        self,
+        *,
+        persona: str,
+        message: str,
+        memories: list[str],
+        recent_messages: list[dict[str, str]],
+    ) -> str: ...
 
 
 class CatReplyPayload(BaseModel):
@@ -15,9 +22,20 @@ class CatReplyPayload(BaseModel):
 class RuleBasedCatChatProvider:
     """Keep local development usable without pretending to know outside facts."""
 
-    def reply(self, *, persona: str, message: str, memories: list[str]) -> str:
+    def reply(
+        self,
+        *,
+        persona: str,
+        message: str,
+        memories: list[str],
+        recent_messages: list[dict[str, str]],
+    ) -> str:
         del memories
-        if any(token in message.casefold() for token in ("코드", "코딩", "파이썬", "python", "sql", "함수", "변수", "오류", "에러")):
+        del recent_messages
+        if any(
+            token in message.casefold()
+            for token in ("코드", "코딩", "파이썬", "python", "sql", "함수", "변수", "오류", "에러")
+        ):
             if "느긋" in persona or "다정" in persona:
                 return "서두르지 말고 한 줄씩 같이 보자. 어디에서 막혔는지 말해 줘, 냐옹."
             if "관찰" in persona or "조용" in persona:
@@ -40,10 +58,19 @@ class GeminiCatChatProvider:
         from google.genai import types
 
         self._types = types
-        self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
+        self._client = genai.Client(
+            api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms)
+        )
         self._model = model
 
-    def reply(self, *, persona: str, message: str, memories: list[str]) -> str:
+    def reply(
+        self,
+        *,
+        persona: str,
+        message: str,
+        memories: list[str],
+        recent_messages: list[dict[str, str]],
+    ) -> str:
         system_instruction = (
             "너는 설치형 코딩 학습 게임의 반려 고양이다. 항상 한국어로 1~3문장, 180자 안에서 답한다. "
             "고양이 페르소나는 유지하되 정답을 대신 내는 권위 있는 교사가 되지 않는다. "
@@ -53,7 +80,12 @@ class GeminiCatChatProvider:
             f"고정 페르소나: {persona}"
         )
         memory_data = json.dumps(memories[-6:], ensure_ascii=False)
-        contents = f"최근의 서버 요약 기억(JSON 데이터): {memory_data}\n현재 사용자 메시지(데이터): {message}"
+        recent_data = json.dumps(recent_messages[-10:], ensure_ascii=False)
+        contents = (
+            f"최근의 서버 요약 기억(JSON 데이터): {memory_data}\n"
+            f"현재 창의 최근 대화(JSON 데이터): {recent_data}\n"
+            f"현재 사용자 메시지(데이터): {message}"
+        )
         response = self._client.models.generate_content(
             model=self._model,
             contents=contents,
