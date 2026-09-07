@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from app.models.task import Task
@@ -79,17 +79,21 @@ def weak_concepts(
     user_id: int,
     since: datetime | None = None,
 ) -> list[ConceptAssessment]:
+    return [item for item in concept_assessments(db, user_id, since) if item.is_weak]
+
+
+def concept_assessments(
+    db: Session,
+    user_id: int,
+    since: datetime | None = None,
+) -> list[ConceptAssessment]:
     query = select(Task.concept_id).join(TaskAttempt).where(
         TaskAttempt.user_id == user_id, TaskAttempt.status == "COMPLETED"
     )
     if since is not None:
         query = query.where(TaskAttempt.attempted_at >= since)
-    concept_ids = db.scalars(query.distinct()).all()
-    return [
-        item
-        for concept_id in concept_ids
-        if (item := assess_concept(db, user_id, concept_id, since)).is_weak
-    ]
+    concept_ids = db.scalars(query.distinct().order_by(Task.concept_id)).all()
+    return [assess_concept(db, user_id, concept_id, since) for concept_id in concept_ids]
 
 
 def recommended_tasks(
@@ -120,7 +124,7 @@ def recommended_tasks(
             )
             query = query.order_by(concept_rank, difficulty_rank, Task.id)
         else:
-            query = query.order_by(difficulty_rank, func.random())
+            query = query.order_by(difficulty_rank, Task.id)
         return db.scalars(query.limit(limit)).all()
 
     for exclude_recent, weak_only in ((True, True), (True, False), (False, True), (False, False)):

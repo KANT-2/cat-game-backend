@@ -54,6 +54,7 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/learning/tasks` | `200` | 조건별 활성 문제 조회 |
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
+| `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 사용자의 전체 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |
 | `POST` | `/api/v1/attempts` | `202` | 코드 또는 객관식 답안 제출 |
 | `GET` | `/api/v1/attempts/{attempt_public_id}` | `200` | 채점 상태·결과 조회 |
@@ -161,6 +162,23 @@
 ```
 
 `test_cases`와 `correct_option`은 채점 전용이므로 응답하지 않는다.
+
+추천 결과는 같은 학습 이력과 같은 문제 데이터에서는 같은 순서로 반환한다. 새 채점 기록이 생기면 최근 문제 제외 정책에 따라 목록이 달라질 수 있다.
+
+#### `GET /api/v1/learning/proficiencies`
+
+최근 완료 채점 기록이 있는 모든 개념의 숙련도를 반환한다. `proficiency_level`은 개념별 최근 10개 완료 채점의 정답률이며 새로고침 후에도 서버 데이터에서 다시 계산된다.
+
+```json
+[
+  {
+    "concept_public_id": "0ccdf2d3-53df-4a11-a265-9eaf252280cc",
+    "proficiency_level": 70,
+    "name": "SQL:basics",
+    "attempts": 10
+  }
+]
+```
 
 #### `GET /api/v1/learning/weak-concepts`
 
