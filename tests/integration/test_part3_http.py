@@ -689,6 +689,7 @@ def test_cat_chat_http_uses_database_persona_and_persists_memory(
             persona=cat.persona,
             message="파이썬 반복문 예제를 보여줘",
             memories=[existing_memory.context_summary],
+            recent_messages=[],
         )
 
         with session_factory() as verification_session:

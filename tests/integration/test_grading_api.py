@@ -1,9 +1,11 @@
 import uuid
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from app.core.config import settings
 from app.main import app
 from app.modules.grading.service import claim_attempt, grade_claimed_attempt
 
@@ -48,7 +50,7 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
             ),
             {
                 "user_id": owner_id,
-                "today": datetime.now(UTC).date(),
+                "today": datetime.now(ZoneInfo(settings.game_timezone)).date(),
                 "claimed_at": datetime.now(UTC),
             },
         ).scalar_one()
