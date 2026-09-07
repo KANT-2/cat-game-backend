@@ -8,9 +8,9 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
-from app.modules.learning.proficiency import recommended_tasks, weak_concepts
+from app.modules.learning.proficiency import concept_assessments, recommended_tasks, weak_concepts
 from app.schemas.task import TaskRead, to_task_read
-from app.schemas.user_proficiency import WeakConceptRead
+from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
@@ -96,6 +96,22 @@ def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
         concept = db.get(Concept, assessment.concept_id)
         rows.append(
             WeakConceptRead(
+                concept_public_id=concept.public_id,
+                name=concept.name,
+                attempts=assessment.attempts,
+                proficiency_level=assessment.proficiency_level,
+            )
+        )
+    return rows
+
+
+@router.get("/proficiencies", response_model=list[ConceptProficiencyRead])
+def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRead]:
+    rows = []
+    for assessment in concept_assessments(db, user.id, since=user.learning_reset_at):
+        concept = db.get(Concept, assessment.concept_id)
+        rows.append(
+            ConceptProficiencyRead(
                 concept_public_id=concept.public_id,
                 name=concept.name,
                 attempts=assessment.attempts,

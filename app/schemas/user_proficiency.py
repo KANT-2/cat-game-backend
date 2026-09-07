@@ -8,6 +8,10 @@ class UserProficiencyRead(BaseModel):
     proficiency_level: int
 
 
-class WeakConceptRead(UserProficiencyRead):
+class ConceptProficiencyRead(UserProficiencyRead):
     name: str
     attempts: int
+
+
+class WeakConceptRead(ConceptProficiencyRead):
+    pass

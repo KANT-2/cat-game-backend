@@ -13,6 +13,7 @@ def test_part2_get_responses_have_explicit_openapi_schemas():
         "/api/v1/attempts/{attempt_public_id}",
         "/api/v1/learning/tasks",
         "/api/v1/learning/recommendations",
+        "/api/v1/learning/proficiencies",
         "/api/v1/learning/weak-concepts",
     ):
         schema = paths[path]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
