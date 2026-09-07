@@ -7,19 +7,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import CurrentUser
 from app.core.config import settings
 from app.core.exceptions import (
-    AIProviderUnavailableError,
-    InvalidAIResponseError,
     InvalidMemorySummaryError,
     ResourceNotFoundError,
 )
 from app.core.unit_of_work import UnitOfWork
 from app.db.unit_of_work import SqlAlchemyUnitOfWork
-from app.integrations.ai.contracts import AIMessage, AITextClient
-from app.integrations.ai.gemini import GeminiAITextClient
+from app.integrations.ai.cat_chat import (
+    CatChatProvider,
+    GeminiCatChatProvider,
+    RuleBasedCatChatProvider,
+)
 from app.modules.cats import service as cat_service
-from app.schemas.cat_chat import CatChatRequest, CatChatResponse
 from app.schemas.cat_collection import CatCollectionRead
-from app.schemas.cat_conversation import CatConversationContextRead
+from app.schemas.cat_conversation import CatChatCreate, CatChatRead, CatConversationContextRead
 from app.schemas.cat_memory import CatMemoryCreate, CatMemoryRead
 
 router = APIRouter(prefix="/cats", tags=["cats"])
@@ -35,26 +35,16 @@ CatUnitOfWork = Annotated[
 ]
 
 
-@lru_cache
-def get_cat_ai_client() -> AITextClient:
+@lru_cache(maxsize=1)
+def get_cat_chat_provider() -> CatChatProvider:
     api_key = settings.gemini_api_key
-    if api_key is None or not api_key.get_secret_value().strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured",
+    if api_key is not None and api_key.get_secret_value().strip():
+        return GeminiCatChatProvider(
+            api_key=api_key.get_secret_value(),
+            model=settings.gemini_model,
+            timeout_ms=int(settings.gemini_timeout_seconds * 1000),
         )
-
-    return GeminiAITextClient(
-        api_key=api_key.get_secret_value(),
-        model=settings.gemini_model,
-        timeout_seconds=settings.gemini_timeout_seconds,
-    )
-
-
-CatAIClient = Annotated[
-    AITextClient,
-    Depends(get_cat_ai_client),
-]
+    return RuleBasedCatChatProvider()
 
 
 @router.get(
@@ -75,6 +65,12 @@ def read_cat_collection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+CatChatProviderDependency = Annotated[
+    CatChatProvider,
+    Depends(get_cat_chat_provider),
+]
 
 
 @router.get(
@@ -101,37 +97,27 @@ def read_cat_conversation_context(
 
 @router.post(
     "/{cat_asset_public_id}/chat",
-    response_model=CatChatResponse,
+    response_model=CatChatRead,
 )
 def create_cat_chat(
     cat_asset_public_id: uuid.UUID,
-    payload: CatChatRequest,
+    payload: CatChatCreate,
     current_user: CurrentUser,
     unit_of_work: CatUnitOfWork,
-    ai_client: CatAIClient,
-) -> CatChatResponse:
+    provider: CatChatProviderDependency,
+) -> CatChatRead:
     try:
         return cat_service.chat_with_cat(
             unit_of_work=unit_of_work,
-            ai_client=ai_client,
+            provider=provider,
             user_public_id=current_user.public_id,
             cat_asset_public_id=cat_asset_public_id,
             message=payload.message,
-            recent_messages=[
-                AIMessage(role=item.role, text=item.text) for item in payload.recent_messages
-            ],
-            max_output_tokens=settings.gemini_max_output_tokens,
-            max_memory_count=settings.gemini_max_memory_count,
         )
     except ResourceNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
-        ) from exc
-    except (AIProviderUnavailableError, InvalidAIResponseError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is temporarily unavailable",
         ) from exc
 
 

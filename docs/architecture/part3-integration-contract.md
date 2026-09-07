@@ -305,7 +305,7 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 | 현재 사용자 확인 | `GET /api/v1/session/me` | 인증 헤더 | 사용자 공개 프로필 |
 | 고양이 도감 | `GET /api/v1/cats/collection` | 인증 헤더 | 전체 고양이와 사용자 보유 상태 |
 | 고양이 대화 컨텍스트 | `GET /api/v1/cats/{cat_asset_public_id}/conversation-context` | 고양이 보유 자산 UUID | 고양이·persona·기억 목록 |
-| 고양이 AI 대화 | `POST /api/v1/cats/{cat_asset_public_id}/chat` | 현재 메시지·최근 대화 최대 10개 | 답변·선택적 새 기억·token 사용량 |
+| 고양이 자유 대화 | `POST /api/v1/cats/{cat_asset_public_id}/chat` | `message`(1~240자) | 답변·분류·기억 여부·기억 개수 |
 | 기억 추가 | `POST /api/v1/cats/{cat_asset_public_id}/memories` | `context_summary` | 생성된 기억 |
 | 기억 선택 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | 고양이 자산·기억 UUID | 본문 없음 |
 | 기억 전체 삭제 | `DELETE /api/v1/cats/{cat_asset_public_id}/memories` | 고양이 자산 UUID | 본문 없음 |
@@ -319,6 +319,10 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 공통 클라이언트 규칙은 다음과 같다.
 
+게임 스냅샷의 `cats[]`는 고양이 원본 UUID인 `public_id`와 별도로 보유 자산 UUID인
+`cat_asset_public_id`를 반환한다. 미보유 고양이는 `cat_asset_public_id: null`이다. 프런트엔드는
+기억 API를 호출할 때 보유 고양이의 `cat_asset_public_id`를 사용하며 원본 `public_id`와 혼용하지 않는다.
+
 - 기본 URL prefix는 `/api/v1`이다.
 - JSON 본문이 있는 요청은 `Content-Type: application/json`을 사용한다.
 - 로컬·테스트 환경의 보호 API에는 `X-User-Public-ID: <사용자 UUID>`를 보낸다.
@@ -326,6 +330,11 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 가격, 잔액 차감액, 가챠 확률과 마일리지는 서버 계산값이므로 요청에 넣지 않는다.
 - `204 No Content` 응답에는 본문이 없으므로 JSON 파싱을 시도하지 않는다.
 - 구매와 가챠의 `request_id`는 동작마다 새 UUID를 생성하되, 같은 동작의 네트워크 재시도에는 같은 UUID를 재사용한다.
+
+자유 대화의 사용자 원문은 기억에 저장하지 않는다. 서버는 유니코드 정규화와 프롬프트 제어 문구 검사를
+외부 AI 호출보다 먼저 수행하며, 코딩과 일상 대화만 생성 경계로 전달한다. 지원하지 않는 지식 질문은
+고양이 울음으로 답하고, 저장 가능한 대화도 `CODING` 또는 `COMPANION` 분류로 만든 서버 요약만 기억한다.
+외부 응답은 길이와 시스템 지시 노출 여부를 다시 검사하며 실패하면 고정된 고양이 응답으로 대체한다.
 
 ##### 인증 보조 API
 

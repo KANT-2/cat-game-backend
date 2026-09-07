@@ -6,7 +6,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
-from app.integrations.ai.contracts import AIStructuredResult
 from app.main import app
 from app.models.asset import Asset
 from app.models.cat import Cat
@@ -15,8 +14,7 @@ from app.models.gacha_execution import GachaExecution
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.user import User
-from app.modules.cats.router import get_cat_ai_client
-from app.schemas.cat_chat import CatChatGeneration
+from app.modules.cats.router import get_cat_chat_provider
 
 
 def test_purchase_http_request_uses_postgresql_and_is_idempotent(
@@ -666,41 +664,32 @@ def test_cat_chat_http_uses_database_persona_and_persists_memory(
     cat_asset_id = cat_asset.id
     user_public_id = user.public_id
     cat_asset_public_id = cat_asset.public_id
-    ai_client = MagicMock()
-    ai_client.generate_structured.return_value = AIStructuredResult(
-        data=CatChatGeneration(
-            reply="Let's practice a for loop, meow!",
-            memory_summary="The user prefers examples.",
-        ),
-        input_tokens=42,
-        output_tokens=12,
-    )
-    app.dependency_overrides[get_cat_ai_client] = lambda: ai_client
+    provider = MagicMock()
+    provider.reply.return_value = "반복문을 작은 예제로 연습해 보자, 냐옹!"
+    app.dependency_overrides[get_cat_chat_provider] = lambda: provider
 
     try:
         with TestClient(app) as client:
             response = client.post(
                 f"/api/v1/cats/{cat_asset_public_id}/chat",
                 headers={"X-User-Public-ID": str(user_public_id)},
-                json={
-                    "message": "Show me a loop example.",
-                    "recent_messages": [{"role": "assistant", "text": "What shall we study?"}],
-                },
+                json={"message": "파이썬 반복문 예제를 보여줘"},
             )
 
         assert response.status_code == 200
         payload = response.json()
         assert payload["cat_asset_public_id"] == str(cat_asset_public_id)
-        assert payload["reply"] == "Let's practice a for loop, meow!"
-        assert payload["memory"]["context_summary"] == "The user prefers examples."
-        assert payload["input_tokens"] == 42
-        assert payload["output_tokens"] == 12
+        assert payload["reply"] == "반복문을 작은 예제로 연습해 보자, 냐옹!"
+        assert payload["category"] == "CODING"
+        assert payload["memory_count"] == 2
+        assert payload["remembered"] is True
         assert "id" not in payload
-        assert "cat_asset_id" not in payload["memory"]
 
-        call = ai_client.generate_structured.call_args.kwargs
-        assert cat.persona in call["system_instruction"]
-        assert existing_memory.context_summary in call["system_instruction"]
+        provider.reply.assert_called_once_with(
+            persona=cat.persona,
+            message="파이썬 반복문 예제를 보여줘",
+            memories=[existing_memory.context_summary],
+        )
 
         with session_factory() as verification_session:
             summaries = verification_session.scalars(
@@ -708,10 +697,10 @@ def test_cat_chat_http_uses_database_persona_and_persists_memory(
             ).all()
             assert summaries == [
                 "The user is learning Python loops.",
-                "The user prefers examples.",
+                "사용자와 코딩 학습에 관해 대화했다.",
             ]
     finally:
-        app.dependency_overrides.pop(get_cat_ai_client, None)
+        app.dependency_overrides.pop(get_cat_chat_provider, None)
         with session_factory() as cleanup_session:
             cleanup_session.execute(delete(CatMemory).where(CatMemory.cat_asset_id == cat_asset_id))
             cleanup_session.execute(delete(Asset).where(Asset.id == cat_asset_id))
