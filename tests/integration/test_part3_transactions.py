@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from app.core.exceptions import (
     IdempotencyConflictError,
     InsufficientBalanceError,
+    ItemAlreadyOwnedError,
     PlacementLimitExceededError,
 )
 from app.db.repositories import (
@@ -397,7 +398,7 @@ def test_concurrent_gacha_requests_do_not_overspend(
             cleanup_session.commit()
 
 
-def test_concurrent_purchase_and_surface_application_share_lock_order(
+def test_concurrent_duplicate_purchase_and_surface_application_share_lock_order(
     engine,
 ) -> None:
     session_factory = sessionmaker(
@@ -463,10 +464,10 @@ def test_concurrent_purchase_and_surface_application_share_lock_order(
             purchase_future = executor.submit(purchase_once)
             surface_future = executor.submit(apply_surface_once)
 
-            purchase_result = purchase_future.result(timeout=10)
+            with pytest.raises(ItemAlreadyOwnedError, match="item already owned"):
+                purchase_future.result(timeout=10)
             surface_result = surface_future.result(timeout=10)
 
-        assert purchase_result["balance"] == 700
         assert surface_result.category == "WALLPAPER"
 
         with session_factory() as verification_session:
@@ -482,12 +483,11 @@ def test_concurrent_purchase_and_surface_application_share_lock_order(
             ).all()
 
             assert persisted_user is not None
-            assert persisted_user.balance == 700
+            assert persisted_user.balance == 1000
             assert persisted_user.wallpaper_item_id == item_id
             assert persisted_asset is not None
-            assert persisted_asset.quantity == 2
-            assert len(executions) == 1
-            assert executions[0].status == "COMPLETED"
+            assert persisted_asset.quantity == 1
+            assert executions == []
     finally:
         with session_factory() as cleanup_session:
             cleanup_session.execute(
