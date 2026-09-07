@@ -13,7 +13,7 @@ from app.core.exceptions import (
 )
 from app.main import app
 from app.modules.cats import service as cat_service
-from app.modules.cats.router import get_cat_unit_of_work
+from app.modules.cats.router import get_cat_chat_provider, get_cat_unit_of_work
 
 
 def test_cat_collection_route_is_registered() -> None:
@@ -126,6 +126,51 @@ def test_cat_conversation_context_route_is_registered() -> None:
 
     assert path in app.openapi()["paths"]
     assert "get" in app.openapi()["paths"][path]
+
+
+def test_free_cat_chat_returns_guarded_public_response(monkeypatch) -> None:
+    user = SimpleNamespace(public_id=uuid.uuid4())
+    unit_of_work = MagicMock()
+    provider = MagicMock()
+    cat_asset_public_id = uuid.uuid4()
+    chat = MagicMock(
+        return_value={
+            "cat_asset_public_id": cat_asset_public_id,
+            "reply": "같이 한 줄씩 보자, 냐옹.",
+            "category": "CODING",
+            "memory_count": 2,
+            "remembered": True,
+        }
+    )
+    monkeypatch.setattr(cat_service, "chat_with_cat", chat)
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_cat_unit_of_work] = lambda: unit_of_work
+    app.dependency_overrides[get_cat_chat_provider] = lambda: provider
+
+    try:
+        response = TestClient(app).post(
+            f"/api/v1/cats/{cat_asset_public_id}/chat",
+            json={"message": "파이썬 함수가 어려워"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "cat_asset_public_id": str(cat_asset_public_id),
+        "reply": "같이 한 줄씩 보자, 냐옹.",
+        "category": "CODING",
+        "memory_count": 2,
+        "remembered": True,
+    }
+    chat.assert_called_once_with(
+        unit_of_work=unit_of_work,
+        provider=provider,
+        user_public_id=user.public_id,
+        cat_asset_public_id=cat_asset_public_id,
+        message="파이썬 함수가 어려워",
+        recent_messages=[],
+    )
 
 
 def test_cat_conversation_context_requires_authentication() -> None:

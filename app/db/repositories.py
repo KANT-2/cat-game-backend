@@ -27,7 +27,12 @@ class SqlAlchemyUserRepository:
         return self._session.execute(statement).scalar_one_or_none()
 
     def get_for_update(self, user_id: int) -> User | None:
-        statement = select(User).where(User.id == user_id).with_for_update()
+        statement = (
+            select(User)
+            .where(User.id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         return self._session.execute(statement).scalar_one_or_none()
 
 
@@ -37,6 +42,10 @@ class SqlAlchemyItemRepository:
 
     def get_by_public_id(self, public_id: UUID) -> Item | None:
         statement = select(Item).where(Item.public_id == public_id)
+        return self._session.execute(statement).scalar_one_or_none()
+
+    def get_by_catalog_key(self, catalog_key: str) -> Item | None:
+        statement = select(Item).where(Item.catalog_key == catalog_key)
         return self._session.execute(statement).scalar_one_or_none()
 
     def get_by_id(self, item_id: int) -> Item | None:
@@ -64,6 +73,10 @@ class SqlAlchemyCatRepository:
         return list(self._session.execute(statement).scalars().all())
 
 
+    def get_by_catalog_key(self, catalog_key: str) -> Cat | None:
+        statement = select(Cat).where(Cat.catalog_key == catalog_key)
+        return self._session.execute(statement).scalar_one_or_none()
+
 class SqlAlchemyAssetRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -80,6 +93,9 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         cat_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, cat_id=cat_id)
+        if pending is not None:
+            return pending
         statement = select(Asset).where(
             Asset.user_id == user_id,
             Asset.cat_id == cat_id,
@@ -105,6 +121,9 @@ class SqlAlchemyAssetRepository:
         user_id: int,
         item_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, item_id=item_id)
+        if pending is not None:
+            return pending
         statement = (
             select(Asset)
             .where(
@@ -137,6 +156,32 @@ class SqlAlchemyAssetRepository:
         )
         self._session.add(asset)
         return asset
+
+    def consume_item_quantity_for_update(self, user_id: int, item_id: int) -> int | None:
+        asset = self.get_item_asset_for_update(user_id, item_id)
+        if asset is None:
+            return None
+        if asset.quantity == 1:
+            self._session.delete(asset)
+            return 0
+        asset.quantity -= 1
+        return asset.quantity
+
+    def _get_pending_asset(
+        self,
+        *,
+        user_id: int,
+        cat_id: int | None = None,
+        item_id: int | None = None,
+    ) -> Asset | None:
+        for pending in self._session.new:
+            if not isinstance(pending, Asset) or pending.user_id != user_id:
+                continue
+            if cat_id is not None and pending.cat_id == cat_id:
+                return pending
+            if item_id is not None and pending.item_id == item_id:
+                return pending
+        return None
 
     def grant_cat(
         self,
@@ -186,16 +231,31 @@ class SqlAlchemyPlacedObjectRepository:
         placed_objects = self._session.execute(statement).scalars().all()
         return len(placed_objects)
 
+    def list_for_update(self, user_id: int) -> list[PlacedObject]:
+        statement = (
+            select(PlacedObject)
+            .where(PlacedObject.user_id == user_id)
+            .order_by(PlacedObject.id)
+            .with_for_update()
+        )
+        return list(self._session.execute(statement).scalars().all())
+
     def add(
         self,
         user_id: int,
         item_id: int,
         position_data: dict[str, object],
+        public_id: UUID | None = None,
     ) -> PlacedObject:
+        values: dict[str, object] = {
+            "user_id": user_id,
+            "item_id": item_id,
+            "position_data": dict(position_data),
+        }
+        if public_id is not None:
+            values["public_id"] = public_id
         placed_object = PlacedObject(
-            user_id=user_id,
-            item_id=item_id,
-            position_data=dict(position_data),
+            **values,
         )
         self._session.add(placed_object)
         return placed_object

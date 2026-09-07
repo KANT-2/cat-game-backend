@@ -8,12 +8,14 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
+  "google-genai>=2.22,<3",
   "pydantic-settings>=2.6",
   "sqlalchemy>=2.0",
   "uvicorn[standard]>=0.32",
   "alembic>=1.13",
   "psycopg[binary]>=3.1",
   "httpx>=0.28",
+  "pwdlib[argon2]>=0.3",
 ]
 
 [project.optional-dependencies]

@@ -21,6 +21,9 @@ EXPECTED_TABLES = [
     "user_proficiency",
     "placed_objects",
     "gacha_executions",
+    "task_completions", "daily_reward_claims",
+    "auth_sessions",
+    "auth_rate_limits",
 ]
 
 
@@ -34,8 +37,8 @@ def test_pgcrypto_extension_enabled(engine):
     assert installed is True
 
 
-def test_all_16_tables_exist(engine):
-    """16개 테이블이 실제 DB에 전부 존재하는지 확인"""
+def test_all_expected_tables_exist(engine):
+    """현재 모델이 요구하는 테이블이 실제 DB에 전부 존재하는지 확인"""
     with engine.connect() as conn:
         result = conn.execute(
             text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
@@ -44,6 +47,58 @@ def test_all_16_tables_exist(engine):
 
     missing = set(EXPECTED_TABLES) - actual_tables
     assert not missing, f"누락된 테이블: {missing}"
+
+
+def test_task_attempts_have_durable_grading_lease_columns(engine):
+    """채점 워커 재시작에 필요한 임대 컬럼과 큐 인덱스가 존재하는지 확인한다."""
+    with engine.connect() as conn:
+        columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'task_attempts'"
+                )
+            )
+        }
+        indexes = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes "
+                    "WHERE schemaname = 'public' AND tablename = 'task_attempts'"
+                )
+            )
+        }
+
+    assert {"grading_started_at", "grading_lease_token"} <= columns
+    assert "ix_task_attempts_grading_queue" in indexes
+
+
+def test_users_have_positive_game_state_version(engine):
+    """권위 상태 응답의 순서를 보장하는 사용자 버전 컬럼과 제약을 확인한다."""
+    with engine.connect() as connection:
+        column = connection.execute(
+            text(
+                "SELECT column_default, is_nullable FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'users' "
+                "AND column_name = 'state_version'"
+            )
+        ).one()
+        constraints = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'public' AND table_name = 'users' "
+                    "AND constraint_type = 'CHECK'"
+                )
+            )
+        }
+
+    assert column.column_default == "1"
+    assert column.is_nullable == "NO"
+    assert "ck_users_state_version_positive" in constraints
 
 
 def test_asset_naming_migration_is_applied(engine):
@@ -87,8 +142,8 @@ def test_placed_object_position_uses_xyz_coordinates(db_session):
     ).scalar_one()
     item_id = db_session.execute(
         text(
-            "INSERT INTO items (category, name, price) "
-            "VALUES ('FURNITURE', 'XYZ Chair', 0) RETURNING id"
+            "INSERT INTO items (catalog_key, category, name, price) "
+            "VALUES ('test.xyz-chair', 'FURNITURE', 'XYZ Chair', 0) RETURNING id"
         )
     ).scalar_one()
     db_session.execute(

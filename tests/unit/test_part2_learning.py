@@ -136,12 +136,13 @@ def test_learning_task_selection_applies_filters_and_completed_state():
         options=None,
         hint_text=None,
         is_active=True,
+        reward_coins=60,
     )
     db = _LearningTaskSession(concept, [task], [task.id])
 
     response = list_tasks(
         db=db,
-        user=SimpleNamespace(id=7),
+        user=SimpleNamespace(id=7, learning_reset_at=None),
         task_type="CODE",
         domain="PYTHON",
         concept_public_id=concept_public_id,

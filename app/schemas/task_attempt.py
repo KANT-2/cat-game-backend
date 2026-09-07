@@ -14,8 +14,8 @@ class TaskAttemptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_public_id: uuid.UUID
-    submitted_code: str | None = None
-    selected_option: str | None = None
+    submitted_code: str | None = Field(default=None, max_length=32_768)
+    selected_option: str | None = Field(default=None, max_length=256)
     context_type: Literal["LEARNING", "DAILY", "BATTLE"]
     used_hint: bool = False
     attendance_task_public_id: uuid.UUID | None = None
@@ -51,11 +51,11 @@ class GradingResultDetail(BaseModel):
         "RUNTIME_ERROR",
         "TIMEOUT",
         "OUTPUT_LIMIT",
+        "MEMORY_LIMIT",
         "SYSTEM_ERROR",
     ]
-    detail: str | None = None
-    passed: int | None = Field(default=None, ge=0)
-    total: int | None = Field(default=None, ge=0)
+    passed: int = Field(ge=0)
+    total: int = Field(ge=0)
 
 
 def _parse_result_detail(raw: str | None) -> GradingResultDetail | None:
@@ -64,17 +64,18 @@ def _parse_result_detail(raw: str | None) -> GradingResultDetail | None:
     try:
         return GradingResultDetail.model_validate(json.loads(raw))
     except (json.JSONDecodeError, TypeError, ValueError):
-        return None
+        return GradingResultDetail(verdict="SYSTEM_ERROR", passed=0, total=0)
 
 
 class TaskAttemptRead(ReadSchema):
     task_public_id: uuid.UUID
-    context_type: str
-    status: str
+    context_type: Literal["LEARNING", "DAILY", "BATTLE"]
+    status: Literal["PENDING", "RUNNING", "COMPLETED", "FAILED"]
     is_correct: bool | None
     used_hint: bool
     attempted_at: datetime
     result_detail: GradingResultDetail | None = None
+    coins_awarded: int = Field(ge=0)
 
 
 def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
@@ -87,4 +88,5 @@ def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
         used_hint=attempt.used_hint,
         attempted_at=attempt.attempted_at,
         result_detail=_parse_result_detail(attempt.result_detail),
+        coins_awarded=attempt.coins_awarded,
     )

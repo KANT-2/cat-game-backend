@@ -11,8 +11,9 @@ from app.core.repository_contracts import (
 EXPECTED_METHODS = {
     ExecutionRepository: {"claim", "complete"},
     UserRepository: {"get_by_public_id", "get_for_update"},
-    ItemRepository: {"get_by_public_id", "get_by_id"},
+    ItemRepository: {"get_by_catalog_key", "get_by_public_id", "get_by_id"},
     CatRepository: {
+        "get_by_catalog_key",
         "get_by_public_id",
         "get_by_id",
         "list_all",
@@ -23,11 +24,13 @@ EXPECTED_METHODS = {
         "list_cat_assets_by_user_id",
         "get_item_asset_for_update",
         "add_item_quantity",
+        "consume_item_quantity_for_update",
         "grant_cat",
     },
     PlacedObjectRepository: {
         "get_by_public_id_for_update",
         "count_for_update",
+        "list_for_update",
         "add",
         "remove",
     },
@@ -61,10 +64,11 @@ def test_repository_contracts_do_not_own_transactions() -> None:
 def test_locking_methods_are_named_for_update() -> None:
     locking_methods = {
         UserRepository: {"get_for_update"},
-        AssetRepository: {"get_item_asset_for_update"},
+        AssetRepository: {"get_item_asset_for_update", "consume_item_quantity_for_update"},
         PlacedObjectRepository: {
             "get_by_public_id_for_update",
             "count_for_update",
+            "list_for_update",
         },
         CatMemoryRepository: {
             "get_by_public_id_for_update",

@@ -13,6 +13,7 @@ def test_part2_get_responses_have_explicit_openapi_schemas():
         "/api/v1/attempts/{attempt_public_id}",
         "/api/v1/learning/tasks",
         "/api/v1/learning/recommendations",
+        "/api/v1/learning/proficiencies",
         "/api/v1/learning/weak-concepts",
     ):
         schema = paths[path]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
@@ -23,7 +24,7 @@ def test_task_converter_exposes_only_public_relationship_ids():
     task = SimpleNamespace(
         id=12, public_id=uuid.uuid4(), concept_id=3, title="SQL select", type="CODE",
         domain="SQL", difficulty="BRONZE", description="desc", template_code="SELECT ",
-        options=None, hint_text=None, is_active=True, test_cases="secret",
+        options=None, hint_text=None, is_active=True, reward_coins=30, test_cases="secret",
     )
     concept = SimpleNamespace(id=3, public_id=uuid.uuid4())
     payload = to_task_read(task, concept).model_dump()
@@ -37,6 +38,7 @@ def test_attempt_converter_does_not_expose_internal_ids_or_submission():
         submitted_code="SELECT secret", status="COMPLETED", is_correct=True,
         used_hint=False, attempted_at=datetime.now(UTC),
         result_detail='{"verdict":"ACCEPTED","detail":null,"passed":3,"total":3}',
+        coins_awarded=30,
     )
     task = SimpleNamespace(id=12, public_id=uuid.uuid4())
     payload = to_task_attempt_read(attempt, task).model_dump()
@@ -45,7 +47,6 @@ def test_attempt_converter_does_not_expose_internal_ids_or_submission():
     assert "submitted_code" not in payload
     assert payload["result_detail"] == {
         "verdict": "ACCEPTED",
-        "detail": None,
         "passed": 3,
         "total": 3,
     }
@@ -56,16 +57,16 @@ def test_attempt_converter_accepts_legacy_result_detail_shape():
         id=20, public_id=uuid.uuid4(), task_id=12, user_id=7, context_type="LEARNING",
         status="COMPLETED", is_correct=False, used_hint=False, attempted_at=datetime.now(UTC),
         result_detail='{"verdict":"WRONG_ANSWER","detail":"expected 2"}',
+        coins_awarded=0,
     )
     task = SimpleNamespace(id=12, public_id=uuid.uuid4())
 
     payload = to_task_attempt_read(attempt, task).model_dump()
 
     assert payload["result_detail"] == {
-        "verdict": "WRONG_ANSWER",
-        "detail": "expected 2",
-        "passed": None,
-        "total": None,
+        "verdict": "SYSTEM_ERROR",
+        "passed": 0,
+        "total": 0,
     }
 
 

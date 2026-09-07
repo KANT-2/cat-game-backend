@@ -2,6 +2,8 @@
 
 이 문서는 학습 문제, Python/SQL/객관식 채점, 숙련도, 추천, 일일 미션, 배틀 제출 흐름을 프런트엔드와 FastAPI 백엔드가 안전하게 통합하기 위한 계약을 정의한다.
 
+Part 2와 Part 3의 전체 endpoint를 한 번에 찾으려면 [통합 API 계약](../api/README.md)을 먼저 본다. 이 문서는 Part 2의 상세 업무 규칙과 예외를 설명한다.
+
 현재 `feature/part2-learning` 구현을 기준으로 작성하며, DB 내부 식별자와 API 공개 식별자를 분리하고 모든 보호 API는 공통 `CurrentUser` 인증 의존성을 사용한다.
 
 ---
@@ -483,6 +485,7 @@ GET /api/v1/learning/tasks?type=CODE&domain=PYTHON&difficulty=SILVER&limit=20
 
 ```http
 GET /api/v1/learning/weak-concepts
+GET /api/v1/learning/proficiencies
 GET /api/v1/learning/recommendations?limit=10
 ```
 
@@ -492,8 +495,10 @@ GET /api/v1/learning/recommendations?limit=10
 2. 최근 20개 문제 우선 제외
 3. 난이도 `BRONZE → SILVER → GOLD` 우선
 4. 후보 부족 시 최근 문제 제외/취약 개념 조건을 순차 완화
+5. 같은 학습 이력에서는 난이도와 문제 ID를 기준으로 안정된 순서 유지
 
 추천 응답은 `TaskRead`를 사용하며 `test_cases`, `correct_option`은 노출하지 않는다.
+전체 숙련도 응답은 개념 공개 UUID, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다.
 
 ---
 
@@ -746,6 +751,7 @@ POST /api/v1/attempts
 | 개발 사용자 준비 | `POST /api/v1/session/development` | 본문 없음 | 공개 사용자 DTO |
 | 문제 조회 | `GET /api/v1/learning/tasks` | type/domain/concept/difficulty/limit | 공개 Task 목록 |
 | 문제 추천 | `GET /api/v1/learning/recommendations` | `limit` | 공개 Task 목록 |
+| 전체 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·이름·시도 수·숙련도 |
 | 취약 개념 | `GET /api/v1/learning/weak-concepts` | 없음 | 개념 UUID·숙련도 |
 | 문제 제출 | `POST /api/v1/attempts` | task UUID + code/option + context | attempt UUID + PENDING |
 | 채점 결과 | `GET /api/v1/attempts/{attempt_public_id}` | attempt UUID | 상태·정오답·verdict |

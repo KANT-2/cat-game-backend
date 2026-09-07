@@ -148,8 +148,8 @@ def build_tasks() -> list[dict]:
                 } if is_choice else None)
                 prompt = (
                     f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
-                    "[도와주세요!] 가장 올바른 설명을 골라 주세요. 오답은 실행 환경과 입력 조건을 "
-                    "임의로 가정한 설명입니다."
+                    f"[문제] {spec.prompt}\n\n"
+                    "[질문] 이 문제를 해결하는 데 가장 알맞은 방법을 하나 골라 주세요."
                     if is_choice else
                     f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
                     f"[도와주세요!] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "
@@ -169,6 +169,7 @@ def build_tasks() -> list[dict]:
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
                     "hint_text": f"고양이 힌트 🐾 {spec.hint}",
+                    "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[difficulty],
                 })
     assert len(rows) == 150
     assert {d: sum(row["difficulty"] == d for row in rows) for d in ("BRONZE", "SILVER", "GOLD")} == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}

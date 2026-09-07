@@ -10,7 +10,7 @@ from app.schemas.gacha import (
 )
 
 
-@pytest.mark.parametrize("draw_count", [1, 10])
+@pytest.mark.parametrize("draw_count", [1, 11])
 def test_gacha_request_accepts_supported_draw_count(
     draw_count: int,
 ) -> None:
@@ -25,7 +25,7 @@ def test_gacha_request_accepts_supported_draw_count(
     assert request.draw_count == draw_count
 
 
-@pytest.mark.parametrize("draw_count", [0, -1, 2, 11])
+@pytest.mark.parametrize("draw_count", [0, -1, 2, 10])
 def test_gacha_request_rejects_unsupported_draw_count(
     draw_count: int,
 ) -> None:

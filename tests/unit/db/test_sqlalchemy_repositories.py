@@ -156,6 +156,7 @@ def test_asset_repository_gets_by_public_id() -> None:
 
 def test_asset_repository_gets_cat_asset_without_lock() -> None:
     session = Mock(spec=Session)
+    session.new = []
     expected_asset = object()
     session.execute.return_value.scalar_one_or_none.return_value = expected_asset
     repository = SqlAlchemyAssetRepository(session)
@@ -170,6 +171,17 @@ def test_asset_repository_gets_cat_asset_without_lock() -> None:
     assert "assets.cat_id = 10" in sql
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
+
+
+def test_asset_repository_finds_pending_cat_asset_without_query() -> None:
+    session = Session()
+    expected_asset = Asset(user_id=1, cat_id=10, item_id=None, quantity=1)
+    session.add(expected_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.get_cat_asset(user_id=1, cat_id=10)
+
+    assert result is expected_asset
 
 
 def test_asset_repository_lists_users_cat_assets() -> None:
@@ -193,6 +205,7 @@ def test_asset_repository_lists_users_cat_assets() -> None:
 
 def test_asset_repository_locks_item_asset() -> None:
     session = Mock(spec=Session)
+    session.new = []
     expected_asset = object()
     session.execute.return_value.scalar_one_or_none.return_value = expected_asset
     repository = SqlAlchemyAssetRepository(session)
@@ -210,6 +223,30 @@ def test_asset_repository_locks_item_asset() -> None:
     assert "assets.item_id = 20" in sql
     assert "FOR UPDATE" in sql
     session.commit.assert_not_called()
+
+
+def test_asset_repository_finds_pending_item_asset_without_query() -> None:
+    session = Session()
+    expected_asset = Asset(user_id=1, cat_id=None, item_id=20, quantity=2)
+    session.add(expected_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.get_item_asset_for_update(user_id=1, item_id=20)
+
+    assert result is expected_asset
+
+
+def test_asset_repository_combines_repeated_pending_item_quantity() -> None:
+    session = Session()
+    pending_asset = Asset(user_id=1, cat_id=None, item_id=20, quantity=2)
+    session.add(pending_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.add_item_quantity(user_id=1, item_id=20, quantity=3)
+
+    assert result is pending_asset
+    assert result.quantity == 5
+    assert list(session.new) == [pending_asset]
 
 
 def test_asset_repository_adds_to_existing_item_quantity() -> None:

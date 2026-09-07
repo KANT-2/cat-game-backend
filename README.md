@@ -6,9 +6,26 @@
 
 ```bash
 python -m venv .venv
-python -m pip install -e ".[dev]"
-uvicorn app.main:app --reload
 ```
+
+Windows PowerShell에서 가상환경을 만든 뒤 다음을 실행한다. `.env`가 없으면 `.env.example`을
+복사하고, 실행 중인 PostgreSQL의 `DATABASE_URL`을 설정한다. 기존 `.env`는 덮어쓰지 않는다.
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m alembic -c alembic.ini.example upgrade head
+.\.venv\Scripts\python.exe scripts/seed_learning_tasks.py
+.\.venv\Scripts\python.exe scripts/seed_sql_tasks.py
+.\.venv\Scripts\python.exe scripts/seed_game_catalog.py
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+전체 게임은 인접한 `../cat-game` 저장소의 `compose.integration.yml`로 실행한다.
+Docker Desktop의 Linux 엔진을 켜고 해당 폴더에서 `docker compose -f compose.integration.yml up --build -d`를 실행한다.
+게임 주소는 `http://127.0.0.1:4173`이다. 초기화, API, Python·SQL 채점 워커와 DB가 함께 준비된다.
+상세 실행·로그 확인은 프런트 저장소의 `docs/DOCKER_INTEGRATION.md`를 따른다.
+API만 직접 실행하면 채점은 진행되지 않으며 별도 `python -m app.modules.grading.worker` 프로세스,
+Python 채점 Docker 이미지와 SQL 채점 DB가 필요하다.
 
 - Health check: `GET /health`
 - OpenAPI UI: `/docs`
@@ -45,7 +62,12 @@ app/main.py
 
 ## 로그인 연동 구현
 
-게임 서버는 별도 비밀번호 인증을 운영하거나 홈페이지 세션 DB를 직접 조회하지 않는다. 통합 홈페이지의 Django DB Session이 인증 원본이다.
+게임 서버는 자체 비밀번호·세션 인증을 지원하며, 설정된 경우 홈페이지 Django Session Auth Bridge도 지원한다.
+자체 인증은 `/api/v1/session/register`, `/login`, `/logout`을 사용하고 비밀번호는 해시로 저장한다.
+브라우저 세션 쿠키와 변경 요청의 `X-CSRF-Token`을 검증한다. 자세한 내용은
+[운영 인증](docs/features/production-authentication.md)을 따른다.
+
+다음은 자체 인증으로 사용자를 확인하지 못했을 때 사용하는 홈페이지 연동 흐름이다.
 
 ```text
 브라우저
@@ -67,7 +89,7 @@ app/main.py
 
 보안 및 오류 계약:
 
-- 비밀번호, Django 세션키, 홈페이지 DB 접속정보는 게임 DB에 저장하지 않는다.
+- 자체 계정 비밀번호는 해시로 저장하며, Django 세션키와 홈페이지 DB 접속정보는 게임 DB에 저장하지 않는다.
 - 홈페이지가 `401/403`을 반환하면 게임 접근도 거절한다.
 - Auth Bridge 장애, timeout, JSON 또는 필드 계약 오류는 `503`으로 처리한다.
 - `local`·`test` 환경에서만 `X-User-Public-ID`와 `POST /session/development`를 제공한다.

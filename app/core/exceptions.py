@@ -10,6 +10,10 @@ class InsufficientBalanceError(ApplicationError):
     """The user does not have enough balance."""
 
 
+class ItemAlreadyOwnedError(ApplicationError):
+    """The unique item is already owned by the user."""
+
+
 class InvalidQuantityError(ApplicationError):
     """The requested quantity must be positive."""
 
@@ -28,3 +32,27 @@ class PlacementLimitExceededError(ApplicationError):
 
 class InvalidMemorySummaryError(ApplicationError):
     """The cat memory summary must contain non-whitespace text."""
+
+
+class AIProviderUnavailableError(ApplicationError):
+    """The configured AI provider could not complete the request."""
+
+
+class InvalidAIResponseError(ApplicationError):
+    """The AI provider returned an unusable response."""
+
+
+class PlacementOutsideRoomError(ApplicationError):
+    """The furniture footprint would extend outside the room grid."""
+
+
+class PlacementOccupiedError(ApplicationError):
+    """The furniture footprint overlaps another placed object."""
+
+
+class AlreadyClaimedError(ApplicationError):
+    """A once-per-period reward was already claimed."""
+
+
+class RewardNotReadyError(ApplicationError):
+    """A reward's authoritative progress requirement is not complete."""

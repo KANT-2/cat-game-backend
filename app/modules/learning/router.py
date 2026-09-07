@@ -8,9 +8,9 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
-from app.modules.learning.proficiency import recommended_tasks, weak_concepts
+from app.modules.learning.proficiency import concept_assessments, recommended_tasks, weak_concepts
 from app.schemas.task import TaskRead, to_task_read
-from app.schemas.user_proficiency import WeakConceptRead
+from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
@@ -20,19 +20,24 @@ def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
     return to_task_read(task, concept, completed=completed)
 
 
-def _completed_task_ids(db: DbSession, user_id: int, task_ids: list[int]) -> set[int]:
+def _completed_task_ids(
+    db: DbSession,
+    user_id: int,
+    task_ids: list[int],
+    *,
+    since=None,
+) -> set[int]:
     if not task_ids:
         return set()
-    return set(
-        db.scalars(
-            select(TaskAttempt.task_id).where(
-                TaskAttempt.user_id == user_id,
-                TaskAttempt.task_id.in_(task_ids),
-                TaskAttempt.status == "COMPLETED",
-                TaskAttempt.is_correct.is_(True),
-            )
-        ).all()
+    statement = select(TaskAttempt.task_id).where(
+        TaskAttempt.user_id == user_id,
+        TaskAttempt.task_id.in_(task_ids),
+        TaskAttempt.status == "COMPLETED",
+        TaskAttempt.is_correct.is_(True),
     )
+    if since is not None:
+        statement = statement.where(TaskAttempt.attempted_at >= since)
+    return set(db.scalars(statement).all())
 
 
 @router.get("/tasks", response_model=list[TaskRead])
@@ -61,7 +66,12 @@ def list_tasks(
         statement = statement.where(Task.concept_id == concept.id)
 
     tasks = list(db.scalars(statement.order_by(Task.id).limit(limit)).all())
-    completed_ids = _completed_task_ids(db, user.id, [task.id for task in tasks])
+    completed_ids = _completed_task_ids(
+        db,
+        user.id,
+        [task.id for task in tasks],
+        since=user.learning_reset_at,
+    )
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
 
 
@@ -69,18 +79,39 @@ def list_tasks(
 def recommendations(
     db: DbSession, user: CurrentUser, limit: int = Query(10, ge=1, le=50)
 ) -> list[TaskRead]:
-    tasks = recommended_tasks(db, user.id, limit)
-    completed_ids = _completed_task_ids(db, user.id, [task.id for task in tasks])
+    tasks = recommended_tasks(db, user.id, limit, since=user.learning_reset_at)
+    completed_ids = _completed_task_ids(
+        db,
+        user.id,
+        [task.id for task in tasks],
+        since=user.learning_reset_at,
+    )
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
 
 
 @router.get("/weak-concepts", response_model=list[WeakConceptRead])
 def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
     rows = []
-    for assessment in weak_concepts(db, user.id):
+    for assessment in weak_concepts(db, user.id, since=user.learning_reset_at):
         concept = db.get(Concept, assessment.concept_id)
         rows.append(
             WeakConceptRead(
+                concept_public_id=concept.public_id,
+                name=concept.name,
+                attempts=assessment.attempts,
+                proficiency_level=assessment.proficiency_level,
+            )
+        )
+    return rows
+
+
+@router.get("/proficiencies", response_model=list[ConceptProficiencyRead])
+def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRead]:
+    rows = []
+    for assessment in concept_assessments(db, user.id, since=user.learning_reset_at):
+        concept = db.get(Concept, assessment.concept_id)
+        rows.append(
+            ConceptProficiencyRead(
                 concept_public_id=concept.public_id,
                 name=concept.name,
                 attempts=assessment.attempts,

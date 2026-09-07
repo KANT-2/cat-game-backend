@@ -2,7 +2,7 @@
 
 이 문서는 Part 3의 가챠·상점·하우징·고양이 AI 기억 기능을 순서대로 구현하기 위한 작업 체크리스트다.
 
-현재 진행 상태(2026-09-04): 구매·가챠·벽지·바닥·가구와 고양이 페르소나·기억 FastAPI 연결을 완료했다. 인증, 공개 UUID 응답, 예외 변환과 브라우저 CORS를 검증했다. 가챠는 정책값 확정 전까지 기본 호출에 `503`을 반환한다. 다음 작업은 **12. 최종 PostgreSQL 통합 검증**이다.
+현재 진행 상태(2026-09-05): 구매·가챠·벽지·바닥·가구, 고양이 페르소나·기억과 Gemini 대화 FastAPI 연결 및 최종 PostgreSQL 통합 검증을 완료했다. 실제 HTTP, rollback, 동시 요청, 행 잠금, 마이그레이션, 공개 UUID 응답과 실제 Gemini 구조화 출력을 검증했다. 최종 검사는 Ruff 통과, `296 passed, 5 skipped, 2 warnings`다. 가챠는 정책값 확정 전까지 기본 호출에 `503`을 반환한다.
 
 구현 기준은 다음 문서다.
 
@@ -13,13 +13,13 @@
 
 ## 공통 원칙
 
-- [ ] API 요청과 응답에 내부 INTEGER `id`를 노출하지 않는다.
-- [ ] 외부 식별자는 UUID `public_id`, `*_public_id`를 사용한다.
-- [ ] 내부 FK에는 INTEGER PK를 사용한다.
+- [x] API 요청과 응답에 내부 INTEGER `id`를 노출하지 않는다.
+- [x] 외부 식별자는 UUID `public_id`, `*_public_id`를 사용한다.
+- [x] 내부 FK에는 INTEGER PK를 사용한다.
 - [x] 통합 보유 자산 모델은 `Asset`을 사용한다.
 - [x] Repository는 `commit()`하지 않는다.
 - [x] 서비스와 Unit of Work가 전체 트랜잭션을 소유한다.
-- [ ] 잠금 메서드는 이름에 `for_update`를 포함한다.
+- [x] 잠금 메서드는 이름에 `for_update`를 포함한다.
 - [x] 미확정 가격, 확률, 보상값을 임의로 하드코딩하지 않는다.
 
 ## 0. 작업 브랜치 준비
@@ -166,11 +166,11 @@ git status
 
 - [x] 신규 `request_id`를 `ACQUIRED`로 확보한다.
 - [x] 완료된 동일 요청이면 기존 `result_data`를 반환한다.
-- [ ] 동일 키의 요청 해시가 다르면 `409 Conflict`로 처리한다.
-- [ ] 동일 키의 사용자가 다르면 `409 Conflict`로 처리한다.
+- [x] 동일 키의 요청 해시가 다르면 `409 Conflict`로 처리한다.
+- [x] 동일 키의 사용자가 다르면 `409 Conflict`로 처리한다.
 - [x] 성공 시 상태를 `COMPLETED`로 변경한다.
 - [x] 실제 비용과 결과 데이터를 저장한다.
-- [ ] 동시에 같은 요청을 보내도 한 번만 처리되는지 검증한다.
+- [x] 동시에 같은 요청을 보내도 한 번만 처리되는지 검증한다.
 
 완료 기준:
 
@@ -190,7 +190,7 @@ git status
 - [x] 신규 아이템 자산을 생성한다.
 - [x] 벽지 소유권과 `WALLPAPER` 카테고리를 확인한다.
 - [x] 바닥 소유권과 `FLOOR` 카테고리를 확인한다.
-- [ ] 구매 및 적용 API를 멱등성 트랜잭션으로 처리한다.
+- [x] 구매 및 적용 API를 멱등성 트랜잭션으로 처리한다.
 - [x] 잔액 부족과 잘못된 카테고리 테스트를 작성한다.
 
 현재 구매 서비스 검증 결과:
@@ -222,7 +222,7 @@ git status
 - [x] 중복 보상을 사용자 mileage로 전환한다.
 - [x] 잔액, mileage, 자산, 실행 결과를 한 트랜잭션으로 처리한다.
 - [x] 동일 요청 재시도 시 동일 결과를 반환한다.
-- [ ] 중간 실패 시 전체 rollback을 검증한다.
+- [x] 중간 실패 시 전체 rollback을 검증한다.
 
 현재 단위 검증 결과:
 
@@ -259,7 +259,7 @@ git status
 - [x] 배치 수정 서비스를 작성한다.
 - [x] 배치 해제 서비스를 작성한다.
 - [x] 다른 사용자의 배치 객체 접근은 `ResourceNotFoundError`로 숨긴다.
-- [ ] 동시에 배치해도 보유 수량을 초과하지 않는지 PostgreSQL에서 검증한다.
+- [x] 동시에 배치해도 보유 수량을 초과하지 않는지 PostgreSQL에서 검증한다.
 
 현재 단위 검증 결과:
 
@@ -318,7 +318,7 @@ git status
 - [x] 구매 API를 라우터에 연결한다.
 - [x] 벽지·바닥 적용 API를 라우터에 연결한다.
 - [x] 가챠 API를 라우터에 연결한다.
-  - [x] `draw_count`를 1 또는 10으로 제한하고 10회 요청에 보너스 1회 결과를 추가한다.
+  - [x] `draw_count`를 1 또는 11로 제한하고 11회 요청에는 10회 비용만 부과한다.
   - [x] 응답의 `bonus_draw_count`로 1회와 10+1회 결과를 구분한다.
   - [ ] 확정된 비용·확률·중복 마일리지 정책을 운영 `GachaPolicy`로 주입한다.
 - [x] 가구 배치·수정·해제 API를 라우터에 연결한다.
@@ -343,17 +343,17 @@ git status
 
 ## 12. 최종 PostgreSQL 통합 검증
 
-- [ ] 빈 PostgreSQL DB에서 `alembic upgrade head`를 실행한다.
-- [ ] 전체 Pytest를 실행한다.
-- [ ] Ruff 검사를 실행한다.
-- [ ] 동일 멱등 요청의 동시 실행을 검증한다.
-- [ ] 다른 사용자의 동일 `request_id` 사용을 검증한다.
-- [ ] 가구 동시 배치를 검증한다.
-- [ ] 잔액 부족 시 전체 rollback을 검증한다.
-- [ ] 중복 고양이 mileage 처리 실패 시 전체 rollback을 검증한다.
-- [ ] 실행 결과 저장 실패 시 전체 rollback을 검증한다.
-- [ ] API 응답에 내부 정수 ID가 없는지 최종 검사한다.
-- [ ] `docs/architecture/part3-status.md`를 갱신한다.
+- [x] 빈 PostgreSQL DB에서 `alembic upgrade head`를 실행한다.
+- [x] 전체 Pytest를 실행한다.
+- [x] Ruff 검사를 실행한다.
+- [x] 동일 멱등 요청의 동시 실행을 검증한다.
+- [x] 다른 사용자의 동일 `request_id` 사용을 검증한다.
+- [x] 가구 동시 배치를 검증한다.
+- [x] 잔액 부족 시 전체 rollback을 검증한다.
+- [x] 중복 고양이 mileage 처리 실패 시 전체 rollback을 검증한다.
+- [x] 실행 결과 저장 실패 시 전체 rollback을 검증한다.
+- [x] API 응답에 내부 정수 ID가 없는지 최종 검사한다.
+- [x] `docs/architecture/part3-status.md`를 갱신한다.
 
 ```bash
 python -m pytest -q
@@ -369,6 +369,33 @@ python -m ruff check .
 
 - [ ] 최종 테스트와 상태 문서 갱신을 커밋했다.
 
+## 13. Gemini 생성형 AI 연동
+
+- [x] Google Gemini API와 안정 모델 `gemini-3.6-flash`를 선택한다.
+- [x] API 키, 모델, timeout, 출력 token과 기억 개수 제한을 환경 설정으로 분리한다.
+- [x] 실제 API 키를 `.env`에만 두고 `.env.example`에는 변수 이름만 남긴다.
+- [x] 공급자 중립 `AITextClient` Protocol과 Google SDK 어댑터를 분리한다.
+- [x] `POST /api/v1/cats/{cat_asset_public_id}/chat`을 인증과 소유권 검사에 연결한다.
+- [x] `ASSETS.cat_id`를 통해 DB의 `CATS.persona`를 읽어 system instruction에 넣는다.
+- [x] 최신 `CAT_MEMORIES` 최대 20개와 프런트 최근 대화 최대 10개를 문맥으로 사용한다.
+- [x] 답변과 선택적 장기 기억 요약을 한 번의 구조화 호출로 생성한다.
+- [x] 새 요약만 `CAT_MEMORIES`에 누적하고 원문 대화는 영구 저장하지 않는다.
+- [x] AI 호출 전에 조회 트랜잭션을 닫고 기억 저장 전 소유권을 다시 검사한다.
+- [x] 키 미설정, 무료 할당량 초과, timeout과 잘못된 AI 응답을 안전한 `503`으로 변환한다.
+- [x] 유료 모델이나 크레딧으로 자동 전환하지 않는다.
+- [x] 요청 길이·개수·role·추가 필드와 응답의 내부 ID 비노출을 테스트한다.
+- [x] 실제 Gemini 구조화 응답과 token metadata를 확인한다.
+- [x] 실제 HTTP와 PostgreSQL에서 persona·기존 기억 입력 및 새 기억 저장을 검증한다.
+- [x] 기존 ERD만 사용하며 Alembic 신규 upgrade가 없음을 확인한다.
+- [x] API 계약, 설계 문서와 상태 문서를 갱신한다.
+
+완료 기준:
+
+- 고양이별 고정 persona가 실제 모델 답변에 반영된다.
+- 장기 기억은 유용한 요약만 저장되고 원문·민감 정보는 저장하지 않는다.
+- 프런트 요청과 백엔드 응답이 공개 UUID 계약을 지킨다.
+- 공급자 장애가 내부 정보 노출이나 자동 유료 전환 없이 처리된다.
+
 ## 전체 진행 상태
 
 - [x] 0. 작업 브랜치 준비
@@ -377,10 +404,11 @@ python -m ruff check .
 - [x] 3. 요청 해시 공통 함수
 - [x] 4. Repository 계약과 Fake 구현
 - [x] 5. Unit of Work와 SQLAlchemy Repository
-- [ ] 6. 멱등성 실행 엔진
-- [ ] 7. 아이템 구매 및 벽지·바닥 적용
+- [x] 6. 멱등성 실행 엔진
+- [x] 7. 아이템 구매 및 벽지·바닥 적용
 - [x] 8. 고양이 가챠
 - [x] 9. 하우징 가구 배치
 - [x] 10. 고양이 AI 기억
 - [x] 11. FastAPI 라우터 연결
-- [ ] 12. 최종 PostgreSQL 통합 검증
+- [x] 12. 최종 PostgreSQL 통합 검증
+- [x] 13. Gemini 생성형 AI 연동

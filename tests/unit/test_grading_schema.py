@@ -23,6 +23,15 @@ def test_submission_rejects_user_id_and_blank_code():
         TaskAttemptCreate.model_validate(valid(submitted_code="  \n"))
 
 
+def test_submission_rejects_oversized_code_and_option() -> None:
+    with pytest.raises(ValidationError):
+        TaskAttemptCreate.model_validate(valid(submitted_code="x" * 32_769))
+    with pytest.raises(ValidationError):
+        TaskAttemptCreate.model_validate(
+            valid(submitted_code=None, selected_option="x" * 257)
+        )
+
+
 @pytest.mark.parametrize("context", ["RANKING", "ranking", "OTHER"])
 def test_submission_allows_only_current_contexts(context):
     with pytest.raises(ValidationError):

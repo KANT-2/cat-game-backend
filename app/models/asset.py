@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -11,6 +11,7 @@ class Asset(Base):
     cat_id: Mapped[int | None] = mapped_column(ForeignKey("cats.id"), nullable=True)
     item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_home: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         UniqueConstraint("user_id", "cat_id", name="uq_assets_user_cat"),
@@ -21,4 +22,5 @@ class Asset(Base):
         ),
         CheckConstraint("quantity > 0", name="ck_assets_quantity_positive"),
         CheckConstraint("cat_id IS NULL OR quantity = 1", name="ck_assets_cat_quantity_one"),
+        CheckConstraint("cat_id IS NOT NULL OR NOT is_home", name="ck_assets_home_cat_only"),
     )
