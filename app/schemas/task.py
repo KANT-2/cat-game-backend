@@ -1,6 +1,8 @@
 import uuid
 from random import SystemRandom
 
+from pydantic import BaseModel
+
 from app.models.concept import Concept
 from app.models.task import Task
 from app.schemas.base import ReadSchema
@@ -21,7 +23,21 @@ class TaskRead(ReadSchema):
     completed: bool = False
     reward_coins: int
 
-    # test_cases와 correct_option은 채점 전용 정보라 의도적으로 포함하지 않는다.
+    # test_cases and correct_option are grading-only fields, intentionally excluded.
+
+
+class TaskCreate(BaseModel):
+    concept_public_id: uuid.UUID
+    title: str
+    type: str  # "MULTIPLE_CHOICE" or "CODE"
+    domain: str
+    difficulty: str  # "BRONZE" / "SILVER" / "GOLD"
+    description: str
+    template_code: str = ""
+    options: dict[str, str] | None = None
+    hint_text: str | None = None
+    test_cases: list[dict] = []
+    correct_option: str | None = None
 
 
 def to_task_read(task: Task, concept: Concept, *, completed: bool = False) -> TaskRead:
