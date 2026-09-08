@@ -117,7 +117,7 @@
 - 비용·보상 개수·중복 마일리지 같은 정책 결과를 변경 전에 검증한다.
 - 잔액, mileage, 자산과 실행 결과를 하나의 UoW에서 변경하고 서비스가 한 번만 commit한다.
 - 스키마 테스트 4개와 서비스 테스트 14개를 포함한 전체 테스트가 `77 passed, 11 skipped, 1 warning`으로 통과했다.
-- 중간 실패의 실제 rollback과 동시 가챠 요청은 최종 PostgreSQL 통합 검증에 남아 있다.
+- 중간 실패의 실제 rollback과 동시 가챠 요청은 최종 PostgreSQL 통합 검증에서 통과했다.
 
 ### 11. 하우징 가구 배치 서비스 — 단위 구현 완료
 
@@ -190,9 +190,12 @@
 - 고양이 페르소나와 기억 목록의 공개 UUID DTO 직렬화
 - 보유 고양이별 기억 조회·누적·선택 삭제·전체 삭제, 소유권 차단과 시간순 정렬
 
-### 17. 고양이 페르소나와 대화 기억 서비스 — 단위 구현 완료
+### 17. 고양이 페르소나와 대화 기억 — FastAPI 연결 완료
 
 - 고양이의 고정 성격은 `CATS.persona`에서 읽으며 기억 삭제의 대상이 아니다.
+- 네 카탈로그 고양이의 이름과 페르소나는 프런트 캐릭터인 포근이·먹구름·모카·호박이와 일치한다.
+- 게임 스냅샷은 원본 `public_id`와 별도로 보유 자산의 `cat_asset_public_id`를 반환해 프런트가
+  선택한 고양이의 기억 API를 안전하게 호출할 수 있다. 미보유 고양이는 `null`을 반환한다.
 - `get_cat_conversation_context()`는 보유 고양이 자산 UUID로 이름, 페르소나와 누적 기억을 반환한다.
 - 기억 목록은 `created_at`, `id` 오름차순으로 정렬하고 내부 정수 ID를 응답에 노출하지 않는다.
 - `add_cat_memory()`는 기존 기억을 덮어쓰지 않고 새 `CAT_MEMORIES` 행을 추가하며 공백 요약을 거부한다.
@@ -200,21 +203,100 @@
 - `delete_all_cat_memories()`는 지정한 고양이 자산의 기억 행만 일괄 삭제한다.
 - 모든 경로에서 인증 사용자의 소유권과 고양이 자산 여부를 검사하며, 다른 사용자의 자산은 찾을 수 없는 것으로 처리한다.
 - Repository는 조회·추가·삭제만 수행하고 서비스가 Unit of Work를 통해 commit한다.
-- 전체 단위 회귀 검사 결과는 `143 passed, 13 skipped, 1 warning`이며 Ruff와 `git diff --check`도 통과했다.
-- 실제 HTTP 엔드포인트와 예외 상태 코드 매핑은 FastAPI 라우터 단계에 남아 있다.
+- `GET /api/v1/cats/{cat_asset_public_id}/conversation-context`는 고양이 이름, 고정 페르소나와 누적 기억을 반환한다.
+- `POST /api/v1/cats/{cat_asset_public_id}/memories`는 새 기억을 누적하고 `201 Created`를 반환한다.
+- 선택 삭제와 전체 삭제는 각각 기억 공개 UUID 포함 경로와 고양이 자산의 memories 경로에서 빈 `204 No Content`를 반환한다.
+- 모든 경로는 `CurrentUser`와 공개 UUID만 사용하며 소유권·리소스 오류는 `404`, 공백 요약과 요청 검증 오류는 `422`로 변환한다.
+- `CatMemoryCreate`는 알 수 없는 필드를 거부하고 OpenAPI 응답 스키마는 내부 정수 ID를 포함하지 않는다.
+- 요청 헤더, 경로 변수, JSON 본문, 성공 응답과 오류 형식의 예시는 `part3-integration-contract.md`의 고양이 페르소나·기억 FastAPI 계약에 기록했다.
+- 브라우저 클라이언트가 기억 삭제를 호출할 수 있도록 CORS 허용 메서드에 `DELETE`를 추가했다.
+- 관련 API·서비스·스키마·CORS 테스트는 `44 passed`, 전체 회귀 검사는 `171 passed, 13 skipped, 1 warning`이다.
+- 전체 Ruff와 `git diff --check`도 통과했다. 남은 경고는 기존 TestClient/httpx deprecation 경고다.
 
-다음 Part 3 검증은 기능 구현과 함께 추가해야 한다.
+### 18. 나머지 Part 3 API — FastAPI 연결 완료
 
-- 동일 요청 동시 재시도와 PostgreSQL 행 잠금
-- PostgreSQL에서 다른 사용자의 동일 `request_id` 사용
-- 동시 가구 배치 및 자산 행 잠금
-- 잔액, 마일리지, 자산, 실행 결과의 원자적 롤백
+- `POST /api/v1/shop/purchases`를 구매 서비스에 연결하고 성공 `201`, 리소스 `404`, 멱등 충돌·잔액 부족 `409`, 수량 검증 `422`를 적용했다.
+- `PUT /api/v1/housing/surfaces/{item_public_id}`를 벽지·바닥 적용 서비스에 연결하고 성공 `200`, 리소스 `404`, 카테고리 검증 `422`를 적용했다.
+- `POST /api/v1/housing/placed-objects`, `PATCH`·`DELETE /api/v1/housing/placed-objects/{placed_object_public_id}`를 배치·수정·해제 서비스에 연결했다. 생성은 `201`, 수정은 `200`, 삭제는 빈 `204`이며 리소스 `404`, 수량 초과 `409`, 입력·카테고리 오류 `422`를 사용한다.
+- `POST /api/v1/gacha/draws`를 가챠 서비스에 연결하고 리소스 `404`, 멱등 충돌·잔액 부족 `409`, 수량 검증 `422`를 적용했다.
+- 모든 새 API는 `CurrentUser`, 공개 UUID와 Unit of Work를 사용하고 응답 모델에 내부 정수 ID를 선언하지 않는다.
+- 구매·가챠 요청과 가구 좌표 요청은 알 수 없는 필드를 거부한다.
+- 브라우저 호출을 위해 CORS 허용 메서드에 `PUT`, `PATCH`, `DELETE`를 포함했다.
+- 가챠 비용·확률·중복 마일리지는 아직 확정되지 않았다. 따라서 기본 `get_gacha_policy()`는 `503 Service Unavailable`을 반환하며, 확정 정책을 주입한 환경과 테스트에서만 추첨을 실행한다.
+- 가챠 요청은 프런트의 별도 `1회 뽑기`, `10+1회 뽑기` 버튼에 맞춰 `draw_count`를 `1` 또는 `11`로 제한한다.
+- `draw_count=11`은 10회 비용만 계산하고 `bonus_draw_count=1`, 결과 11개를 반환한다. `draw_count=1`은 보너스 없이 결과 한 개다.
+- 중복된 `test_router.py` 모듈명 때문에 전체 Pytest 수집 충돌이 발생해 기능별 테스트 파일을 `test_cats_router.py`, `test_shop_router.py`, `test_housing_router.py`, `test_gacha_router.py`로 구분했다.
+- `draw_count=1/11` 계약과 최신 `origin/main`을 포함한 최종 전체 검증 결과는 Ruff 통과, `277 passed, 5 skipped, 1 warning`이다. 5개 skip은 전체 검사 당시 별도 SQL grader PostgreSQL이 실행 중이지 않아 생겼으며, 같은 테스트를 전용 환경에서 별도로 모두 통과시켰다. 경고는 기존 TestClient/httpx deprecation이다.
+- 인증 보조 API를 포함한 Frontend ↔ Backend 전체 요약표, 요청·응답 필드와 오류 상태는 `part3-integration-contract.md`에 기록했다.
 
-## 권장 작업 순서
+### 19. 고양이 도감 API — 완료
 
-1. FastAPI 라우터와 예외 매핑
-2. 고양이 기억 조회·추가·선택 삭제·전체 삭제 API
-3. PostgreSQL 동시성 및 rollback 통합 테스트
+- `GET /api/v1/cats/collection`이 전체 고양이 마스터와 인증 사용자의 보유 고양이 자산을 조합해 반환한다.
+- 응답은 `total_count`, `owned_count`, `cats`를 포함하고 각 항목은 `cat_public_id`, nullable `cat_asset_public_id`, `name`, `persona`, `rarity`, `is_owned`만 노출한다.
+- 보유한 고양이에만 `cat_asset_public_id`를 제공해 프런트엔드가 대화 컨텍스트 API로 연결할 수 있다.
+- `CatRepository.list_all()`은 마스터 등록 순서를 보장하고 `AssetRepository.list_cat_assets_by_user_id()`는 인증 사용자의 고양이 자산만 조회한다.
+- 도감은 읽기 전용이며 Repository는 조회만 수행하고 서비스는 commit하지 않는다.
+- 인증되지 않은 요청은 `401`, 서비스의 사용자 부재는 `404`로 변환한다.
+- 페이지네이션, 검색, 희귀도 필터와 이미지 URL은 현재 데이터·프런트 계약에 없어 임의로 추가하지 않았다.
+- 도감 Repository·서비스·라우터 대상 검증은 `61 passed, 1 warning`으로 통과했다.
+
+### 20. 최종 PostgreSQL 통합 검증 — 완료
+
+- 빈 PostgreSQL 16 데이터베이스에서 전체 Alembic 마이그레이션의 downgrade와 `upgrade head`를 검증했다.
+- 현재 Alembic revision은 `8a91c3d4e5f6 (head)`이다.
+- 실제 PostgreSQL에서 구매 중간 실패 rollback, 동일 구매 요청의 동시 재시도, 서로 다른 구매·가챠 요청의 잔액 초과 방지를 검증했다.
+- 서로 다른 사용자의 동일 `request_id` 사용이 충돌로 처리되고 두 번째 사용자의 잔액과 자산이 변경되지 않는 것을 검증했다.
+- 구매·표면 적용의 공통 사용자 잠금 순서와 동시 가구 배치의 보유 수량 초과 방지를 검증했다.
+- 중복 고양이 마일리지 처리 후 실행 결과 저장이 실패하면 마일리지, 자산과 실행 기록이 모두 rollback되는 것을 검증했다.
+- 실제 HTTP 요청으로 구매 멱등성, 가챠 정책 미설정 `503`, 가구 배치·수정·해제, 벽지·바닥 적용, 고양이 도감·대화 컨텍스트·기억 추가·선택 삭제·전체 삭제를 검증했다.
+- HTTP 응답에는 공개 UUID만 포함되며 내부 정수 ID가 노출되지 않는 것을 검증했다.
+- Part 3 PostgreSQL 통합 테스트 결과는 `28 passed, 1 warning`이다.
+- 별도 SQL grader PostgreSQL 환경의 SQL sandbox 검증은 `5 passed`이다.
+- 최신 `origin/main`을 fast-forward로 반영한 뒤 전체 Ruff 검사가 통과했다.
+- 최신 `main` 통합 후 전체 회귀 검사 결과는 `277 passed, 5 skipped, 1 warning`이다. 5개 skip은 전체 검사 당시 별도 SQL grader 데이터베이스가 실행 중이지 않아 생겼으며, 같은 테스트를 전용 환경에서 별도로 모두 통과시켰다.
+- 남은 경고는 기존 FastAPI TestClient와 httpx 호환성 deprecation 경고다.
+
+### 21. Gemini 고양이 대화 API — 완료
+
+- 공급자는 Google Gemini API, 기본 모델은 무료 등급의 `gemini-3.6-flash`다.
+- `google-genai` SDK 타입은 `app/integrations/ai`에 격리하고 고양이 서비스는 `AITextClient` Protocol에 의존한다.
+- `POST /api/v1/cats/{cat_asset_public_id}/chat`은 현재 메시지와 최근 대화 최대 10개를 받아 답변, 선택적 새 기억과 token 사용량을 반환한다.
+- 서비스는 현재 사용자 소유권을 확인한 뒤 `ASSETS.cat_id`로 `CATS.name`과 고정 `CATS.persona`를 DB에서 직접 읽는다. 프런트가 persona를 요청에 넣거나 변경하지 않는다.
+- 고정 persona와 최신 `CAT_MEMORIES` 최대 20개를 system instruction에 넣고, 최근 대화와 현재 메시지는 Gemini message로 전달한다.
+- 한 번의 구조화 호출에서 `reply`와 nullable `memory_summary`를 함께 생성해 무료 token 사용과 지연을 줄인다.
+- 새 요약이 기존 기억과 정확히 중복되지 않을 때만 `CAT_MEMORIES`에 누적한다. 대화 원문은 DB에 저장하지 않고 프런트가 최근 문맥을 임시 보관한다.
+- 외부 AI 호출 전에 조회 Unit of Work를 닫고, 기억 저장이 필요하면 새 Unit of Work에서 소유권을 다시 확인한다. 따라서 네트워크 대기 중 DB 트랜잭션을 점유하지 않는다.
+- API 키 누락, 무료 할당량 초과, timeout, 공급자 오류와 유효하지 않은 구조화 응답은 내부 정보를 숨긴 `503`으로 처리하며 유료 모델로 자동 전환하지 않는다.
+- 메시지 길이, 최근 대화 개수·role과 추가 필드는 Pydantic에서 검증하며 API 응답에는 내부 INTEGER ID가 없다.
+- 실제 Gemini 호출에서 persona가 반영된 한국어 고양이 말투의 반복문 답변을 받았고 input 217, output 134 token을 확인했다.
+- 실제 HTTP·PostgreSQL 통합 테스트에서 DB persona와 기존 기억이 프롬프트에 포함되고 새 기억 행이 commit되는 것을 확인했다.
+- AI 전용 계약·어댑터·서비스·라우터·스키마 및 PostgreSQL HTTP 검사는 `19 passed, 2 warnings`, 전체 회귀 검사는 `296 passed, 5 skipped, 2 warnings`다.
+- 기존 `CATS`, `ASSETS`, `CAT_MEMORIES` 구조만 사용하며 `alembic check` 결과 `No new upgrade operations detected.`이므로 ERD와 마이그레이션 변경은 없다.
+- 5개 skip은 기존 SQL grader 전용 PostgreSQL이 실행 중이지 않아 생긴 선택형 skip이다. 경고는 기존 TestClient/httpx와 `google-genai 2.22.0`의 Python 3.14 내부 API deprecation이다.
+- 자세한 데이터 흐름과 실패·비용 정책은 `docs/architecture/cat-ai-integration.md`, 프런트 요청·응답 계약은 `docs/api/README.md`에 기록했다.
+
+### 22. 테마 가구와 긍정적 돌봄 간식 — 완료
+
+- `asset/background-items`의 전체 원본을 대조해 숲·골목·실내·책상·바다 테마별 러그, 캣타워, 숨숨집,
+  스크래처, 화장실과 벤치의 서로 다른 변형 57종을 정적 게임 카탈로그에 추가했다.
+- 장식 카테고리는 자연물, 골목 소품, 실내 고양이 용품까지 22종으로 확장했다.
+- 연어 큐브, 닭가슴살 스트립, 캣닢 비스킷, 참치 크림 수프를 `CONSUMABLE` 상품으로 추가했다.
+- `POST /api/v1/game/consumables/use`는 보유 고양이와 간식을 검증하고 수량 한 개를 멱등하게 차감한 뒤 전체 스냅샷을 반환한다.
+- 간식 차감, 실행 완료 결과와 `state_version` 증가는 한 트랜잭션에서 커밋된다. 마지막 수량은 자산 행을 삭제해 DB의 양수 수량 제약을 유지한다.
+- 간식 효과는 화면의 긍정적 반응만 지정하며 허기, 방치 패널티, 능력치나 학습 보상을 만들지 않는다.
+- 카탈로그 구조가 확장되어 게임 스냅샷의 `catalog_version`을 2로 올렸다.
+
+## 남은 정책 작업
+
+1. 가챠 비용·확률·중복 마일리지 정책 확정 및 운영 `GachaPolicy` 주입
+2. 일일 보상액, 배틀 정답 점수와 Part 2 일반 학습 보상·직접 문제 선택의 MVP 포함 여부 확정
+
+## 프런트엔드 학습 연결 기반
+
+- 로컬 브라우저 개발용 세션 발급과 `X-User-Public-ID` 사용자 조회를 추가했다.
+- 운영 환경에서는 개발 세션을 404로 숨기고 임시 UUID 헤더를 인증으로 사용하지 않는다.
+- `CORS_ORIGINS`로 PWA 개발 origin을 명시적으로 허용한다.
+- 추천 과제 응답에 `concept_name`을 추가해 클라이언트가 내부 개념 ID 없이 필터를 구성할 수 있다.
 
 ## 웹 작업 시작 프롬프트
 

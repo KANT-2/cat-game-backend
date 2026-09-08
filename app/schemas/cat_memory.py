@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime
 from typing import Protocol
 
+from pydantic import BaseModel, ConfigDict
+
 from app.schemas.base import ReadSchema
 
 
@@ -9,6 +11,12 @@ class _CatMemoryReadSource(Protocol):
     public_id: uuid.UUID
     context_summary: str
     created_at: datetime
+
+
+class CatMemoryCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    context_summary: str
 
 
 class CatMemoryRead(ReadSchema):

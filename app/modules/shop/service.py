@@ -4,6 +4,7 @@ from app.core.exceptions import (
     IdempotencyConflictError,
     InsufficientBalanceError,
     InvalidQuantityError,
+    ItemAlreadyOwnedError,
     ResourceNotFoundError,
 )
 from app.core.repository_contracts import ClaimStatus
@@ -38,6 +39,10 @@ def purchase_item(
         if user is None:
             raise ResourceNotFoundError("user not found")
 
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
+            raise ResourceNotFoundError("user not found")
+
         claim = uow.executions.claim(
             user_id=user.id,
             request_id=request_id,
@@ -47,7 +52,7 @@ def purchase_item(
         )
         if claim.status == ClaimStatus.HASH_CONFLICT:
             raise IdempotencyConflictError("request_id conflict")
-        
+
         if claim.status == ClaimStatus.COMPLETED:
             result_data = claim.execution.result_data
             if result_data is None:
@@ -55,14 +60,14 @@ def purchase_item(
 
             return dict(result_data)
 
-
         item = uow.items.get_by_public_id(item_public_id)
         if item is None:
             raise ResourceNotFoundError("item not found")
 
-        locked_user = uow.users.get_for_update(user.id)
-        if locked_user is None:
-            raise ResourceNotFoundError("user not found")
+        if item.category == "WALLPAPER":
+            owned_asset = uow.assets.get_item_asset_for_update(locked_user.id, item.id)
+            if owned_asset is not None and owned_asset.quantity > 0:
+                raise ItemAlreadyOwnedError("item already owned")
 
         balance_cost = item.price * quantity
         if locked_user.balance < balance_cost:
@@ -90,6 +95,7 @@ def purchase_item(
             balance_cost=balance_cost,
             result_data=result_data,
         )
+        locked_user.advance_state_version()
         uow.commit()
 
         return result_data

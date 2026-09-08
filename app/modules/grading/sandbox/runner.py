@@ -1,5 +1,6 @@
 import json
 import subprocess
+import tempfile
 import threading
 import uuid
 from dataclasses import dataclass
@@ -7,6 +8,11 @@ from enum import StrEnum
 
 from app.core.config import settings
 from app.modules.grading.test_cases import TestCase
+
+try:
+    import resource
+except ImportError:  # Windows can still run API/unit tests; production grading is Linux-only.
+    resource = None  # type: ignore[assignment]
 
 
 class Verdict(StrEnum):
@@ -16,6 +22,7 @@ class Verdict(StrEnum):
     RUNTIME_ERROR = "RUNTIME_ERROR"
     TIMEOUT = "TIMEOUT"
     OUTPUT_LIMIT = "OUTPUT_LIMIT"
+    MEMORY_LIMIT = "MEMORY_LIMIT"
     SYSTEM_ERROR = "SYSTEM_ERROR"
 
 
@@ -40,34 +47,63 @@ class DockerSandbox:
         self._slots = threading.BoundedSemaphore(settings.grading_max_concurrency)
 
     def grade(self, code: str, cases: list[TestCase]) -> GradeResult:
-        payload = json.dumps({"code": code, "test_cases": [c.__dict__ for c in cases]})
+        payload = json.dumps(
+            {
+                "code": code,
+                "test_cases": [c.__dict__ for c in cases],
+                "output_limit_bytes": settings.grading_output_bytes,
+            }
+        )
         container_name = f"cat-grader-{uuid.uuid4().hex}"
         command = [
-            "docker", "run", "--rm", "--name", container_name,
-            "--interactive", "--network", "none",
-            "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
-            "--memory", settings.grading_memory, "--cpus", str(settings.grading_cpus),
-            "--pids-limit", str(settings.grading_pids_limit), "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges:true", "--user", "sandbox",
+            "docker",
+            "run",
+            "--rm",
+            "--name",
+            container_name,
+            "--interactive",
+            "--network",
+            "none",
+            "--read-only",
+            "--tmpfs",
+            "/tmp:rw,noexec,nosuid,size=16m",
+            "--memory",
+            settings.grading_memory,
+            "--cpus",
+            str(settings.grading_cpus),
+            "--pids-limit",
+            str(settings.grading_pids_limit),
+            "--cap-drop",
+            "ALL",
+            "--security-opt",
+            "no-new-privileges:true",
+            "--user",
+            "sandbox",
             settings.grading_image,
         ]
         with self._slots:
             try:
-                completed = subprocess.run(
-                    command, input=payload, text=True, capture_output=True,
-                    timeout=settings.grading_timeout_seconds, check=False,
+                completed, output_exceeded = _run_capped(
+                    command,
+                    payload,
+                    timeout=settings.grading_timeout_seconds,
+                    output_limit=settings.grading_output_bytes,
                 )
             except subprocess.TimeoutExpired:
-                subprocess.run(
-                    ["docker", "rm", "--force", container_name],
-                    capture_output=True, check=False,
-                )
+                _remove_container(container_name)
                 return GradeResult(Verdict.TIMEOUT, total=len(cases), detail="time limit exceeded")
             except (OSError, subprocess.SubprocessError) as exc:
                 return GradeResult(Verdict.SYSTEM_ERROR, total=len(cases), detail=str(exc))
+        if output_exceeded:
+            _remove_container(container_name)
+            return GradeResult(
+                Verdict.OUTPUT_LIMIT, total=len(cases), detail="output limit exceeded"
+            )
+        if completed.returncode == 137:
+            return GradeResult(
+                Verdict.MEMORY_LIMIT, total=len(cases), detail="memory limit exceeded"
+            )
         combined = completed.stdout + completed.stderr
-        if len(combined.encode()) > settings.grading_output_bytes:
-            return GradeResult(Verdict.OUTPUT_LIMIT, total=len(cases), detail="output limit exceeded")
         if completed.returncode != 0:
             return GradeResult(Verdict.SYSTEM_ERROR, total=len(cases), detail=combined[-1000:])
         try:
@@ -76,7 +112,59 @@ class DockerSandbox:
                 Verdict(data["verdict"]), data.get("passed", 0), len(cases), data.get("detail")
             )
         except (KeyError, ValueError, json.JSONDecodeError) as exc:
-            return GradeResult(Verdict.SYSTEM_ERROR, total=len(cases), detail=f"invalid runner result: {exc}")
+            return GradeResult(
+                Verdict.SYSTEM_ERROR, total=len(cases), detail=f"invalid runner result: {exc}"
+            )
+
+
+def _run_capped(
+    command: list[str],
+    payload: str,
+    *,
+    timeout: float,
+    output_limit: int,
+) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run Docker with regular-file output caps so pipes cannot exhaust worker memory."""
+    with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
+        preexec_fn = None
+        if resource is not None:
+
+            def limit_output_file() -> None:
+                resource.setrlimit(resource.RLIMIT_FSIZE, (output_limit, output_limit))
+
+            preexec_fn = limit_output_file
+        completed = subprocess.run(
+            command,
+            input=payload.encode(),
+            stdout=stdout_file,
+            stderr=stderr_file,
+            timeout=timeout,
+            check=False,
+            preexec_fn=preexec_fn,
+        )
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        stdout_bytes = stdout_file.read(output_limit + 1)
+        stderr_bytes = stderr_file.read(output_limit + 1)
+    output_exceeded = len(stdout_bytes) + len(stderr_bytes) >= output_limit
+    return (
+        subprocess.CompletedProcess(
+            completed.args,
+            completed.returncode,
+            stdout_bytes.decode(errors="replace"),
+            stderr_bytes.decode(errors="replace"),
+        ),
+        output_exceeded,
+    )
+
+
+def _remove_container(container_name: str) -> None:
+    subprocess.run(
+        ["docker", "rm", "--force", container_name],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
 
 
 sandbox = DockerSandbox()

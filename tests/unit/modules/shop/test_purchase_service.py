@@ -6,6 +6,7 @@ import pytest
 from app.core.exceptions import (
     ApplicationError,
     IdempotencyConflictError,
+    ItemAlreadyOwnedError,
     ResourceNotFoundError,
 )
 from app.models.asset import Asset
@@ -73,6 +74,7 @@ def test_purchase_item_updates_everything_in_one_transaction() -> None:
     }
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_purchase_item_reuses_result_without_charging_twice() -> None:
     user = User(
         id=1,
@@ -122,6 +124,7 @@ def test_purchase_item_reuses_result_without_charging_twice() -> None:
     assert asset is not None
     assert asset.quantity == 2
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_purchase_item_rejects_same_request_id_with_different_quantity() -> None:
     user = User(
@@ -173,6 +176,7 @@ def test_purchase_item_rejects_same_request_id_with_different_quantity() -> None
     assert asset is not None
     assert asset.quantity == 1
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_purchase_item_rejects_same_request_id_from_different_user() -> None:
     first_user = User(
@@ -244,6 +248,7 @@ def test_purchase_item_rejects_same_request_id_from_different_user() -> None:
     assert second_asset is None
     unit_of_work.commit.assert_called_once_with()
 
+
 def test_purchase_item_rejects_insufficient_balance() -> None:
     user = User(
         id=1,
@@ -284,6 +289,7 @@ def test_purchase_item_rejects_insufficient_balance() -> None:
     assert user.balance == 100
     assert asset is None
     unit_of_work.commit.assert_not_called()
+
 
 @pytest.mark.parametrize("quantity", [0, -1])
 def test_purchase_item_rejects_nonpositive_quantity(quantity: int) -> None:
@@ -326,6 +332,7 @@ def test_purchase_item_rejects_nonpositive_quantity(quantity: int) -> None:
     assert unit_of_work.executions.executions == {}
     unit_of_work.commit.assert_not_called()
 
+
 def test_purchase_item_rejects_missing_user() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
@@ -343,6 +350,7 @@ def test_purchase_item_rejects_missing_user() -> None:
 
     assert unit_of_work.executions.executions == {}
     unit_of_work.commit.assert_not_called()
+
 
 def test_purchase_item_rejects_missing_item() -> None:
     user = User(
@@ -375,6 +383,7 @@ def test_purchase_item_rejects_missing_item() -> None:
     assert user.balance == 1000
     assert unit_of_work.assets.assets == []
     unit_of_work.commit.assert_not_called()
+
 
 def test_purchase_item_adds_quantity_to_existing_asset() -> None:
     user = User(
@@ -423,4 +432,62 @@ def test_purchase_item_adds_quantity_to_existing_asset() -> None:
     assert existing_asset.quantity == 5
     assert result["purchased_quantity"] == 2
     assert result["total_quantity"] == 5
+    unit_of_work.commit.assert_called_once_with()
+
+
+def test_purchase_item_replays_wallpaper_purchase_but_rejects_a_new_purchase() -> None:
+    user = User(
+        id=1,
+        public_id=uuid.uuid4(),
+        email="wallpaper@example.com",
+        username="wallpaper-user",
+        role="STUDENT",
+        balance=1000,
+        mileage=0,
+        house_level=1,
+    )
+    item = Item(
+        id=10,
+        public_id=uuid.uuid4(),
+        category="WALLPAPER",
+        name="Forest Clearing",
+        price=150,
+    )
+    request_id = uuid.uuid4()
+    unit_of_work = MagicMock()
+    unit_of_work.__enter__.return_value = unit_of_work
+    unit_of_work.users = FakeUserRepository([user])
+    unit_of_work.items = FakeItemRepository([item])
+    unit_of_work.assets = FakeAssetRepository()
+    unit_of_work.executions = FakeExecutionRepository()
+
+    first_result = purchase_item(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+        request_id=request_id,
+        item_public_id=item.public_id,
+        quantity=1,
+    )
+    replayed_result = purchase_item(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+        request_id=request_id,
+        item_public_id=item.public_id,
+        quantity=1,
+    )
+
+    with pytest.raises(ItemAlreadyOwnedError, match="item already owned"):
+        purchase_item(
+            unit_of_work=unit_of_work,
+            user_public_id=user.public_id,
+            request_id=uuid.uuid4(),
+            item_public_id=item.public_id,
+            quantity=1,
+        )
+
+    asset = unit_of_work.assets.get_item_asset_for_update(user.id, item.id)
+    assert replayed_result == first_result
+    assert user.balance == 850
+    assert asset is not None
+    assert asset.quantity == 1
     unit_of_work.commit.assert_called_once_with()

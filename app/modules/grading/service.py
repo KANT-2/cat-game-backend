@@ -1,25 +1,45 @@
 import json
+import logging
 import uuid
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
+from app.models.room import Room
 from app.models.room_participant import RoomParticipant
 from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
+from app.models.task_completion import TaskCompletion
 from app.models.user import User
-from app.modules.grading.runners import dispatcher
+from app.modules.battle.service import record_attempt_result
+from app.modules.grading.runners import TaskRunner, dispatcher
+from app.modules.grading.sandbox.runner import GradeResult, Verdict
 from app.modules.grading.test_cases import TestCaseSpecError
 from app.modules.learning.proficiency import update_proficiency
 from app.schemas.task_attempt import TaskAttemptCreate
 
+logger = logging.getLogger(__name__)
+
 
 class SubmissionError(ValueError):
     pass
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptLease:
+    """Public attempt identifier and opaque lease required to persist one grading result."""
+
+    public_id: uuid.UUID
+    token: uuid.UUID
 
 
 def _by_public_id(db: Session, model, public_id: uuid.UUID):
@@ -40,73 +60,238 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
     attendance_task = room_task = None
     if payload.context_type == "DAILY":
         attendance_task = _by_public_id(db, AttendanceTask, payload.attendance_task_public_id)
-        owned = attendance_task and db.scalar(select(Attendance.id).where(
-            Attendance.id == attendance_task.attendance_id, Attendance.user_id == user.id
-        ))
-        if not owned or attendance_task.task_id != task.id:
+        owned = attendance_task and db.scalar(
+            select(Attendance.id).where(
+                Attendance.id == attendance_task.attendance_id,
+                Attendance.user_id == user.id,
+                Attendance.check_in_date == datetime.now(ZoneInfo(settings.game_timezone)).date(),
+            )
+        )
+        if not owned or attendance_task.task_id != task.id or attendance_task.is_completed:
             raise SubmissionError("daily task not found")
     elif payload.context_type == "BATTLE":
         room_task = _by_public_id(db, RoomTask, payload.room_task_public_id)
-        participant = room_task and db.scalar(select(RoomParticipant.id).where(
-            RoomParticipant.room_id == room_task.room_id, RoomParticipant.user_id == user.id
-        ))
+        participant = room_task and db.scalar(
+            select(RoomParticipant.id)
+            .join(Room, Room.id == RoomParticipant.room_id)
+            .where(
+                RoomParticipant.room_id == room_task.room_id,
+                RoomParticipant.user_id == user.id,
+                Room.status == "RUNNING",
+            )
+        )
         if not participant or room_task.task_id != task.id:
             raise SubmissionError("battle task not found")
+    locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
+    if locked_user is None:
+        raise SubmissionError("user not found")
     attempt = TaskAttempt(
-        user_id=user.id, task_id=task.id,
+        user_id=user.id,
+        task_id=task.id,
         attendance_task_id=attendance_task.id if attendance_task else None,
         room_task_id=room_task.id if room_task else None,
         context_type=payload.context_type,
         submitted_code=payload.submitted_code or payload.selected_option,
-        used_hint=payload.used_hint, status="PENDING", is_correct=None,
+        used_hint=payload.used_hint,
+        status="PENDING",
+        is_correct=None,
     )
     db.add(attempt)
+    locked_user.advance_state_version()
     db.commit()
     db.refresh(attempt)
     return attempt
 
 
-def _finish(db, attempt, is_correct, status, verdict, detail=None):
-    attempt.status = status
-    attempt.is_correct = is_correct
-    attempt.result_detail = json.dumps({"verdict": str(verdict), "detail": detail})
-    db.commit()
-
-
-def grade_attempt(attempt_public_id: uuid.UUID) -> None:
+def claim_next_attempt(now: datetime | None = None) -> AttemptLease | None:
+    """Atomically lease the oldest pending or expired-running attempt for one worker."""
     db = SessionLocal()
     try:
-        attempt = _by_public_id(db, TaskAttempt, attempt_public_id)
-        if attempt is None or attempt.status != "PENDING":
-            return
-        attempt.status = "RUNNING"
-        db.commit()
-        task = db.get(Task, attempt.task_id)
-        try:
-            result = dispatcher.for_task(task).grade(task, attempt.submitted_code)
-        except TestCaseSpecError as exc:
-            _finish(db, attempt, None, "FAILED", "TEST_CASE_SPEC_ERROR", str(exc))
-            return
-        status = "FAILED" if result.is_system_failure else "COMPLETED"
-        is_correct = None if result.is_system_failure else result.is_correct
-        attempt.status = status
-        attempt.is_correct = is_correct
-        attempt.result_detail = json.dumps({"verdict": str(result.verdict), "detail": result.detail})
-        if is_correct is not None:
-            update_proficiency(db, attempt.user_id, task.concept_id)
-        if is_correct and attempt.context_type == "DAILY":
-            db.get(AttendanceTask, attempt.attendance_task_id).is_completed = True
-        db.commit()
-    except Exception as exc:  # noqa: BLE001 - background boundary must persist FAILED
-        db.rollback()
-        attempt = _by_public_id(db, TaskAttempt, attempt_public_id)
-        if attempt:
-            _finish(db, attempt, None, "FAILED", "SYSTEM_ERROR", str(exc))
+        claimed_at = now or datetime.now(UTC)
+        attempt = db.scalar(
+            select(TaskAttempt)
+            .where(_claimable_at(claimed_at))
+            .order_by(TaskAttempt.attempted_at, TaskAttempt.id)
+            .with_for_update(skip_locked=True)
+            .limit(1)
+        )
+        if attempt is None:
+            return None
+        return _lease(db, attempt, claimed_at)
     finally:
         db.close()
 
 
+def claim_attempt(attempt_public_id: uuid.UUID, now: datetime | None = None) -> AttemptLease | None:
+    """Lease one specific pending or expired-running attempt for maintenance."""
+    db = SessionLocal()
+    try:
+        claimed_at = now or datetime.now(UTC)
+        attempt = db.scalar(
+            select(TaskAttempt)
+            .where(TaskAttempt.public_id == attempt_public_id, _claimable_at(claimed_at))
+            .with_for_update()
+        )
+        if attempt is None:
+            return None
+        return _lease(db, attempt, claimed_at)
+    finally:
+        db.close()
+
+
+def _claimable_at(claimed_at: datetime):
+    expired_before = claimed_at - timedelta(seconds=settings.grading_lease_seconds)
+    return or_(
+        TaskAttempt.status == "PENDING",
+        and_(
+            TaskAttempt.status == "RUNNING",
+            or_(
+                TaskAttempt.grading_started_at.is_(None),
+                TaskAttempt.grading_started_at < expired_before,
+            ),
+        ),
+    )
+
+
+def _lease(db: Session, attempt: TaskAttempt, claimed_at: datetime) -> AttemptLease:
+    token = uuid.uuid4()
+    attempt.status = "RUNNING"
+    attempt.grading_started_at = claimed_at
+    attempt.grading_lease_token = token
+    db.commit()
+    return AttemptLease(public_id=attempt.public_id, token=token)
+
+
+def grade_claimed_attempt(lease: AttemptLease, runner: TaskRunner | None = None) -> bool:
+    """Grade one leased attempt and persist a result only while its lease remains current."""
+    db = SessionLocal()
+    try:
+        attempt = db.scalar(
+            select(TaskAttempt).where(
+                TaskAttempt.public_id == lease.public_id,
+                TaskAttempt.status == "RUNNING",
+                TaskAttempt.grading_lease_token == lease.token,
+            )
+        )
+        if attempt is None:
+            return False
+        task = db.get(Task, attempt.task_id)
+        if task is None:
+            grade_result = GradeResult(Verdict.SYSTEM_ERROR)
+        else:
+            grade_result = _run_safely(lease.public_id, runner, task, attempt)
+        return _persist_result(db, lease, task, grade_result)
+    except Exception:  # noqa: BLE001 - an expired lease is retried by a worker
+        db.rollback()
+        logger.error("grading result persistence failed for attempt %s", lease.public_id)
+        return False
+    finally:
+        db.close()
+
+
+def _run_safely(
+    attempt_public_id: uuid.UUID,
+    runner: TaskRunner | None,
+    task: Task,
+    attempt: TaskAttempt,
+) -> GradeResult:
+    try:
+        return (runner or dispatcher.for_task(task)).grade(task, attempt.submitted_code)
+    except TestCaseSpecError:
+        return GradeResult(Verdict.SYSTEM_ERROR)
+    except Exception:  # noqa: BLE001 - worker boundary converts failures to a safe verdict
+        logger.error("grading runner failed for attempt %s", attempt_public_id)
+        return GradeResult(Verdict.SYSTEM_ERROR)
+
+
+def _persist_result(
+    db: Session,
+    lease: AttemptLease,
+    task: Task | None,
+    result: GradeResult,
+) -> bool:
+    db.rollback()
+    attempt = db.scalar(
+        select(TaskAttempt)
+        .where(
+            TaskAttempt.public_id == lease.public_id,
+            TaskAttempt.status == "RUNNING",
+            TaskAttempt.grading_lease_token == lease.token,
+        )
+        .with_for_update()
+    )
+    if attempt is None:
+        return False
+    is_correct = None if result.is_system_failure else result.is_correct
+    attempt.status = "FAILED" if result.is_system_failure else "COMPLETED"
+    attempt.is_correct = is_correct
+    attempt.result_detail = json.dumps(_public_result(result))
+    attempt.grading_started_at = None
+    attempt.grading_lease_token = None
+
+    locked_user = db.scalar(select(User).where(User.id == attempt.user_id).with_for_update())
+    if locked_user is None:
+        raise RuntimeError("attempt user not found")
+    is_after_reset = False
+    if is_correct is not None and task is not None:
+        is_after_reset = (
+            locked_user.learning_reset_at is None
+            or attempt.attempted_at >= locked_user.learning_reset_at
+        )
+        if is_after_reset:
+            update_proficiency(
+                db,
+                attempt.user_id,
+                task.concept_id,
+                since=locked_user.learning_reset_at,
+            )
+    if is_correct and is_after_reset and task is not None:
+        completion_id = db.scalar(
+            insert(TaskCompletion)
+            .values(
+                user_id=attempt.user_id,
+                task_id=task.id,
+                first_attempt_id=attempt.id,
+                coins_awarded=task.reward_coins,
+            )
+            .on_conflict_do_nothing(index_elements=[TaskCompletion.user_id, TaskCompletion.task_id])
+            .returning(TaskCompletion.id)
+        )
+        if completion_id is not None:
+            attempt.coins_awarded = task.reward_coins
+            locked_user.balance += task.reward_coins
+    if is_correct and attempt.context_type == "DAILY":
+        attendance_task = db.get(AttendanceTask, attempt.attendance_task_id)
+        if attendance_task is None:
+            raise RuntimeError("daily attempt attendance task not found")
+        attendance_task.is_completed = True
+    if attempt.context_type == "BATTLE" and is_correct is not None:
+        record_attempt_result(db, attempt)
+    locked_user.advance_state_version()
+    db.commit()
+    return True
+
+
+def _public_result(result: GradeResult) -> dict[str, str | int]:
+    """Return only stable grading fields safe for an authenticated learner response."""
+    return {
+        "verdict": str(result.verdict),
+        "passed": result.passed,
+        "total": result.total,
+    }
+
+
+def grade_attempt(attempt_public_id: uuid.UUID) -> None:
+    """Synchronously claim and grade one pending or expired attempt for maintenance commands."""
+    lease = claim_attempt(attempt_public_id)
+    if lease is not None:
+        grade_claimed_attempt(lease)
+
+
 def get_attempt(db: Session, public_id: uuid.UUID, user: User) -> TaskAttempt | None:
-    return db.scalar(select(TaskAttempt).where(
-        TaskAttempt.public_id == public_id, TaskAttempt.user_id == user.id
-    ))
+    return db.scalar(
+        select(TaskAttempt).where(
+            TaskAttempt.public_id == public_id,
+            TaskAttempt.user_id == user.id,
+        )
+    )

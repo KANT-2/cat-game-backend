@@ -21,6 +21,7 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/cat_game
+      RUN_DOCKER_GRADING_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,5 +32,6 @@ jobs:
       - run: alembic upgrade head
       - run: alembic downgrade base
       - run: alembic upgrade head
+      - run: docker build -t cat-game-python-grader:3.12 infra/docker/grader
       - run: pytest
       - run: ruff check .

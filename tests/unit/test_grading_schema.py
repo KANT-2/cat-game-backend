@@ -23,6 +23,15 @@ def test_submission_rejects_user_id_and_blank_code():
         TaskAttemptCreate.model_validate(valid(submitted_code="  \n"))
 
 
+def test_submission_rejects_oversized_code_and_option() -> None:
+    with pytest.raises(ValidationError):
+        TaskAttemptCreate.model_validate(valid(submitted_code="x" * 32_769))
+    with pytest.raises(ValidationError):
+        TaskAttemptCreate.model_validate(
+            valid(submitted_code=None, selected_option="x" * 257)
+        )
+
+
 @pytest.mark.parametrize("context", ["RANKING", "ranking", "OTHER"])
 def test_submission_allows_only_current_contexts(context):
     with pytest.raises(ValidationError):
@@ -31,11 +40,9 @@ def test_submission_allows_only_current_contexts(context):
 
 def test_context_link_combinations_are_enforced():
     TaskAttemptCreate.model_validate(valid())
-    TaskAttemptCreate.model_validate(valid(
-        context_type="DAILY", attendance_task_public_id=uuid.uuid4()
-    ))
-    TaskAttemptCreate.model_validate(valid(
-        context_type="BATTLE", room_task_public_id=uuid.uuid4()
-    ))
+    TaskAttemptCreate.model_validate(
+        valid(context_type="DAILY", attendance_task_public_id=uuid.uuid4())
+    )
+    TaskAttemptCreate.model_validate(valid(context_type="BATTLE", room_task_public_id=uuid.uuid4()))
     with pytest.raises(ValidationError):
         TaskAttemptCreate.model_validate(valid(context_type="DAILY"))

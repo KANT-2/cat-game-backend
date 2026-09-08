@@ -31,8 +31,10 @@ class SqlAlchemyUserRepository:
             select(User)
             .where(User.id == user_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return self._session.execute(statement).scalar_one_or_none()
+
 
 class SqlAlchemyItemRepository:
     def __init__(self, session: Session) -> None:
@@ -42,9 +44,14 @@ class SqlAlchemyItemRepository:
         statement = select(Item).where(Item.public_id == public_id)
         return self._session.execute(statement).scalar_one_or_none()
 
+    def get_by_catalog_key(self, catalog_key: str) -> Item | None:
+        statement = select(Item).where(Item.catalog_key == catalog_key)
+        return self._session.execute(statement).scalar_one_or_none()
+
     def get_by_id(self, item_id: int) -> Item | None:
         statement = select(Item).where(Item.id == item_id)
         return self._session.execute(statement).scalar_one_or_none()
+
 
 class SqlAlchemyCatRepository:
     def __init__(self, session: Session) -> None:
@@ -59,9 +66,16 @@ class SqlAlchemyCatRepository:
         cat_id: int,
     ) -> Cat | None:
         statement = select(Cat).where(Cat.id == cat_id)
-        return self._session.execute(
-            statement
-        ).scalar_one_or_none()
+        return self._session.execute(statement).scalar_one_or_none()
+
+    def list_all(self) -> list[Cat]:
+        statement = select(Cat).order_by(Cat.id)
+        return list(self._session.execute(statement).scalars().all())
+
+
+    def get_by_catalog_key(self, catalog_key: str) -> Cat | None:
+        statement = select(Cat).where(Cat.catalog_key == catalog_key)
+        return self._session.execute(statement).scalar_one_or_none()
 
 class SqlAlchemyAssetRepository:
     def __init__(self, session: Session) -> None:
@@ -71,29 +85,45 @@ class SqlAlchemyAssetRepository:
         self,
         public_id: UUID,
     ) -> Asset | None:
-        statement = select(Asset).where(
-            Asset.public_id == public_id
-        )
-        return self._session.execute(
-            statement
-        ).scalar_one_or_none()
+        statement = select(Asset).where(Asset.public_id == public_id)
+        return self._session.execute(statement).scalar_one_or_none()
 
     def get_cat_asset(
         self,
         user_id: int,
         cat_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, cat_id=cat_id)
+        if pending is not None:
+            return pending
         statement = select(Asset).where(
             Asset.user_id == user_id,
             Asset.cat_id == cat_id,
         )
         return self._session.execute(statement).scalar_one_or_none()
 
+    def list_cat_assets_by_user_id(
+        self,
+        user_id: int,
+    ) -> list[Asset]:
+        statement = (
+            select(Asset)
+            .where(
+                Asset.user_id == user_id,
+                Asset.cat_id.is_not(None),
+            )
+            .order_by(Asset.id)
+        )
+        return list(self._session.execute(statement).scalars().all())
+
     def get_item_asset_for_update(
         self,
         user_id: int,
         item_id: int,
     ) -> Asset | None:
+        pending = self._get_pending_asset(user_id=user_id, item_id=item_id)
+        if pending is not None:
+            return pending
         statement = (
             select(Asset)
             .where(
@@ -127,6 +157,32 @@ class SqlAlchemyAssetRepository:
         self._session.add(asset)
         return asset
 
+    def consume_item_quantity_for_update(self, user_id: int, item_id: int) -> int | None:
+        asset = self.get_item_asset_for_update(user_id, item_id)
+        if asset is None:
+            return None
+        if asset.quantity == 1:
+            self._session.delete(asset)
+            return 0
+        asset.quantity -= 1
+        return asset.quantity
+
+    def _get_pending_asset(
+        self,
+        *,
+        user_id: int,
+        cat_id: int | None = None,
+        item_id: int | None = None,
+    ) -> Asset | None:
+        for pending in self._session.new:
+            if not isinstance(pending, Asset) or pending.user_id != user_id:
+                continue
+            if cat_id is not None and pending.cat_id == cat_id:
+                return pending
+            if item_id is not None and pending.item_id == item_id:
+                return pending
+        return None
+
     def grant_cat(
         self,
         user_id: int,
@@ -145,6 +201,7 @@ class SqlAlchemyAssetRepository:
         self._session.add(asset)
         return asset
 
+
 class SqlAlchemyPlacedObjectRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -154,9 +211,7 @@ class SqlAlchemyPlacedObjectRepository:
         public_id: UUID,
     ) -> PlacedObject | None:
         statement = (
-            select(PlacedObject)
-            .where(PlacedObject.public_id == public_id)
-            .with_for_update()
+            select(PlacedObject).where(PlacedObject.public_id == public_id).with_for_update()
         )
         return self._session.execute(statement).scalar_one_or_none()
 
@@ -176,16 +231,31 @@ class SqlAlchemyPlacedObjectRepository:
         placed_objects = self._session.execute(statement).scalars().all()
         return len(placed_objects)
 
+    def list_for_update(self, user_id: int) -> list[PlacedObject]:
+        statement = (
+            select(PlacedObject)
+            .where(PlacedObject.user_id == user_id)
+            .order_by(PlacedObject.id)
+            .with_for_update()
+        )
+        return list(self._session.execute(statement).scalars().all())
+
     def add(
         self,
         user_id: int,
         item_id: int,
         position_data: dict[str, object],
+        public_id: UUID | None = None,
     ) -> PlacedObject:
+        values: dict[str, object] = {
+            "user_id": user_id,
+            "item_id": item_id,
+            "position_data": dict(position_data),
+        }
+        if public_id is not None:
+            values["public_id"] = public_id
         placed_object = PlacedObject(
-            user_id=user_id,
-            item_id=item_id,
-            position_data=dict(position_data),
+            **values,
         )
         self._session.add(placed_object)
         return placed_object
@@ -196,6 +266,7 @@ class SqlAlchemyPlacedObjectRepository:
     ) -> None:
         self._session.delete(placed_object)
 
+
 class SqlAlchemyCatMemoryRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -204,14 +275,8 @@ class SqlAlchemyCatMemoryRepository:
         self,
         public_id: UUID,
     ) -> CatMemory | None:
-        statement = (
-            select(CatMemory)
-            .where(CatMemory.public_id == public_id)
-            .with_for_update()
-        )
-        return self._session.execute(
-            statement
-        ).scalar_one_or_none()
+        statement = select(CatMemory).where(CatMemory.public_id == public_id).with_for_update()
+        return self._session.execute(statement).scalar_one_or_none()
 
     def list_by_cat_asset_id(
         self,
@@ -246,10 +311,9 @@ class SqlAlchemyCatMemoryRepository:
         self,
         cat_asset_id: int,
     ) -> None:
-        statement = delete(CatMemory).where(
-            CatMemory.cat_asset_id == cat_asset_id
-        )
+        statement = delete(CatMemory).where(CatMemory.cat_asset_id == cat_asset_id)
         self._session.execute(statement)
+
 
 class SqlAlchemyExecutionRepository:
     def __init__(self, session: Session) -> None:
@@ -275,15 +339,11 @@ class SqlAlchemyExecutionRepository:
                 status=ClaimStatus.ACQUIRED,
                 balance_cost=0,
             )
-            .on_conflict_do_nothing(
-                index_elements=[GachaExecution.request_id]
-            )
+            .on_conflict_do_nothing(index_elements=[GachaExecution.request_id])
             .returning(GachaExecution)
         )
 
-        execution = self._session.execute(
-            insert_statement
-        ).scalar_one_or_none()
+        execution = self._session.execute(insert_statement).scalar_one_or_none()
 
         if execution is not None:
             return ExecutionClaim(
@@ -292,18 +352,11 @@ class SqlAlchemyExecutionRepository:
             )
 
         select_statement = (
-            select(GachaExecution)
-            .where(GachaExecution.request_id == request_id)
-            .with_for_update()
+            select(GachaExecution).where(GachaExecution.request_id == request_id).with_for_update()
         )
-        execution = self._session.execute(
-            select_statement
-        ).scalar_one()
+        execution = self._session.execute(select_statement).scalar_one()
 
-        if (
-            execution.user_id != user_id
-            or execution.request_hash != request_hash
-        ):
+        if execution.user_id != user_id or execution.request_hash != request_hash:
             return ExecutionClaim(
                 status=ClaimStatus.HASH_CONFLICT,
                 execution=execution,

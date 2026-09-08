@@ -31,9 +31,9 @@ class GachaExecution(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
-    CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),
-    CheckConstraint(
-        "status IN ('ACQUIRED', 'COMPLETED', 'HASH_CONFLICT')",
-        name="ck_gacha_executions_status_valid",
-    ),
-)
+        CheckConstraint("balance_cost >= 0", name="ck_gacha_executions_cost_nonneg"),
+        CheckConstraint(
+            "status IN ('ACQUIRED', 'COMPLETED', 'HASH_CONFLICT')",
+            name="ck_gacha_executions_status_valid",
+        ),
+    )
