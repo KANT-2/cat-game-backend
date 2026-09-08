@@ -62,3 +62,4 @@ def to_task_read(task: Task, concept: Concept, *, completed: bool = False) -> Ta
         completed=completed,
         reward_coins=task.reward_coins,
     )
+    )

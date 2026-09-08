@@ -1,11 +1,14 @@
 import uuid
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GachaRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     request_id: uuid.UUID
-    draw_count: int = Field(gt=0)
+    draw_count: Literal[1, 11]
 
 
 class GachaDrawResult(BaseModel):
@@ -19,7 +22,8 @@ class GachaDrawResult(BaseModel):
 class GachaResponse(BaseModel):
     execution_public_id: uuid.UUID
     request_id: uuid.UUID
-    draw_count: int = Field(gt=0)
+    draw_count: Literal[1, 11]
+    bonus_draw_count: Literal[0, 1]
     balance_cost: int = Field(ge=0)
     balance: int = Field(ge=0)
     mileage: int = Field(ge=0)

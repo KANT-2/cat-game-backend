@@ -1,6 +1,10 @@
 import json
 import subprocess
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
+from app.core.config import settings
+from app.modules.grading.sandbox import runner as sandbox_runner
 from app.modules.grading.sandbox.runner import DockerSandbox, Verdict
 from app.modules.grading.test_cases import TestCase as Case
 
@@ -10,20 +14,24 @@ def test_docker_security_flags_and_accepted_result(monkeypatch):
 
     def fake_run(command, **kwargs):
         seen["command"] = command
-        return subprocess.CompletedProcess(
-            command, 0, json.dumps({"verdict": "ACCEPTED", "passed": 1}), ""
-        )
+        kwargs["stdout"].write(json.dumps({"verdict": "ACCEPTED", "passed": 1}).encode())
+        return subprocess.CompletedProcess(command, 0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     result = DockerSandbox().grade("print(input())", [Case("ok", "ok")])
     command = seen["command"]
     assert result.verdict is Verdict.ACCEPTED
     for pair in [
-        ["--network", "none"], ["--read-only"], ["--cap-drop", "ALL"],
-        ["--security-opt", "no-new-privileges:true"], ["--user", "sandbox"],
-        ["--memory"], ["--cpus"], ["--pids-limit"],
+        ["--network", "none"],
+        ["--read-only"],
+        ["--cap-drop", "ALL"],
+        ["--security-opt", "no-new-privileges:true"],
+        ["--user", "sandbox"],
+        ["--memory"],
+        ["--cpus"],
+        ["--pids-limit"],
     ]:
-        assert any(command[i:i + len(pair)] == pair for i in range(len(command)))
+        assert any(command[i : i + len(pair)] == pair for i in range(len(command)))
 
 
 def test_host_timeout_is_student_failure(monkeypatch):
@@ -40,3 +48,55 @@ def test_host_timeout_is_student_failure(monkeypatch):
     assert result.verdict is Verdict.TIMEOUT
     assert not result.is_system_failure
     assert calls[1][:3] == ["docker", "rm", "--force"]
+
+
+def test_worker_output_file_cap_is_student_failure(monkeypatch):
+    def excessive_output(command, **kwargs):
+        if command[:2] == ["docker", "run"]:
+            kwargs["stdout"].write(b"x" * 65_536)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "run", excessive_output)
+
+    result = DockerSandbox().grade("print('x')", [Case("", "x")])
+
+    assert result.verdict is Verdict.OUTPUT_LIMIT
+    assert not result.is_system_failure
+
+
+def test_worker_limits_concurrent_sandboxes(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "grading_max_concurrency", 2)
+    release = threading.Event()
+    two_started = threading.Event()
+    counter_lock = threading.Lock()
+    active = 0
+    maximum_active = 0
+
+    def blocked_run(command, _payload, **_kwargs):
+        nonlocal active, maximum_active
+        with counter_lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+            if active == 2:
+                two_started.set()
+        release.wait(timeout=2)
+        with counter_lock:
+            active -= 1
+        return (
+            subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps({"verdict": "ACCEPTED", "passed": 1}),
+                "",
+            ),
+            False,
+        )
+
+    monkeypatch.setattr(sandbox_runner, "_run_capped", blocked_run)
+    sandbox = DockerSandbox()
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        results = [executor.submit(sandbox.grade, "print(1)", [Case("", "1")]) for _ in range(3)]
+        assert two_started.wait(timeout=2)
+        assert maximum_active == 2
+        release.set()
+        assert all(result.result().verdict is Verdict.ACCEPTED for result in results)

@@ -1,9 +1,12 @@
+import json
 import uuid
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.models.task import Task
+from app.models.task_attempt import TaskAttempt
 from app.schemas.base import ReadSchema
 
 
@@ -11,8 +14,8 @@ class TaskAttemptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_public_id: uuid.UUID
-    submitted_code: str | None = None
-    selected_option: str | None = None
+    submitted_code: str | None = Field(default=None, max_length=32_768)
+    selected_option: str | None = Field(default=None, max_length=256)
     context_type: Literal["LEARNING", "DAILY", "BATTLE"]
     used_hint: bool = False
     attendance_task_public_id: uuid.UUID | None = None
@@ -40,12 +43,50 @@ class TaskAttemptAccepted(BaseModel):
     status: Literal["PENDING"]
 
 
+class GradingResultDetail(BaseModel):
+    verdict: Literal[
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "SYNTAX_ERROR",
+        "RUNTIME_ERROR",
+        "TIMEOUT",
+        "OUTPUT_LIMIT",
+        "MEMORY_LIMIT",
+        "SYSTEM_ERROR",
+    ]
+    passed: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
+def _parse_result_detail(raw: str | None) -> GradingResultDetail | None:
+    if raw is None:
+        return None
+    try:
+        return GradingResultDetail.model_validate(json.loads(raw))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return GradingResultDetail(verdict="SYSTEM_ERROR", passed=0, total=0)
+
+
 class TaskAttemptRead(ReadSchema):
     task_public_id: uuid.UUID
-    context_type: str
-    submitted_code: str
-    status: str
+    context_type: Literal["LEARNING", "DAILY", "BATTLE"]
+    status: Literal["PENDING", "RUNNING", "COMPLETED", "FAILED"]
     is_correct: bool | None
     used_hint: bool
     attempted_at: datetime
-    result_detail: str | None = Field(default=None)
+    result_detail: GradingResultDetail | None = None
+    coins_awarded: int = Field(ge=0)
+
+
+def to_task_attempt_read(attempt: TaskAttempt, task: Task) -> TaskAttemptRead:
+    return TaskAttemptRead(
+        public_id=attempt.public_id,
+        task_public_id=task.public_id,
+        context_type=attempt.context_type,
+        status=attempt.status,
+        is_correct=attempt.is_correct,
+        used_hint=attempt.used_hint,
+        attempted_at=attempt.attempted_at,
+        result_detail=_parse_result_detail(attempt.result_detail),
+        coins_awarded=attempt.coins_awarded,
+    )

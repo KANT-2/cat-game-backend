@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String, Text, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,11 +22,18 @@ class Task(Base):
     correct_option: Mapped[str | None] = mapped_column(String, nullable=True)
     hint_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    reward_coins: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
 
     __table_args__ = (
         CheckConstraint("type IN ('CODE', 'MULTIPLE_CHOICE')", name="ck_tasks_type"),
         CheckConstraint("domain IN ('PYTHON', 'SQL')", name="ck_tasks_domain"),
         CheckConstraint("difficulty IN ('BRONZE', 'SILVER', 'GOLD')", name="ck_tasks_difficulty"),
+        CheckConstraint("reward_coins >= 0", name="ck_tasks_reward_coins_nonneg"),
         CheckConstraint(
             "(type = 'CODE' AND options IS NULL AND correct_option IS NULL) OR "
             "(type = 'MULTIPLE_CHOICE' AND options IS NOT NULL AND correct_option IS NOT NULL)",

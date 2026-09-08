@@ -65,6 +65,7 @@ def test_user_repository_gets_for_update_with_row_lock() -> None:
     assert "FOR UPDATE" in sql
     session.commit.assert_not_called()
 
+
 def test_item_repository_gets_by_public_id() -> None:
     session = Mock(spec=Session)
     expected_item = object()
@@ -100,12 +101,11 @@ def test_cat_repository_gets_by_public_id() -> None:
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
 
+
 def test_cat_repository_gets_by_internal_id() -> None:
     session = Mock(spec=Session)
     expected_cat = object()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        expected_cat
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = expected_cat
     repository = SqlAlchemyCatRepository(session)
 
     result = repository.get_by_id(20)
@@ -118,12 +118,28 @@ def test_cat_repository_gets_by_internal_id() -> None:
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
 
+
+def test_cat_repository_lists_all_in_master_order() -> None:
+    session = Mock(spec=Session)
+    expected_cats = [object(), object()]
+    session.execute.return_value.scalars.return_value.all.return_value = expected_cats
+    repository = SqlAlchemyCatRepository(session)
+
+    result = repository.list_all()
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result == expected_cats
+    assert "ORDER BY cats.id" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+
 def test_asset_repository_gets_by_public_id() -> None:
     session = Mock(spec=Session)
     expected_asset = object()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        expected_asset
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = expected_asset
     repository = SqlAlchemyAssetRepository(session)
     public_id = uuid.uuid4()
 
@@ -137,8 +153,10 @@ def test_asset_repository_gets_by_public_id() -> None:
     assert "FOR UPDATE" not in sql
     session.commit.assert_not_called()
 
+
 def test_asset_repository_gets_cat_asset_without_lock() -> None:
     session = Mock(spec=Session)
+    session.new = []
     expected_asset = object()
     session.execute.return_value.scalar_one_or_none.return_value = expected_asset
     repository = SqlAlchemyAssetRepository(session)
@@ -155,8 +173,39 @@ def test_asset_repository_gets_cat_asset_without_lock() -> None:
     session.commit.assert_not_called()
 
 
+def test_asset_repository_finds_pending_cat_asset_without_query() -> None:
+    session = Session()
+    expected_asset = Asset(user_id=1, cat_id=10, item_id=None, quantity=1)
+    session.add(expected_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.get_cat_asset(user_id=1, cat_id=10)
+
+    assert result is expected_asset
+
+
+def test_asset_repository_lists_users_cat_assets() -> None:
+    session = Mock(spec=Session)
+    expected_assets = [object(), object()]
+    session.execute.return_value.scalars.return_value.all.return_value = expected_assets
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.list_cat_assets_by_user_id(1)
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+
+    assert result == expected_assets
+    assert "assets.user_id = 1" in sql
+    assert "assets.cat_id IS NOT NULL" in sql
+    assert "ORDER BY assets.id" in sql
+    assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+
 def test_asset_repository_locks_item_asset() -> None:
     session = Mock(spec=Session)
+    session.new = []
     expected_asset = object()
     session.execute.return_value.scalar_one_or_none.return_value = expected_asset
     repository = SqlAlchemyAssetRepository(session)
@@ -174,6 +223,31 @@ def test_asset_repository_locks_item_asset() -> None:
     assert "assets.item_id = 20" in sql
     assert "FOR UPDATE" in sql
     session.commit.assert_not_called()
+
+
+def test_asset_repository_finds_pending_item_asset_without_query() -> None:
+    session = Session()
+    expected_asset = Asset(user_id=1, cat_id=None, item_id=20, quantity=2)
+    session.add(expected_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.get_item_asset_for_update(user_id=1, item_id=20)
+
+    assert result is expected_asset
+
+
+def test_asset_repository_combines_repeated_pending_item_quantity() -> None:
+    session = Session()
+    pending_asset = Asset(user_id=1, cat_id=None, item_id=20, quantity=2)
+    session.add(pending_asset)
+    repository = SqlAlchemyAssetRepository(session)
+
+    result = repository.add_item_quantity(user_id=1, item_id=20, quantity=3)
+
+    assert result is pending_asset
+    assert result.quantity == 5
+    assert list(session.new) == [pending_asset]
+
 
 def test_asset_repository_adds_to_existing_item_quantity() -> None:
     session = Mock(spec=Session)
@@ -233,6 +307,7 @@ def test_asset_repository_grants_new_cat() -> None:
     session.add.assert_called_once_with(result)
     session.commit.assert_not_called()
 
+
 def test_placed_object_repository_counts_locked_rows() -> None:
     session = Mock(spec=Session)
     session.execute.return_value.scalars.return_value.all.return_value = [
@@ -270,12 +345,11 @@ def test_placed_object_repository_adds_object() -> None:
     session.add.assert_called_once_with(result)
     session.commit.assert_not_called()
 
+
 def test_cat_memory_repository_locks_by_public_id() -> None:
     session = Mock(spec=Session)
     expected_memory = object()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        expected_memory
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = expected_memory
     repository = SqlAlchemyCatMemoryRepository(session)
     public_id = uuid.uuid4()
 
@@ -289,6 +363,7 @@ def test_cat_memory_repository_locks_by_public_id() -> None:
     assert "FOR UPDATE" in sql
     session.commit.assert_not_called()
 
+
 def test_cat_memory_repository_removes_memory() -> None:
     session = Mock(spec=Session)
     repository = SqlAlchemyCatMemoryRepository(session)
@@ -298,6 +373,7 @@ def test_cat_memory_repository_removes_memory() -> None:
 
     session.delete.assert_called_once_with(memory)
     session.commit.assert_not_called()
+
 
 def test_cat_memory_repository_removes_all_for_cat_asset() -> None:
     session = Mock(spec=Session)
@@ -312,12 +388,11 @@ def test_cat_memory_repository_removes_all_for_cat_asset() -> None:
     assert "cat_memories.cat_asset_id = 30" in sql
     session.commit.assert_not_called()
 
+
 def test_cat_memory_repository_lists_memories_in_order() -> None:
     session = Mock(spec=Session)
     expected_memories = [object(), object()]
-    session.execute.return_value.scalars.return_value.all.return_value = (
-        expected_memories
-    )
+    session.execute.return_value.scalars.return_value.all.return_value = expected_memories
     repository = SqlAlchemyCatMemoryRepository(session)
 
     result = repository.list_by_cat_asset_id(cat_asset_id=30)
@@ -345,6 +420,7 @@ def test_cat_memory_repository_adds_new_memory() -> None:
     assert result.context_summary == "The user learned about loops."
     session.add.assert_called_once_with(result)
     session.commit.assert_not_called()
+
 
 def test_execution_repository_completes_execution() -> None:
     session = Mock(spec=Session)
@@ -395,12 +471,11 @@ def test_execution_repository_rejects_negative_cost() -> None:
 
     session.commit.assert_not_called()
 
+
 def test_execution_repository_claims_new_request_atomically() -> None:
     session = Mock(spec=Session)
     inserted_execution = GachaExecution()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        inserted_execution
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = inserted_execution
     repository = SqlAlchemyExecutionRepository(session)
     request_id = uuid.uuid4()
     request_payload = {"draw_count": 1}
@@ -431,6 +506,7 @@ def test_execution_repository_claims_new_request_atomically() -> None:
     assert result.status == ClaimStatus.ACQUIRED
     assert result.execution is inserted_execution
     session.commit.assert_not_called()
+
 
 def _repository_with_existing_execution(
     existing: GachaExecution,
@@ -526,12 +602,11 @@ def test_execution_repository_detects_claim_conflict(
     assert result.execution is existing
     session.commit.assert_not_called()
 
+
 def test_item_repository_gets_by_internal_id() -> None:
     session = Mock(spec=Session)
     expected_item = object()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        expected_item
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = expected_item
     repository = SqlAlchemyItemRepository(session)
 
     result = repository.get_by_id(20)
@@ -548,9 +623,7 @@ def test_item_repository_gets_by_internal_id() -> None:
 def test_placed_object_repository_locks_by_public_id() -> None:
     session = Mock(spec=Session)
     expected_placement = object()
-    session.execute.return_value.scalar_one_or_none.return_value = (
-        expected_placement
-    )
+    session.execute.return_value.scalar_one_or_none.return_value = expected_placement
     repository = SqlAlchemyPlacedObjectRepository(session)
     public_id = uuid.uuid4()
 

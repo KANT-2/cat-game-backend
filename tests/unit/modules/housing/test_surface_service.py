@@ -10,7 +10,7 @@ from app.core.exceptions import (
 from app.models.asset import Asset
 from app.models.item import Item
 from app.models.user import User
-from app.modules.housing.service import apply_surface_item
+from app.modules.housing.service import apply_surface_item, clear_wallpaper
 from tests.fakes.repositories import (
     FakeAssetRepository,
     FakeItemRepository,
@@ -68,6 +68,32 @@ def test_apply_surface_item_sets_owned_wallpaper_in_one_transaction() -> None:
     assert "wallpaper_item_id" not in result.model_dump()
     unit_of_work.commit.assert_called_once_with()
 
+
+def test_clear_wallpaper_restores_default_without_removing_assets() -> None:
+    user = User(
+        id=1,
+        public_id=uuid.uuid4(),
+        email="default-wallpaper@example.com",
+        username="default-wallpaper-user",
+        role="STUDENT",
+        balance=1000,
+        mileage=0,
+        house_level=1,
+        wallpaper_item_id=10,
+        floor_item_id=20,
+    )
+    unit_of_work = MagicMock()
+    unit_of_work.__enter__.return_value = unit_of_work
+    unit_of_work.users = FakeUserRepository([user])
+
+    clear_wallpaper(unit_of_work=unit_of_work, user_public_id=user.public_id)
+
+    assert user.wallpaper_item_id is None
+    assert user.floor_item_id == 20
+    assert user.state_version == 2
+    unit_of_work.commit.assert_called_once_with()
+
+
 def test_apply_surface_item_sets_owned_floor_without_changing_wallpaper() -> None:
     user = User(
         id=1,
@@ -115,6 +141,7 @@ def test_apply_surface_item_sets_owned_floor_without_changing_wallpaper() -> Non
     assert result.item_public_id == floor.public_id
     assert result.category == "FLOOR"
     unit_of_work.commit.assert_called_once_with()
+
 
 def test_apply_surface_item_rejects_furniture_category() -> None:
     user = User(
@@ -165,6 +192,7 @@ def test_apply_surface_item_rejects_furniture_category() -> None:
     assert user.floor_item_id is None
     unit_of_work.commit.assert_not_called()
 
+
 def test_apply_surface_item_rejects_unowned_surface() -> None:
     user = User(
         id=1,
@@ -206,6 +234,7 @@ def test_apply_surface_item_rejects_unowned_surface() -> None:
     assert user.floor_item_id is None
     unit_of_work.commit.assert_not_called()
 
+
 def test_apply_surface_item_rejects_missing_user() -> None:
     unit_of_work = MagicMock()
     unit_of_work.__enter__.return_value = unit_of_work
@@ -222,6 +251,7 @@ def test_apply_surface_item_rejects_missing_user() -> None:
         )
 
     unit_of_work.commit.assert_not_called()
+
 
 def test_apply_surface_item_rejects_missing_item() -> None:
     user = User(

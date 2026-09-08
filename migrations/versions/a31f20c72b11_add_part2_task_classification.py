@@ -18,12 +18,16 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("tasks", sa.Column("domain", sa.String(), server_default="PYTHON", nullable=False))
+    op.add_column(
+        "tasks", sa.Column("domain", sa.String(), server_default="PYTHON", nullable=False)
+    )
     op.add_column("tasks", sa.Column("options", postgresql.JSONB(), nullable=True))
     op.add_column("tasks", sa.Column("correct_option", sa.String(), nullable=True))
     op.execute("UPDATE tasks SET type = 'CODE' WHERE type NOT IN ('CODE', 'MULTIPLE_CHOICE')")
     op.execute("UPDATE tasks SET difficulty = upper(difficulty)")
-    op.execute("UPDATE tasks SET difficulty = 'BRONZE' WHERE difficulty NOT IN ('BRONZE', 'SILVER', 'GOLD')")
+    op.execute(
+        "UPDATE tasks SET difficulty = 'BRONZE' WHERE difficulty NOT IN ('BRONZE', 'SILVER', 'GOLD')"
+    )
     op.create_check_constraint("ck_tasks_type", "tasks", "type IN ('CODE', 'MULTIPLE_CHOICE')")
     op.create_check_constraint("ck_tasks_domain", "tasks", "domain IN ('PYTHON', 'SQL')")
     op.create_check_constraint(

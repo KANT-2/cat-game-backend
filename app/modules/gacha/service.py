@@ -12,6 +12,8 @@ from app.core.unit_of_work import UnitOfWork
 from app.modules.gacha.policy import GachaPolicy
 
 _OPERATION_TYPE = "CAT_GACHA"
+_MULTI_DRAW_COUNT = 11
+_MULTI_PAID_DRAW_COUNT = 10
 
 
 def draw_cats(
@@ -22,9 +24,9 @@ def draw_cats(
     request_id: UUID,
     draw_count: int,
 ) -> dict[str, object]:
-    if draw_count <= 0:
-        raise InvalidQuantityError("draw_count must be positive")
-    
+    if draw_count not in {1, _MULTI_DRAW_COUNT}:
+        raise InvalidQuantityError("draw_count must be 1 or 11")
+
     request_payload: dict[str, object] = {
         "draw_count": draw_count,
     }
@@ -36,6 +38,10 @@ def draw_cats(
     with unit_of_work as uow:
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
+            raise ResourceNotFoundError("user not found")
+
+        locked_user = uow.users.get_for_update(user.id)
+        if locked_user is None:
             raise ResourceNotFoundError("user not found")
 
         claim = uow.executions.claim(
@@ -55,14 +61,12 @@ def draw_cats(
 
             return dict(result_data)
 
-        balance_cost = policy.calculate_balance_cost(
-            draw_count=draw_count,
-        )
+        bonus_draw_count = 1 if draw_count == _MULTI_DRAW_COUNT else 0
+        paid_draw_count = _MULTI_PAID_DRAW_COUNT if bonus_draw_count else draw_count
+        balance_cost = policy.calculate_balance_cost(draw_count=paid_draw_count)
 
         if balance_cost < 0:
-            raise RuntimeError(
-                "gacha policy returned negative balance cost"
-            )
+            raise RuntimeError("gacha policy returned negative balance cost")
 
         locked_user = uow.users.get_for_update(user.id)
         if locked_user is None:
@@ -73,18 +77,11 @@ def draw_cats(
 
         rewards = policy.draw(draw_count=draw_count)
 
-        if any(
-            reward.duplicate_mileage < 0
-            for reward in rewards
-        ):
-            raise RuntimeError(
-                "gacha policy returned negative duplicate mileage"
-            )
+        if any(reward.duplicate_mileage < 0 for reward in rewards):
+            raise RuntimeError("gacha policy returned negative duplicate mileage")
 
         if len(rewards) != draw_count:
-            raise RuntimeError(
-                "gacha policy returned wrong reward count"
-            )
+            raise RuntimeError("gacha policy returned wrong reward count")
 
         selected = []
         for reward in rewards:
@@ -125,6 +122,7 @@ def draw_cats(
             "execution_public_id": str(claim.execution.public_id),
             "request_id": str(request_id),
             "draw_count": draw_count,
+            "bonus_draw_count": bonus_draw_count,
             "balance_cost": balance_cost,
             "balance": locked_user.balance,
             "mileage": locked_user.mileage,
@@ -137,7 +135,7 @@ def draw_cats(
             balance_cost=balance_cost,
             result_data=result_data,
         )
+        locked_user.advance_state_version()
         uow.commit()
 
         return result_data
-

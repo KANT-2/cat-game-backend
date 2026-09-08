@@ -30,10 +30,7 @@ class FakeExecutionRepository:
         existing = self.executions.get(request_id)
 
         if existing is not None:
-            if (
-                existing.user_id != user_id
-                or existing.request_hash != request_hash
-            ):
+            if existing.user_id != user_id or existing.request_hash != request_hash:
                 return ExecutionClaim(
                     status=ClaimStatus.HASH_CONFLICT,
                     execution=existing,
@@ -83,6 +80,7 @@ class FakeExecutionRepository:
         execution.status = ClaimStatus.COMPLETED
         execution.completed_at = datetime.now(UTC)
 
+
 class FakeUserRepository:
     def __init__(self, users: list[User] | None = None) -> None:
         self.users = list(users or [])
@@ -110,6 +108,12 @@ class FakeItemRepository:
             None,
         )
 
+    def get_by_catalog_key(self, catalog_key: str) -> Item | None:
+        return next(
+            (item for item in self.items if item.catalog_key == catalog_key),
+            None,
+        )
+
     def get_by_id(self, item_id: int) -> Item | None:
         return next(
             (item for item in self.items if item.id == item_id),
@@ -126,15 +130,21 @@ class FakeCatRepository:
             (cat for cat in self.cats if cat.public_id == public_id),
             None,
         )
+
     def get_by_id(self, cat_id: int) -> Cat | None:
-            return next(
-                (
-                    cat
-                    for cat in self.cats
-                    if cat.id == cat_id
-                ),
-                None,
-            )
+        return next(
+            (cat for cat in self.cats if cat.id == cat_id),
+            None,
+        )
+
+    def list_all(self) -> list[Cat]:
+        return sorted(self.cats, key=lambda cat: cat.id)
+
+    def get_by_catalog_key(self, catalog_key: str) -> Cat | None:
+        return next(
+            (cat for cat in self.cats if cat.catalog_key == catalog_key),
+            None,
+        )
 
 
 class FakeAssetRepository:
@@ -146,11 +156,7 @@ class FakeAssetRepository:
         public_id: uuid.UUID,
     ) -> Asset | None:
         return next(
-            (
-                asset
-                for asset in self.assets
-                if asset.public_id == public_id
-            ),
+            (asset for asset in self.assets if asset.public_id == public_id),
             None,
         )
 
@@ -160,12 +166,21 @@ class FakeAssetRepository:
         cat_id: int,
     ) -> Asset | None:
         return next(
+            (asset for asset in self.assets if asset.user_id == user_id and asset.cat_id == cat_id),
+            None,
+        )
+
+    def list_cat_assets_by_user_id(
+        self,
+        user_id: int,
+    ) -> list[Asset]:
+        return sorted(
             (
                 asset
                 for asset in self.assets
-                if asset.user_id == user_id and asset.cat_id == cat_id
+                if asset.user_id == user_id and asset.cat_id is not None
             ),
-            None,
+            key=lambda asset: asset.id,
         )
 
     def get_item_asset_for_update(
@@ -206,6 +221,16 @@ class FakeAssetRepository:
         )
         self.assets.append(asset)
         return asset
+
+    def consume_item_quantity_for_update(self, user_id: int, item_id: int) -> int | None:
+        asset = self.get_item_asset_for_update(user_id, item_id)
+        if asset is None:
+            return None
+        if asset.quantity == 1:
+            self.assets.remove(asset)
+            return 0
+        asset.quantity -= 1
+        return asset.quantity
 
     def grant_cat(
         self,
@@ -258,15 +283,19 @@ class FakePlacedObjectRepository:
             for placed in self.placed_objects
         )
 
+    def list_for_update(self, user_id: int) -> list[PlacedObject]:
+        return [placed for placed in self.placed_objects if placed.user_id == user_id]
+
     def add(
         self,
         user_id: int,
         item_id: int,
         position_data: dict[str, object],
+        public_id: uuid.UUID | None = None,
     ) -> PlacedObject:
         placed = PlacedObject(
             id=len(self.placed_objects) + 1,
-            public_id=uuid.uuid4(),
+            public_id=public_id or uuid.uuid4(),
             user_id=user_id,
             item_id=item_id,
             position_data=dict(position_data),
@@ -293,11 +322,7 @@ class FakeCatMemoryRepository:
         public_id: uuid.UUID,
     ) -> CatMemory | None:
         return next(
-            (
-                memory
-                for memory in self.memories
-                if memory.public_id == public_id
-            ),
+            (memory for memory in self.memories if memory.public_id == public_id),
             None,
         )
 
@@ -305,11 +330,7 @@ class FakeCatMemoryRepository:
         self,
         cat_asset_id: int,
     ) -> list[CatMemory]:
-        memories = [
-            memory
-            for memory in self.memories
-            if memory.cat_asset_id == cat_asset_id
-        ]
+        memories = [memory for memory in self.memories if memory.cat_asset_id == cat_asset_id]
         return sorted(
             memories,
             key=lambda memory: (
@@ -344,7 +365,5 @@ class FakeCatMemoryRepository:
         cat_asset_id: int,
     ) -> None:
         self.memories[:] = [
-            memory
-            for memory in self.memories
-            if memory.cat_asset_id != cat_asset_id
+            memory for memory in self.memories if memory.cat_asset_id != cat_asset_id
         ]

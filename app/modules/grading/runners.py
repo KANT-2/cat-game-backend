@@ -2,6 +2,7 @@ from typing import Protocol
 
 from app.models.task import Task
 from app.modules.grading.sandbox.runner import GradeResult, Verdict, sandbox
+from app.modules.grading.sql_sandbox import sql_sandbox
 from app.modules.grading.test_cases import parse_test_cases
 
 
@@ -15,10 +16,8 @@ class PythonSandboxRunner:
 
 
 class SQLSandboxRunner:
-    """Extension point: SQL execution must later be isolated, read-only and timed out."""
-
     def grade(self, task: Task, submission: str) -> GradeResult:
-        return GradeResult(Verdict.SYSTEM_ERROR, detail="SQL runner is not enabled")
+        return sql_sandbox.grade(submission, parse_test_cases(task.test_cases))
 
 
 class MultipleChoiceRunner:
