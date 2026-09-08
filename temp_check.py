@@ -23,13 +23,13 @@ class TaskRead(ReadSchema):
     completed: bool = False
     reward_coins: int
 
-    # test_cases and correct_option are grading-only fields, intentionally excluded.
+    # test_cases? correct_option? 梨꾩젏 ?꾩슜 ?뺣낫???섎룄?곸쑝濡??ы븿?섏? ?딅뒗??
 
 
 class TaskCreate(BaseModel):
     concept_public_id: uuid.UUID
     title: str
-    type: str  # "MULTIPLE_CHOICE" or "CODE"
+    type: str  # "MULTIPLE_CHOICE" ?먮뒗 "CODE"
     domain: str
     difficulty: str  # "BRONZE" / "SILVER" / "GOLD"
     description: str
