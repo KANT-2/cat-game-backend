@@ -9,8 +9,8 @@ from app.modules.grading.router import router as grading_router
 from app.modules.housing.router import router as housing_router
 from app.modules.identity.router import router as identity_router
 from app.modules.learning.router import router as learning_router
-from app.modules.tasks.router import router as tasks_router
 from app.modules.shop.router import router as shop_router
+from app.modules.tasks.router import router as tasks_router
 
 api_router = APIRouter()
 api_router.include_router(identity_router)
