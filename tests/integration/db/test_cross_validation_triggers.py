@@ -75,7 +75,10 @@ def test_task_attempt_context_trigger_accepts_owner_and_rejects_other_user(db_se
     owner_id = _insert_user(db_session, "daily-owner@example.com")
     other_id = _insert_user(db_session, "daily-other@example.com")
     concept_id = db_session.execute(
-        text("INSERT INTO concepts (name) VALUES ('trigger concept') RETURNING id")
+        text(
+            "INSERT INTO concepts (domain, name) "
+            "VALUES ('PYTHON', 'trigger concept') RETURNING id"
+        )
     ).scalar_one()
     task_id = db_session.execute(
         text(

@@ -501,12 +501,13 @@ GET /api/v1/learning/recommendations?limit=10
 
 추천 우선순위:
 
-1. 숙련도가 낮은 취약 개념 우선
-2. 최근 20개 문제 우선 제외
-3. 난이도 `BRONZE → SILVER → GOLD` 우선
-4. 후보 부족 시 최근 문제 제외/취약 개념 조건을 순차 완화
-5. 같은 게임 날짜와 학습 이력에서는 안정된 순서 유지
-6. 게임 타임존의 날짜가 바뀌면 같은 개념·난이도 우선순위 안에서 문제를 순환해 오늘의 추천을 교체
+1. 사용자 설정 `learningDomain`과 같은 `concepts.domain`의 문제만 선택
+2. 숙련도가 낮은 취약 개념 우선
+3. 최근 20개 문제 우선 제외
+4. 난이도 `BRONZE → SILVER → GOLD` 우선
+5. 후보 부족 시 최근 문제 제외/취약 개념 조건을 순차 완화
+6. 같은 게임 날짜와 학습 이력에서는 안정된 순서 유지
+7. 게임 타임존의 날짜가 바뀌면 같은 개념·난이도 우선순위 안에서 문제를 순환해 오늘의 추천을 교체
 
 추천 응답은 `TaskRead`를 사용하며 `test_cases`, `correct_option`은 노출하지 않는다.
 전체 숙련도 응답은 개념 공개 UUID, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다.
@@ -522,6 +523,7 @@ GET /api/v1/daily/today
 ```
 
 요청 본문은 없다. 인증된 사용자의 게임 타임존 기준 당일 `Attendance`를 조회하며, 없으면 생성하고 추천 알고리즘으로 문제를 배정한다.
+새 일일 미션을 만드는 시점의 `learningDomain`과 같은 과목만 배정한다. 이미 생성된 당일 미션은 진행도와 보상 연결을 보존하기 위해 설정 변경으로 교체하지 않으며, 일반 추천 목록은 설정 직후 새 과목으로 다시 조회한다.
 
 성공 응답은 `200 OK`와 `DailyMissionRead`다.
 
@@ -762,6 +764,7 @@ POST /api/v1/attempts
 | 개발 사용자 준비 | `POST /api/v1/session/development` | 본문 없음 | 공개 사용자 DTO |
 | 문제 조회 | `GET /api/v1/learning/tasks` | type/domain/concept/difficulty/limit | 공개 Task 목록 |
 | 문제 추천 | `GET /api/v1/learning/recommendations` | `limit` | 공개 Task 목록 |
+| 학습 과목 설정 | `PATCH /api/v1/game/settings` | `learning_domain=PYTHON 또는 SQL` | 선택 과목이 포함된 게임 스냅샷 |
 | 전체 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·이름·시도 수·숙련도 |
 | 취약 개념 | `GET /api/v1/learning/weak-concepts` | 없음 | 개념 UUID·숙련도 |
 | 문제 제출 | `POST /api/v1/attempts` | task UUID + code/option + context | attempt UUID + PENDING |

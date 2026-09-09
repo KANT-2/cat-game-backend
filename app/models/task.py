@@ -11,9 +11,6 @@ class Task(Base):
     concept_id: Mapped[int] = mapped_column(ForeignKey("concepts.id"), nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     type: Mapped[str] = mapped_column(String, nullable=False)
-    domain: Mapped[str] = mapped_column(
-        String, nullable=False, default="PYTHON", server_default=text("'PYTHON'")
-    )
     difficulty: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     template_code: Mapped[str] = mapped_column(Text, nullable=False)
@@ -31,7 +28,6 @@ class Task(Base):
 
     __table_args__ = (
         CheckConstraint("type IN ('CODE', 'MULTIPLE_CHOICE')", name="ck_tasks_type"),
-        CheckConstraint("domain IN ('PYTHON', 'SQL')", name="ck_tasks_domain"),
         CheckConstraint("difficulty IN ('BRONZE', 'SILVER', 'GOLD')", name="ck_tasks_difficulty"),
         CheckConstraint("reward_coins >= 0", name="ck_tasks_reward_coins_nonneg"),
         CheckConstraint(

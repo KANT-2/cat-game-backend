@@ -33,11 +33,15 @@ def get_or_create_daily(db: Session, user: User, today: date) -> Attendance:
     )
     db.add(attendance)
     db.flush()
+    preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
+    if preferred_domain not in {"PYTHON", "SQL"}:
+        preferred_domain = "PYTHON"
     tasks = recommended_tasks(
         db,
         user.id,
         settings.daily_task_count,
         recommendation_date=today,
+        domain=preferred_domain,
     )
     if len(tasks) < settings.daily_task_count:
         raise DailyMissionError("not enough active tasks to assign the daily mission")

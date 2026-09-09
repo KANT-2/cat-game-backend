@@ -14,6 +14,7 @@ class GameSettingsRead(BaseModel):
     effects_enabled: bool = True
     effects_volume: int = Field(default=80, ge=0, le=100)
     reduced_motion: bool = False
+    learning_domain: Literal["PYTHON", "SQL"] = "PYTHON"
 
 
 class GameCatRead(BaseModel):
@@ -108,11 +109,14 @@ class CatHomeCommand(BaseModel):
 
 
 class SettingsCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     bgm_enabled: bool | None = None
     bgm_volume: int | None = Field(default=None, ge=0, le=100)
     effects_enabled: bool | None = None
     effects_volume: int | None = Field(default=None, ge=0, le=100)
     reduced_motion: bool | None = None
+    learning_domain: Literal["PYTHON", "SQL"] | None = None
 
 
 class DailyRewardCommand(BaseModel):

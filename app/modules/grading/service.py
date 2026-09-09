@@ -15,6 +15,7 @@ from app.core.request_hash import build_request_hash
 from app.db.session import SessionLocal
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
+from app.models.concept import Concept
 from app.models.room import Room
 from app.models.room_participant import RoomParticipant
 from app.models.room_task import RoomTask
@@ -213,10 +214,11 @@ def grade_claimed_attempt(lease: AttemptLease, runner: TaskRunner | None = None)
         if attempt is None:
             return False
         task = db.get(Task, attempt.task_id)
-        if task is None:
+        concept = db.get(Concept, task.concept_id) if task is not None else None
+        if task is None or concept is None:
             grade_result = GradeResult(Verdict.SYSTEM_ERROR)
         else:
-            grade_result = _run_safely(lease.public_id, runner, task, attempt)
+            grade_result = _run_safely(lease.public_id, runner, task, concept.domain, attempt)
         return _persist_result(db, lease, task, grade_result)
     except Exception:  # noqa: BLE001 - an expired lease is retried by a worker
         db.rollback()
@@ -230,10 +232,11 @@ def _run_safely(
     attempt_public_id: uuid.UUID,
     runner: TaskRunner | None,
     task: Task,
+    domain: str,
     attempt: TaskAttempt,
 ) -> GradeResult:
     try:
-        return (runner or dispatcher.for_task(task)).grade(task, attempt.submitted_code)
+        return (runner or dispatcher.for_task(task, domain)).grade(task, attempt.submitted_code)
     except TestCaseSpecError:
         return GradeResult(Verdict.SYSTEM_ERROR)
     except Exception:  # noqa: BLE001 - worker boundary converts failures to a safe verdict

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
+from app.modules.game.schemas import SettingsCommand
 from app.modules.grading.runners import (
     MultipleChoiceRunner,
     PythonSandboxRunner,
@@ -41,16 +42,16 @@ def test_submission_requires_exactly_one_answer_shape():
 
 
 def test_multiple_choice_is_graded_without_python_sandbox():
-    task = SimpleNamespace(type="MULTIPLE_CHOICE", domain="PYTHON", correct_option="B")
-    runner = RunnerDispatcher().for_task(task)
+    task = SimpleNamespace(type="MULTIPLE_CHOICE", correct_option="B")
+    runner = RunnerDispatcher().for_task(task, "PYTHON")
     assert isinstance(runner, MultipleChoiceRunner)
     assert runner.grade(task, "B").verdict is Verdict.ACCEPTED
     assert runner.grade(task, "A").verdict is Verdict.WRONG_ANSWER
 
 
 def test_python_code_tasks_keep_using_the_sandbox():
-    task = SimpleNamespace(type="CODE", domain="PYTHON")
-    assert isinstance(RunnerDispatcher().for_task(task), PythonSandboxRunner)
+    task = SimpleNamespace(type="CODE")
+    assert isinstance(RunnerDispatcher().for_task(task, "PYTHON"), PythonSandboxRunner)
 
 
 def test_proficiency_and_weakness_policy():
@@ -58,6 +59,12 @@ def test_proficiency_and_weakness_policy():
     assert ConceptAssessment(1, 2, 0).is_weak is False
     assert ConceptAssessment(1, 3, 33).is_weak is True
     assert ConceptAssessment(1, 3, 67).is_weak is False
+
+
+def test_learning_domain_setting_accepts_only_supported_task_domains():
+    assert SettingsCommand(learning_domain="SQL").learning_domain == "SQL"
+    with pytest.raises(ValidationError):
+        SettingsCommand(learning_domain="JAVASCRIPT")
 
 
 def test_daily_recommendation_rotates_ties_without_crossing_priority_groups():
@@ -148,14 +155,13 @@ class _LearningTaskSession:
 
 def test_learning_task_selection_applies_filters_and_completed_state():
     concept_public_id = uuid.uuid4()
-    concept = SimpleNamespace(id=9, public_id=concept_public_id, name="PYTHON:functions")
+    concept = SimpleNamespace(id=9, public_id=concept_public_id, domain="PYTHON", name="functions")
     task = SimpleNamespace(
         id=21,
         public_id=uuid.uuid4(),
         concept_id=9,
         title="함수 문제",
         type="CODE",
-        domain="PYTHON",
         difficulty="SILVER",
         description="desc",
         template_code="def solve():",
@@ -183,7 +189,7 @@ def test_learning_task_selection_applies_filters_and_completed_state():
     sql = str(db.scalar_statements[0])
     assert "tasks.is_active IS true" in sql
     assert "tasks.type =" in sql
-    assert "tasks.domain =" in sql
+    assert "concepts.domain =" in sql
     assert "tasks.difficulty =" in sql
     assert "tasks.concept_id =" in sql
     assert "ORDER BY tasks.id" in sql

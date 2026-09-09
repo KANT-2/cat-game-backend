@@ -5,21 +5,22 @@ from sqlalchemy import select
 from app.api.dependencies import DbSession
 from app.models.concept import Concept
 from app.models.task import Task
-from app.schemas.task import TaskCreate
+from app.schemas.task import TaskCreate, TaskRead, to_task_read
 
 
-def create_task(db: DbSession, data: TaskCreate) -> Task:
+def create_task(db: DbSession, data: TaskCreate) -> TaskRead:
     concept = db.scalar(
         select(Concept).where(Concept.public_id == data.concept_public_id)
     )
     if concept is None:
         raise ValueError("존재하지 않는 concept_public_id입니다.")
+    if concept.domain != data.domain:
+        raise ValueError("domain은 선택한 concept의 domain과 일치해야 합니다.")
 
     task = Task(
         concept_id=concept.id,
         title=data.title,
         type=data.type,
-        domain=data.domain,
         difficulty=data.difficulty,
         description=data.description,
         template_code=data.template_code,
@@ -32,4 +33,4 @@ def create_task(db: DbSession, data: TaskCreate) -> Task:
     db.add(task)
     db.commit()
     db.refresh(task)
-    return task
+    return to_task_read(task, concept)

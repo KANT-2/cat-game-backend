@@ -258,6 +258,7 @@ def change_settings(
         "effects_enabled": "effectsEnabled",
         "effects_volume": "effectsVolume",
         "reduced_motion": "reducedMotion",
+        "learning_domain": "learningDomain",
     }
     patch = {aliases[key]: value for key, value in payload.model_dump(exclude_none=True).items()}
     try:

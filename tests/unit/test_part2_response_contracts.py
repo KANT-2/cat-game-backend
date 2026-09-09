@@ -28,12 +28,13 @@ def test_part2_get_responses_have_explicit_openapi_schemas():
 def test_task_converter_exposes_only_public_relationship_ids():
     task = SimpleNamespace(
         id=12, public_id=uuid.uuid4(), concept_id=3, title="SQL select", type="CODE",
-        domain="SQL", difficulty="BRONZE", description="desc", template_code="SELECT ",
+        difficulty="BRONZE", description="desc", template_code="SELECT ",
         options=None, hint_text=None, is_active=True, reward_coins=30, test_cases="secret",
     )
-    concept = SimpleNamespace(id=3, public_id=uuid.uuid4())
+    concept = SimpleNamespace(id=3, public_id=uuid.uuid4(), domain="SQL", name="select")
     payload = to_task_read(task, concept).model_dump()
     assert payload["concept_public_id"] == concept.public_id
+    assert payload["domain"] == "SQL"
     assert "id" not in payload and "concept_id" not in payload and "test_cases" not in payload
 
 

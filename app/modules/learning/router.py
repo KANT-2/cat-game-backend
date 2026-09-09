@@ -61,12 +61,12 @@ def list_tasks(
     difficulty: Literal["BRONZE", "SILVER", "GOLD"] | None = Query(None),
     limit: int = Query(20, ge=1, le=50),
 ) -> list[TaskRead]:
-    statement = select(Task).where(Task.is_active.is_(True))
+    statement = select(Task).join(Concept, Concept.id == Task.concept_id).where(Task.is_active.is_(True))
 
     if task_type is not None:
         statement = statement.where(Task.type == task_type)
     if domain is not None:
-        statement = statement.where(Task.domain == domain)
+        statement = statement.where(Concept.domain == domain)
     if difficulty is not None:
         statement = statement.where(Task.difficulty == difficulty)
 
@@ -96,12 +96,16 @@ def recommendations(
         Query(description="Local/test-only recommendation date override."),
     ] = None,
 ) -> list[TaskRead]:
+    preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
+    if preferred_domain not in {"PYTHON", "SQL"}:
+        preferred_domain = "PYTHON"
     tasks = recommended_tasks(
         db,
         user.id,
         limit,
         since=user.learning_reset_at,
         recommendation_date=_recommendation_date(test_date),
+        domain=preferred_domain,
     )
     completed_ids = _completed_task_ids(
         db,
