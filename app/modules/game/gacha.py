@@ -13,6 +13,7 @@ from app.core.exceptions import (
 from app.core.repository_contracts import ClaimStatus
 from app.core.request_hash import build_request_hash
 from app.core.unit_of_work import UnitOfWork
+from app.modules.game.catalog import ITEM_DEFINITIONS
 
 _OPERATION_TYPE = "GAME_GACHA"
 _COSTS = {1: 30, 11: 300}
@@ -26,13 +27,28 @@ class RewardDefinition:
     weight: float
 
 
-_REWARDS = (
-    RewardDefinition("ink", "cat", 0.05),
-    RewardDefinition("furniture.desk", "furniture", 0.10),
-    RewardDefinition("furniture.catTower", "furniture", 0.25),
-    RewardDefinition("decor.plant", "furniture", 0.30),
-    RewardDefinition("furniture.sofa", "furniture", 0.30),
-)
+def _build_rewards() -> tuple[RewardDefinition, ...]:
+    # Keep the original category budgets; share each budget across its catalog items.
+    groups = (
+        (0.10, {"desk", "hideout"}),
+        (0.25, {"catTree", "scratcher"}),
+        (0.30, {"plant"}),
+        (0.30, {"sofa", "bed", "rug", "litterBox"}),
+    )
+    rewards = [RewardDefinition("ink", "cat", 0.05)]
+    for weight, kinds in groups:
+        items = [
+            item
+            for item in ITEM_DEFINITIONS
+            if item.category == "FURNITURE" and item.furniture_kind in kinds
+        ]
+        rewards.extend(
+            RewardDefinition(item.catalog_key, "furniture", weight / len(items)) for item in items
+        )
+    return tuple(rewards)
+
+
+_REWARDS = _build_rewards()
 
 
 def draw_game_gacha(

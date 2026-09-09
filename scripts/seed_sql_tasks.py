@@ -13,6 +13,15 @@ from app.models.task import Task
 
 SEED_PREFIX = "[SAMPLE:SQL:"
 CAT_HELPERS = ("치즈", "나비", "보리", "코코", "모카")
+STORIES = (
+    "츄르를 사고 싶어 고양이 학교 친구들의 주문 장부를 살펴보고 있어요.",
+    "고양이용 우유를 함께 주문하려고 친구들의 신청 기록을 정리하고 있어요.",
+    "장난감 놀이 대회를 준비하며 친구들의 점수와 팀 기록을 확인하고 있어요.",
+    "방석 공동구매를 준비하며 결제한 주문과 취소한 주문을 확인하고 있어요.",
+    "리본과 목걸이 선물을 준비하며 친구 목록과 주문 기록을 살펴보고 있어요.",
+    "캣타워 놀이 모임에서 친구들의 점수 기록을 정리하고 있어요.",
+    "생선 가게 심부름을 마치고 친구들의 주문 내역을 정리하고 있어요.",
+)
 SEED_SQL = """
 CREATE TABLE students (id int, name text, team text, score int, active boolean);
 INSERT INTO students VALUES
@@ -40,9 +49,10 @@ def task(level: str, number: int, concept: str, title: str, prompt: str, query: 
         "difficulty": level,
         "type": "CODE",
         "description": (
-            f"[고양이 이야기] {cat}가 생선 가게 데이터 앞에서 꼬리를 동동 구르고 있어요. "
-            "간식 장부를 무사히 정리할 수 있도록 도와주세요, 야옹~\n\n"
-            f"[도와주세요!] {prompt}"
+            f"[도와주세요!] {cat}가 {STORIES[(number - 1) % len(STORIES)]}\n\n"
+            "[데이터 안내] students는 고양이 학교 학생과 놀이 점수, orders는 학생별 주문, "
+            "nums는 숫자 연습표예요. 아래 문제에 적힌 테이블과 열 이름을 그대로 사용해 주세요.\n\n"
+            f"[문제] {prompt}"
         ),
         "template_code": "-- 냥이의 부탁을 해결할 SQL을 작성해 주세요. 야옹!\n",
         "test_cases": query_case(query),
