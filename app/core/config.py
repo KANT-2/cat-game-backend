@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     battle_correct_score: int | None = None
     game_timezone: str = "Asia/Seoul"
     gemini_api_key: SecretStr | None = None
+    tasks_api_key: SecretStr | None = None
     gemini_model: str = "gemini-3.6-flash"
     gemini_timeout_seconds: float = 30.0
     gemini_max_output_tokens: int = 512

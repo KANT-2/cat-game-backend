@@ -146,3 +146,18 @@ def _unauthorized() -> HTTPException:
 
 
 CurrentUser = Annotated[User, Depends(resolve_current_user)]
+
+def verify_tasks_api_key(
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+) -> None:
+    """Restrict task-authoring endpoints to holders of the shared team key."""
+    expected = settings.tasks_api_key
+    if expected is None:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Tasks API key is not configured"
+        )
+    if x_api_key is None or not compare_digest(x_api_key, expected.get_secret_value()):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid-api-key")
+
+
+TeamKeyAuth = Annotated[None, Depends(verify_tasks_api_key)]
