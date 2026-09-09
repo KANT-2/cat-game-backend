@@ -10,10 +10,10 @@ from app.core.exceptions import (
     InvalidQuantityError,
     ResourceNotFoundError,
 )
-from app.core.repository_contracts import ClaimStatus
+from app.core.repository_contracts import CatalogItemSeed, ClaimStatus
 from app.core.request_hash import build_request_hash
 from app.core.unit_of_work import UnitOfWork
-from app.modules.game.catalog import ITEM_DEFINITIONS
+from app.modules.game.catalog import ITEM_DEFINITIONS, catalog_public_id
 
 _OPERATION_TYPE = "GAME_GACHA"
 _COSTS = {1: 30, 11: 300}
@@ -49,6 +49,17 @@ def _build_rewards() -> tuple[RewardDefinition, ...]:
 
 
 _REWARDS = _build_rewards()
+_GACHA_CATALOG_ITEMS = tuple(
+    CatalogItemSeed(
+        public_id=catalog_public_id("item", item.catalog_key),
+        catalog_key=item.catalog_key,
+        category=item.category,
+        name=item.name,
+        price=item.price,
+    )
+    for item in ITEM_DEFINITIONS
+    if item.category == "FURNITURE"
+)
 
 
 def draw_game_gacha(
@@ -77,6 +88,9 @@ def draw_game_gacha(
     source = random_source or random.SystemRandom()
 
     with unit_of_work as uow:
+        # A code deploy can briefly precede the operational seed. Keep the authoritative
+        # static pool drawable without charging a player for a missing catalog row.
+        uow.items.ensure_catalog_items(_GACHA_CATALOG_ITEMS)
         user = uow.users.get_by_public_id(user_public_id)
         if user is None:
             raise ResourceNotFoundError("user not found")

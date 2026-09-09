@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -6,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.repository_contracts import (
+    CatalogItemSeed,
     ClaimStatus,
     ExecutionClaim,
 )
@@ -39,6 +41,23 @@ class SqlAlchemyUserRepository:
 class SqlAlchemyItemRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
+
+    def ensure_catalog_items(self, items: Sequence[CatalogItemSeed]) -> None:
+        if not items:
+            return
+        statement = insert(Item).values(
+            [
+                {
+                    "public_id": item.public_id,
+                    "catalog_key": item.catalog_key,
+                    "category": item.category,
+                    "name": item.name,
+                    "price": item.price,
+                }
+                for item in items
+            ]
+        )
+        self._session.execute(statement.on_conflict_do_nothing(index_elements=[Item.catalog_key]))
 
     def get_by_public_id(self, public_id: UUID) -> Item | None:
         statement = select(Item).where(Item.public_id == public_id)

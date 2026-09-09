@@ -69,6 +69,8 @@ class UserRepository(Protocol):
 
 
 class ItemRepository(Protocol):
+    def ensure_catalog_items(self, items: Sequence["CatalogItemSeed"]) -> None: ...
+
     def get_by_public_id(self, public_id: UUID) -> "Item | None": ...
     def get_by_id(self, item_id: int) -> "Item | None": ...
 
@@ -158,6 +160,12 @@ Repository는 자체적으로 `commit()`하지 않는다. 가챠와 구매는 �
 8. 자산을 생성하거나 수량을 갱신한다.
 9. 실행의 `result_data`, 비용과 완료 상태를 저장한다.
 10. 한 번만 커밋한다.
+
+PWA 호환 가챠는 7번의 비용 차감 전에 정적 가구 풀의 카탈로그 행을
+`ItemRepository.ensure_catalog_items()`로 보완한다. 구현체는 결정적 공개 UUID를 사용하고
+`catalog_key` 충돌을 무시하는 원자적 insert를 수행한다. 따라서 코드 배포와 운영 seed 사이에 짧은
+불일치가 있어도 신규 보상 때문에 추첨이 실패하지 않으며, 보완 행도 같은 Unit of Work에서 함께
+커밋되거나 롤백된다. 기존 행의 이름·가격 갱신과 전체 seed 검증은 운영 seed가 담당한다.
 
 다음 변경은 반드시 동일한 트랜잭션에 포함한다.
 

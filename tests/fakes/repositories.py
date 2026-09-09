@@ -1,7 +1,9 @@
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from app.core.repository_contracts import (
+    CatalogItemSeed,
     ClaimStatus,
     ExecutionClaim,
 )
@@ -101,6 +103,25 @@ class FakeUserRepository:
 class FakeItemRepository:
     def __init__(self, items: list[Item] | None = None) -> None:
         self.items = list(items or [])
+
+    def ensure_catalog_items(self, items: Sequence[CatalogItemSeed]) -> None:
+        known_keys = {item.catalog_key for item in self.items}
+        next_id = max((item.id or 0 for item in self.items), default=0) + 1
+        for seed in items:
+            if seed.catalog_key in known_keys:
+                continue
+            self.items.append(
+                Item(
+                    id=next_id,
+                    public_id=seed.public_id,
+                    catalog_key=seed.catalog_key,
+                    category=seed.category,
+                    name=seed.name,
+                    price=seed.price,
+                )
+            )
+            known_keys.add(seed.catalog_key)
+            next_id += 1
 
     def get_by_public_id(self, public_id: uuid.UUID) -> Item | None:
         return next(

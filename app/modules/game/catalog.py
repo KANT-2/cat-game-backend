@@ -1,8 +1,15 @@
 """Versioned static game catalog shared by seeding and authoritative rules."""
 
+import uuid
 from dataclasses import dataclass
 
 CATALOG_VERSION = 2
+CATALOG_NAMESPACE = uuid.UUID("cf4c878d-b1d4-4f10-9c30-d79842280272")
+
+
+def catalog_public_id(kind: str, catalog_key: str) -> uuid.UUID:
+    """Return the deterministic public UUID for one stable catalog entry."""
+    return uuid.uuid5(CATALOG_NAMESPACE, f"{kind}:{catalog_key}")
 
 
 @dataclass(frozen=True, slots=True)

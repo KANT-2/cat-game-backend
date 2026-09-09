@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
-from app.core.repository_contracts import ClaimStatus
+from app.core.repository_contracts import CatalogItemSeed, ClaimStatus
 from app.db.repositories import (
     SqlAlchemyAssetRepository,
     SqlAlchemyCatMemoryRepository,
@@ -81,6 +81,27 @@ def test_item_repository_gets_by_public_id() -> None:
     assert result is expected_item
     assert "WHERE items.public_id =" in sql
     assert "FOR UPDATE" not in sql
+    session.commit.assert_not_called()
+
+
+def test_item_repository_ensures_missing_catalog_rows_without_owning_transaction() -> None:
+    session = Mock(spec=Session)
+    repository = SqlAlchemyItemRepository(session)
+    seed = CatalogItemSeed(
+        public_id=uuid.uuid4(),
+        catalog_key="furniture.ocean.rug",
+        category="FURNITURE",
+        name="조개빛 해변 러그",
+        price=2_500,
+    )
+
+    repository.ensure_catalog_items([seed])
+
+    statement = session.execute.call_args.args[0]
+    sql = _compile_sql(statement)
+    assert "INSERT INTO items" in sql
+    assert "ON CONFLICT (catalog_key) DO NOTHING" in sql
+    assert "furniture.ocean.rug" in sql
     session.commit.assert_not_called()
 
 
