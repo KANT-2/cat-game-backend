@@ -15,7 +15,7 @@ from app.core.request_hash import build_request_hash
 from app.core.unit_of_work import UnitOfWork
 
 _OPERATION_TYPE = "GAME_GACHA"
-_COSTS = {1: 30, 11: 270}
+_COSTS = {1: 30, 11: 300}
 _DUPLICATE_CAT_COINS = 15
 
 

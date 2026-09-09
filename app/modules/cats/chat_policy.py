@@ -7,6 +7,7 @@ from enum import StrEnum
 class CatChatCategory(StrEnum):
     COMPANION = "COMPANION"
     CODING = "CODING"
+    GENERAL = "GENERAL"
     UNKNOWN = "UNKNOWN"
     PROMPT_INJECTION = "PROMPT_INJECTION"
     SAFETY = "SAFETY"
@@ -46,21 +47,15 @@ _CODING = re.compile(
     r"버그|디버깅|에러|오류|코드|api|데이터베이스|쿼리|git|깃허브",
     re.IGNORECASE,
 )
-_OFF_TOPIC_KNOWLEDGE = re.compile(
-    r"날씨|기온|미세먼지|대통령|국회의원|정치|선거|주가|환율|부동산|역사|전쟁|"
-    r"양자|물리학|화학|생물학|지리|수도|법률|판례|질병|증상|요리법|레시피|스포츠\s*결과",
-    re.IGNORECASE,
-)
 _COMPANION = re.compile(
-    r"안녕|반가|고마|미안|잘\s*잤|뭐\s*해|심심|놀자|좋아|싫어|기분|행복|슬퍼|우울|"
-    r"힘들|피곤|졸려|배고파|오늘|내일|공부|시험|숙제|학교|회사|친구|고양이|귀여|"
+    r"안녕|반가|고마|미안|잘\s*잤|뭐\s*해|심심|놀자|놀래|놀까|놀아|놀이|좋아|싫어|기분|행복|슬퍼|우울|"
+    r"힘들|피곤|졸려|배고파|공부|시험|숙제|학교|회사|친구|고양이|귀여|"
     r"사랑|응원|칭찬|이야기|대화|냐옹|야옹|냐앙|이름|너는|나는|내가|제일",
     re.IGNORECASE,
 )
 
 _DIRECT_REPLIES = {
     CatChatCategory.PROMPT_INJECTION: "냐… 냐앙. 나는 그냥 네 고양이로 있을래.",
-    CatChatCategory.UNKNOWN: "냐… 냐앙? 그건 고양이라 잘 모르겠어.",
     CatChatCategory.SAFETY: "냐아… 그건 도와줄 수 없어. 지금 위험하다면 곁의 믿을 만한 사람이나 긴급 도움에 바로 알려 줘.",
     CatChatCategory.PROFESSIONAL: "냐앙… 그건 고양이가 판단하면 안 되는 일이야. 의료·법률·재정 전문가에게 확인해 줘.",
 }
@@ -80,8 +75,8 @@ def normalize_cat_chat_message(value: str) -> str:
 def classify_cat_chat(value: str) -> CatChatDecision:
     """Classify a user message before any external model receives it.
 
-    Prompt-control attempts and unsupported knowledge never reach the provider and are never
-    persisted. Only coding and ordinary companion conversation may be generated and summarized.
+    Prompt-control, unsafe, and high-stakes professional requests never reach the provider.
+    Other unmatched input is general conversation that Gemini may answer without remembering it.
     """
     message = normalize_cat_chat_message(value)
     if not message:
@@ -94,12 +89,10 @@ def classify_cat_chat(value: str) -> CatChatDecision:
         category = CatChatCategory.PROFESSIONAL
     elif _CODING.search(message):
         category = CatChatCategory.CODING
-    elif _OFF_TOPIC_KNOWLEDGE.search(message):
-        category = CatChatCategory.UNKNOWN
     elif _COMPANION.search(message):
         category = CatChatCategory.COMPANION
     else:
-        category = CatChatCategory.UNKNOWN
+        category = CatChatCategory.GENERAL
     return CatChatDecision(message, category, _DIRECT_REPLIES.get(category), category in {CatChatCategory.CODING, CatChatCategory.COMPANION})
 
 

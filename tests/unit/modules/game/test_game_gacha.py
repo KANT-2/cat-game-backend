@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.core.exceptions import InsufficientBalanceError
+from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.item import Item
 from app.models.user import User
@@ -106,4 +107,55 @@ def test_game_gacha_does_not_charge_when_balance_is_insufficient() -> None:
 
     assert user.balance == 29
     assert unit_of_work.assets.assets == []
+    unit_of_work.commit.assert_not_called()
+
+
+def test_game_gacha_multi_draw_charges_300_and_returns_duplicate_coin_rewards() -> None:
+    user = _user(balance=1_000)
+    unit_of_work = _unit_of_work(user)
+    unit_of_work.assets = FakeAssetRepository(
+        [
+            Asset(
+                id=1,
+                public_id=uuid.uuid4(),
+                user_id=user.id,
+                cat_id=2,
+                item_id=None,
+                quantity=1,
+            )
+        ]
+    )
+    source = MagicMock()
+    source.random.return_value = 0.01
+    request_id = uuid.uuid4()
+
+    result = draw_game_gacha(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+        request_id=request_id,
+        draw_count=11,
+        random_source=source,
+    )
+
+    assert len(result["rewards"]) == 11
+    assert all(reward["exchange_coins"] == 15 for reward in result["rewards"])
+    assert result["remaining_balance"] == 865
+    assert user.balance == 865
+    execution = unit_of_work.executions.executions[request_id]
+    assert execution.balance_cost == 300
+
+
+def test_game_gacha_multi_draw_requires_full_300_balance_before_rewards() -> None:
+    user = _user(balance=299)
+    unit_of_work = _unit_of_work(user)
+
+    with pytest.raises(InsufficientBalanceError):
+        draw_game_gacha(
+            unit_of_work=unit_of_work,
+            user_public_id=user.public_id,
+            request_id=uuid.uuid4(),
+            draw_count=11,
+        )
+
+    assert user.balance == 299
     unit_of_work.commit.assert_not_called()

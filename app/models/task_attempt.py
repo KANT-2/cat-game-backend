@@ -21,6 +21,17 @@ from app.models.base import Base
 class TaskAttempt(Base):
     __tablename__ = "task_attempts"
 
+    request_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        server_default=text("gen_random_uuid()"),
+    )
+    request_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        server_default=text("repeat('0', 64)"),
+    )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), nullable=False)
     attendance_task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

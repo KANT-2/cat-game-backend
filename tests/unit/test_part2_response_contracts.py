@@ -1,8 +1,13 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 
+import pytest
+from fastapi import HTTPException
+
+from app.core.config import settings
 from app.main import app
+from app.modules.learning.router import _recommendation_date
 from app.schemas.task import to_task_read
 from app.schemas.task_attempt import to_task_attempt_read
 
@@ -84,3 +89,21 @@ def test_learning_tasks_openapi_exposes_selection_filters():
     ]
     assert parameters["limit"]["schema"]["minimum"] == 1
     assert parameters["limit"]["schema"]["maximum"] == 50
+
+
+def test_recommendations_exposes_local_test_date_override():
+    operation = app.openapi()["paths"]["/api/v1/learning/recommendations"]["get"]
+    parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
+
+    assert "test_date" in parameters
+
+
+def test_recommendation_date_override_is_limited_to_local_and_test(monkeypatch):
+    selected = date(2026, 9, 9)
+    monkeypatch.setattr(settings, "app_env", "local")
+    assert _recommendation_date(selected) == selected
+
+    monkeypatch.setattr(settings, "app_env", "production")
+    with pytest.raises(HTTPException) as exc_info:
+        _recommendation_date(selected)
+    assert exc_info.value.status_code == 404

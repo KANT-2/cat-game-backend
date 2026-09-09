@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,11 @@ from app.modules.grading.runners import (
     RunnerDispatcher,
     Verdict,
 )
-from app.modules.learning.proficiency import ConceptAssessment, calculate_proficiency
+from app.modules.learning.proficiency import (
+    ConceptAssessment,
+    _rotate_daily_priority_groups,
+    calculate_proficiency,
+)
 from app.modules.learning.router import list_tasks
 from app.schemas.task import TaskRead
 from app.schemas.task_attempt import TaskAttemptCreate
@@ -19,7 +24,11 @@ from scripts.seed_sql_tasks import build_tasks as build_sql_tasks
 
 
 def submission(**values):
-    data = {"task_public_id": uuid.uuid4(), "context_type": "LEARNING"}
+    data = {
+        "request_id": uuid.uuid4(),
+        "task_public_id": uuid.uuid4(),
+        "context_type": "LEARNING",
+    }
     data.update(values)
     return TaskAttemptCreate.model_validate(data)
 
@@ -49,6 +58,23 @@ def test_proficiency_and_weakness_policy():
     assert ConceptAssessment(1, 2, 0).is_weak is False
     assert ConceptAssessment(1, 3, 33).is_weak is True
     assert ConceptAssessment(1, 3, 67).is_weak is False
+
+
+def test_daily_recommendation_rotates_ties_without_crossing_priority_groups():
+    tasks = [
+        SimpleNamespace(id=1, concept_id=10, difficulty="BRONZE"),
+        SimpleNamespace(id=2, concept_id=10, difficulty="BRONZE"),
+        SimpleNamespace(id=3, concept_id=10, difficulty="SILVER"),
+        SimpleNamespace(id=4, concept_id=20, difficulty="BRONZE"),
+    ]
+
+    first_day = _rotate_daily_priority_groups(tasks, 7, date(2026, 9, 8), [10, 20])
+    next_day = _rotate_daily_priority_groups(tasks, 7, date(2026, 9, 9), [10, 20])
+
+    assert [task.id for task in first_day[:2]] == [1, 2]
+    assert [task.id for task in next_day[:2]] == [2, 1]
+    assert [task.id for task in first_day[2:]] == [3, 4]
+    assert [task.id for task in next_day[2:]] == [3, 4]
 
 
 def test_seed_has_150_balanced_unique_tasks_and_hidden_answers():

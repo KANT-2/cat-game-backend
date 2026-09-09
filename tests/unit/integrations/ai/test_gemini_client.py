@@ -90,6 +90,8 @@ def test_generate_structured_returns_validated_model(monkeypatch) -> None:
     config = call.kwargs["config"]
     assert config.response_mime_type == "application/json"
     assert config.response_schema is _ChatOutput
+    assert config.temperature is None
+    assert config.automatic_function_calling.disable is True
     assert result.data == parsed
     assert result.input_tokens == 20
     assert result.output_tokens == 10
