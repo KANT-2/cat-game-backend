@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from app.core.exceptions import (
+    InvalidAIResponseError,
     InvalidMemorySummaryError,
     ResourceNotFoundError,
 )
@@ -105,8 +106,8 @@ def chat_with_cat(
 ) -> CatChatRead:
     """Reply as an owned cat without storing raw user input.
 
-    Prompt-control, unsafe, professional, and unsupported-domain input is answered before the
-    provider boundary. Accepted messages store only a server-authored category summary.
+    Prompt-control, unsafe, and professional input is answered before the provider boundary.
+    Other safe input reaches the provider, while only coding and companion categories are remembered.
     """
     decision = classify_cat_chat(message)
     with unit_of_work as uow:
@@ -133,21 +134,21 @@ def chat_with_cat(
             remembered=False,
         )
 
-    try:
-        reply = safe_cat_chat_output(
-            provider.reply(
-                persona=persona,
-                message=decision.message,
-                memories=memory_summaries,
-                recent_messages=(recent_messages or [])[-10:],
-            )
+    reply = safe_cat_chat_output(
+        provider.reply(
+            persona=persona,
+            message=decision.message,
+            memories=memory_summaries,
+            recent_messages=(recent_messages or [])[-10:],
         )
-    except Exception:  # noqa: BLE001 - provider failures must not escape into the game response
-        reply = None
+    )
     if reply is None:
+        raise InvalidAIResponseError("AI provider returned an unsafe response")
+
+    if not decision.remember:
         return CatChatRead(
             cat_asset_public_id=cat_asset_public_id,
-            reply="냐아… 잠깐 졸았나 봐. 한 번만 다시 말해 줄래?",
+            reply=reply,
             category=decision.category,
             memory_count=memory_count,
             remembered=False,

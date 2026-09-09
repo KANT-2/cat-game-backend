@@ -13,6 +13,7 @@ from app.schemas.base import ReadSchema
 class TaskAttemptCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    request_id: uuid.UUID
     task_public_id: uuid.UUID
     submitted_code: str | None = Field(default=None, max_length=32_768)
     selected_option: str | None = Field(default=None, max_length=256)

@@ -1,6 +1,6 @@
 """Small authoritative commands not covered by economy or housing services."""
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from app.core.exceptions import (
     ResourceNotFoundError,
     RewardNotReadyError,
 )
+from app.core.time import game_day_bounds, game_today
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
@@ -92,15 +93,15 @@ def update_game_settings(db: Session, user: User, patch: dict[str, object]) -> N
 
 
 def claim_attendance(db: Session, user: User, *, today: date | None = None) -> dict[str, object]:
-    """Claim the UTC calendar day's attendance reward exactly once.
+    """Claim the configured game calendar day's attendance reward exactly once.
 
     @param db: Request-scoped database session and transaction.
     @param user: Authenticated player receiving the reward.
-    @param today: Injectable UTC date for deterministic tests.
+    @param today: Injectable game-local date for deterministic tests.
     @returns Claimed date, current streak, bonus, and total awarded coins.
     @throws AlreadyClaimedError: Attendance already exists for the selected date.
     """
-    claim_date = today or datetime.now(UTC).date()
+    claim_date = today or game_today()
     locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if locked_user is None:
         raise ResourceNotFoundError("user not found")
@@ -148,7 +149,7 @@ def claim_daily_reward(
     """Validate today's completed attempts and grant one daily reward atomically."""
     if reward_key not in DAILY_REWARDS:
         raise ResourceNotFoundError("daily reward not found")
-    claim_date = today or datetime.now(UTC).date()
+    claim_date = today or game_today()
     locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if locked_user is None:
         raise ResourceNotFoundError("user not found")
@@ -210,10 +211,9 @@ def _daily_completion_progress(
     claim_date: date,
     learning_reset_at: datetime | None = None,
 ) -> tuple[int, bool]:
-    day_start = datetime.combine(claim_date, time.min, tzinfo=UTC)
+    day_start, day_end = game_day_bounds(claim_date)
     if learning_reset_at is not None and learning_reset_at > day_start:
         day_start = learning_reset_at
-    day_end = day_start + timedelta(days=1)
     rows = db.execute(
         select(TaskAttempt.task_id, Task.type)
         .join(Task, Task.id == TaskAttempt.task_id)

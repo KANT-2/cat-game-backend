@@ -7,7 +7,8 @@ from fastapi import HTTPException, Request, Response
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_current_user
-from app.core.config import settings
+from app.core.config import Settings, settings
+from app.integrations.ax_platform import PlatformService
 from app.main import app
 from app.models.auth_session import AuthSession
 from app.modules.identity.router import _issue_session, current_session, development_session
@@ -101,12 +102,13 @@ def test_development_session_reuses_public_user(monkeypatch) -> None:
 def test_current_session_exposes_only_public_user_fields() -> None:
     user = user_fixture()
 
-    response = current_session(user)
+    response = current_session(user, PlatformService(Settings(_env_file=None)))
 
     assert response.public_id == user.public_id
     payload = response.model_dump()
     assert "id" not in payload
     assert "homepage_user_id" not in payload
+    assert payload["platform"] == {"status": "disabled", "profile": None}
 
 
 def test_development_session_is_hidden_in_production(monkeypatch) -> None:

@@ -1,17 +1,17 @@
 # Python·SQL Concept 기준
 
-Concept는 학습 영역만 나타내며 난이도는 `TASKS.difficulty`에서 별도로 관리한다. 숫자 `concept_id`는 DB 내부 식별자이므로 코드에 고정하지 않고, 시드는 아래의 안정적인 Concept 이름을 조회해 연결한다. 외부 API에는 `concept_public_id` UUID만 노출한다.
+Concept는 학습 과목(`domain`)과 그 안의 학습 영역(`name`)을 나타내며 난이도는 `TASKS.difficulty`에서 별도로 관리한다. 과목의 단일 기준은 `CONCEPTS.domain`이고 `TASKS`에는 중복 저장하지 않는다. 숫자 `concept_id`는 DB 내부 식별자이므로 코드에 고정하지 않고, 시드는 아래의 안정적인 `(domain, name)` 조합을 조회해 연결한다. 외부 API에는 `concept_public_id` UUID만 노출한다.
 
 ## Python Concept 7개
 
 ```text
-PYTHON:basics
-PYTHON:conditionals
-PYTHON:loops
-PYTHON:strings
-PYTHON:collections
-PYTHON:functions
-PYTHON:exceptions
+basics
+conditionals
+loops
+strings
+collections
+functions
+exceptions
 ```
 
 알고리즘·그래프·동적 계획법은 별도 Concept로 만들지 않는다. 문제의 핵심 학습 영역에 따라 `collections`, `functions` 등에 포함하고 실제 복잡도는 Bronze, Silver, Gold 난이도로 표현한다.
@@ -19,15 +19,15 @@ PYTHON:exceptions
 ## SQL Concept 9개
 
 ```text
-SQL:basics
-SQL:filtering
-SQL:aggregation
-SQL:joins
-SQL:subqueries
-SQL:advanced_queries
-SQL:data_manipulation
-SQL:schema
-SQL:transactions
+basics
+filtering
+aggregation
+joins
+subqueries
+advanced_queries
+data_manipulation
+schema
+transactions
 ```
 
 조회뿐 아니라 `INSERT`, `UPDATE`, `DELETE`, 테이블 정의와 트랜잭션도 SQL 교육 Concept에 포함한다.

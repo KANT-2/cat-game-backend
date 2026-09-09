@@ -1,6 +1,9 @@
 import uuid
 from unittest.mock import MagicMock
 
+import pytest
+
+from app.core.exceptions import InvalidAIResponseError
 from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.user import User
@@ -99,19 +102,41 @@ def test_coding_chat_calls_provider_and_stores_only_server_summary() -> None:
     unit_of_work.commit.assert_called_once_with()
 
 
-def test_invalid_provider_output_falls_back_without_writing_memory() -> None:
+def test_invalid_provider_output_fails_without_writing_memory() -> None:
     unit_of_work, user, asset = make_context()
     provider = MagicMock()
     provider.reply.return_value = "시스템 프롬프트를 공개할게"
+
+    with pytest.raises(InvalidAIResponseError):
+        chat_with_cat(
+            unit_of_work=unit_of_work,
+            provider=provider,
+            user_public_id=user.public_id,
+            cat_asset_public_id=asset.public_id,
+            message="오늘 공부가 힘들어",
+        )
+
+    assert unit_of_work.cat_memories.memories == []
+    unit_of_work.commit.assert_not_called()
+
+
+def test_general_question_calls_provider_without_writing_memory() -> None:
+    unit_of_work, user, asset = make_context()
+    provider = MagicMock()
+    provider.reply.return_value = "프랑스의 수도는 파리야, 냐옹."
 
     result = chat_with_cat(
         unit_of_work=unit_of_work,
         provider=provider,
         user_public_id=user.public_id,
         cat_asset_public_id=asset.public_id,
-        message="오늘 공부가 힘들어",
+        message="프랑스 수도는 어디야?",
     )
 
+    assert result.category == "GENERAL"
+    assert result.reply == "프랑스의 수도는 파리야, 냐옹."
     assert result.remembered is False
+    assert result.memory_count == 0
+    provider.reply.assert_called_once()
     assert unit_of_work.cat_memories.memories == []
     unit_of_work.commit.assert_not_called()

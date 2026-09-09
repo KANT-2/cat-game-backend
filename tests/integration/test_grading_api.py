@@ -28,15 +28,15 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
             {"email": f"daily-other-{suffix}@example.com", "username": f"other-{suffix}"},
         ).one()
         concept_id = connection.execute(
-            text("INSERT INTO concepts (name) VALUES (:name) RETURNING id"),
+            text("INSERT INTO concepts (domain, name) VALUES ('PYTHON', :name) RETURNING id"),
             {"name": f"daily-grading-{suffix}"},
         ).scalar_one()
         task_id, task_public_id = connection.execute(
             text(
                 "INSERT INTO tasks "
-                "(concept_id, title, type, domain, difficulty, description, template_code, "
+                "(concept_id, title, type, difficulty, description, template_code, "
                 "test_cases, options, correct_option, is_active, reward_coins) VALUES "
-                "(:concept_id, 'daily task', 'MULTIPLE_CHOICE', 'PYTHON', 'BRONZE', "
+                "(:concept_id, 'daily task', 'MULTIPLE_CHOICE', 'BRONZE', "
                 "'desc', '', '[]', '[\"A\", \"B\"]'::jsonb, 'A', true, 25) "
                 "RETURNING id, public_id"
             ),
@@ -65,21 +65,39 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
 
     owner_headers = {"X-User-Public-ID": str(owner_public_id)}
     other_headers = {"X-User-Public-ID": str(other_public_id)}
+    request_id = uuid.uuid4()
+    submission = {
+        "request_id": str(request_id),
+        "task_public_id": str(task_public_id),
+        "selected_option": "A",
+        "context_type": "DAILY",
+        "attendance_task_public_id": str(attendance_task_public_id),
+    }
     try:
         with TestClient(app) as client:
             accepted = client.post(
                 "/api/v1/attempts",
                 headers=owner_headers,
-                json={
-                    "task_public_id": str(task_public_id),
-                    "selected_option": "A",
-                    "context_type": "DAILY",
-                    "attendance_task_public_id": str(attendance_task_public_id),
-                },
+                json=submission,
             )
             assert accepted.status_code == 202
             assert accepted.json()["status"] == "PENDING"
             attempt_public_id = uuid.UUID(accepted.json()["public_id"])
+
+            replay = client.post(
+                "/api/v1/attempts",
+                headers=owner_headers,
+                json=submission,
+            )
+            conflict = client.post(
+                "/api/v1/attempts",
+                headers=owner_headers,
+                json={**submission, "selected_option": "B"},
+            )
+            assert replay.status_code == 202
+            assert replay.json()["public_id"] == str(attempt_public_id)
+            assert conflict.status_code == 409
+            assert conflict.json()["detail"] == "idempotency-conflict"
 
             lease = claim_attempt(attempt_public_id)
             assert lease is not None
@@ -103,6 +121,10 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
         assert hidden.status_code == 404
 
         with engine.connect() as connection:
+            attempt_count = connection.execute(
+                text("SELECT count(*) FROM task_attempts WHERE request_id = :request_id"),
+                {"request_id": request_id},
+            ).scalar_one()
             row = connection.execute(
                 text(
                     "SELECT attendance_tasks.is_completed, users.balance, users.state_version "
@@ -113,6 +135,7 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
                 ),
                 {"public_id": attendance_task_public_id},
             ).one()
+        assert attempt_count == 1
         assert row.is_completed is True
         assert row.balance == 25
         assert row.state_version == 3

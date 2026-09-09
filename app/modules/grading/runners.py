@@ -32,14 +32,14 @@ class RunnerDispatcher:
         self.sql = SQLSandboxRunner()
         self.multiple_choice = MultipleChoiceRunner()
 
-    def for_task(self, task: Task) -> TaskRunner:
+    def for_task(self, task: Task, domain: str) -> TaskRunner:
         if task.type == "MULTIPLE_CHOICE":
             return self.multiple_choice
-        if task.domain == "PYTHON":
+        if domain == "PYTHON":
             return self.python
-        if task.domain == "SQL":
+        if domain == "SQL":
             return self.sql
-        raise ValueError(f"unsupported task domain: {task.domain}")
+        raise ValueError(f"unsupported task domain: {domain}")
 
 
 dispatcher = RunnerDispatcher()

@@ -18,6 +18,8 @@ from app.modules.battle.service import (
     start_room,
 )
 from app.modules.daily_mission.service import claim_reward, get_or_create_daily
+from app.modules.learning.proficiency import recommended_tasks
+from app.modules.learning.router import proficiencies
 
 
 def user(db, name):
@@ -28,7 +30,7 @@ def user(db, name):
 
 
 def tasks(db, count=3):
-    concept = Concept(name=f"daily-battle-{id(db)}")
+    concept = Concept(domain="PYTHON", name=f"daily-battle-{id(db)}")
     db.add(concept)
     db.flush()
     rows = []
@@ -37,7 +39,6 @@ def tasks(db, count=3):
             concept_id=concept.id,
             title=f"service task {number}",
             type="MULTIPLE_CHOICE",
-            domain="PYTHON",
             difficulty="BRONZE",
             description="choose",
             template_code="",
@@ -73,6 +74,81 @@ def test_daily_assignment_streak_completion_and_idempotent_reward(db_session, mo
     assert first.daily_reward_claimed_at is not None
     assert second.daily_reward_claimed_at == first.daily_reward_claimed_at
     assert current_user.balance == 25
+
+
+def test_recommendations_change_on_the_next_game_date(db_session):
+    current_user = user(db_session, "daily-recommendation")
+    tasks(db_session, 4)
+    first_date = datetime.now(UTC).date()
+
+    first = recommended_tasks(
+        db_session,
+        current_user.id,
+        3,
+        recommendation_date=first_date,
+    )
+    next_day = recommended_tasks(
+        db_session,
+        current_user.id,
+        3,
+        recommendation_date=first_date + timedelta(days=1),
+    )
+
+    assert [task.id for task in first] != [task.id for task in next_day]
+    assert {task.id for task in first} != {task.id for task in next_day}
+
+
+def test_recommendations_return_only_the_selected_learning_domain(db_session):
+    current_user = user(db_session, "domain-recommendation")
+    tasks(db_session, 3)
+    sql_concept = Concept(domain="SQL", name=f"test-{id(db_session)}")
+    db_session.add(sql_concept)
+    db_session.flush()
+    for number in range(3):
+        db_session.add(
+            Task(
+                concept_id=sql_concept.id,
+                title=f"sql service task {number}",
+                type="CODE",
+                difficulty="BRONZE",
+                description="select",
+                template_code="SELECT 1;",
+                test_cases="[]",
+                options=None,
+                correct_option=None,
+                is_active=True,
+            )
+        )
+    db_session.flush()
+
+    selected = recommended_tasks(db_session, current_user.id, 3, domain="SQL")
+    selected_domains = set(
+        db_session.scalars(
+            select(Concept.domain).where(
+                Concept.id.in_({task.concept_id for task in selected})
+            )
+        ).all()
+    )
+
+    assert len(selected) == 3
+    assert selected_domains == {"SQL"}
+
+
+def test_proficiencies_include_zero_attempt_concepts_only_for_selected_domain(db_session):
+    current_user = user(db_session, "domain-proficiency")
+    current_user.game_settings = {**current_user.game_settings, "learningDomain": "SQL"}
+    sql_concept = Concept(domain="SQL", name=f"untried-{id(db_session)}")
+    python_concept = Concept(domain="PYTHON", name=f"untried-{id(db_session)}")
+    db_session.add_all([sql_concept, python_concept])
+    db_session.flush()
+
+    rows = proficiencies(db_session, current_user)
+
+    assert rows
+    assert {row.domain for row in rows} == {"SQL"}
+    untried = next(row for row in rows if row.concept_public_id == sql_concept.public_id)
+    assert untried.attempts == 0
+    assert untried.proficiency_level == 0
 
 
 def test_battle_room_lifecycle_and_finish(db_session, monkeypatch):

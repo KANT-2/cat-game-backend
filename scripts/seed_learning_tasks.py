@@ -21,9 +21,42 @@ VARIANTS = (
     ("치즈의 첫 심부름", "아기 고양이 치즈가 처음 맡은 심부름이에요. 차근차근 도와주세요, 야옹!"),
     ("나비의 기록 정리", "꼼꼼한 나비가 흩어진 학습 기록을 정리하고 있어요. 발바닥 도장을 받을 수 있게 도와주세요."),
     ("보리의 놀이 점수", "보리가 신나게 놀고 받은 점수를 세다가 수염이 꼬였어요. 정확한 답을 알려주세요!"),
-    ("코코의 생선 가게", "코코가 생선 가게 장부를 정리하고 있어요. 간식 시간이 늦지 않도록 도와주세요."),
+    ("코코의 간식 준비", "코코가 친구들과 나눌 간식을 준비하고 있어요. 간식 시간이 늦지 않도록 도와주세요."),
     ("모카의 수상한 상자", "호기심 많은 모카가 상자 속 경계값을 발견했어요. 빠뜨리는 값 없이 확인해 주세요, 야옹~"),
 )
+
+STORIES = {
+    "sum": "츄르를 먹고 싶은데 두 주머니에 모은 돈이 모두 얼마인지 모르겠어요. 두 금액을 더해 주세요.",
+    "length": "목걸이 이름표를 만들려고 해요. 새길 글자가 몇 개인지 세어 주세요.",
+    "even": "리본을 두 개씩 짝지어 달고 싶어요. 짝수인지 확인해 주세요.",
+    "range_sum": "캣타워 놀이를 마칠 때마다 1점부터 차례로 점수를 받았어요. 누적 점수를 세어 주세요.",
+    "max": "장난감 놀이 점수판에 음수인 벌점도 있어요. 가장 높은 기록을 찾아 주세요.",
+    "manhattan": "방석에서 장난감까지 격자를 따라 이동하려고 해요. 가로와 세로 이동 거리를 합쳐 주세요.",
+    "unique": "간식 상자에 붙은 이름표가 섞였어요. 서로 다른 이름표가 몇 종류인지 알려 주세요.",
+    "frequency": "친구들의 간식 신청 메모에서 첫 번째 단어가 몇 번 나오는지 궁금해요.",
+    "truncate": "고양이용 우유의 온도 기록을 정리하려고 해요. 소수 부분을 버린 온도를 알려 주세요.",
+    "range_check": "간식 할인 쿠폰 번호는 1부터 100까지만 유효해요. 사용할 수 있는 번호인지 확인해 주세요.",
+    "even_square_sum": "장난감 게임의 짝수 점수만 제곱해 보너스로 합산하려고 해요.",
+    "word_count": "간식 주문 메모의 대소문자를 통일하고 단어가 몇 개인지 세고 싶어요.",
+    "second_largest": "캣타워 놀이 점수에서 중복 기록을 빼고 두 번째로 높은 점수를 찾아 주세요.",
+    "mode_char": "리본에 찍을 문자 도장을 고르고 있어요. 가장 자주 나온 문자를 찾아 주세요.",
+    "divisor_count": "간식을 같은 수씩 나누어 포장하려고 해요. 남김없이 나눌 수 있는 수가 몇 개인지 세어 주세요.",
+    "average": "고양이용 우유를 준비하며 친구들이 적은 수량의 평균을 알고 싶어요.",
+    "safe_div": "간식을 같은 수씩 나누고 싶은데 친구 수가 0으로 적힌 기록도 있어요. 안전하게 계산해 주세요.",
+    "intersection": "두 친구의 장난감 희망 목록에서 공통 번호를 정렬해 주세요.",
+    "increasing_prefix": "놀이 점수가 처음부터 계속 오른 구간이 얼마나 긴지 궁금해요.",
+    "kv_sum": "간식 장부에 구매액과 음수인 할인액이 함께 적혀 있어요. 금액을 모두 더해 주세요.",
+    "palindrome": "목걸이 이름을 거꾸로 읽어도 같은지 확인하는 함수를 만들어 주세요.",
+    "balanced": "장난감 포장 메모의 괄호가 제대로 닫혔는지 확인하는 함수를 만들어 주세요.",
+    "stairs": "캣타워 계단을 한 칸이나 두 칸씩 올라가려고 해요. 올라가는 방법을 세어 주세요.",
+    "binary_search": "정렬된 장난감 번호 목록에서 원하는 번호가 있는 위치를 빨리 찾고 싶어요.",
+    "best_scores": "고양이 학교 놀이 대회의 학생별 최고 점수를 모아 합산하려고 해요.",
+    "gcd": "두 종류의 간식을 같은 크기의 묶음으로 나누려고 해요. 공통으로 나눌 가장 큰 수를 찾아 주세요.",
+    "pair_sum": "간식 교환 점수 두 개를 합쳐 목표 점수를 만들고 싶어요. 가능한 쌍을 세어 주세요.",
+    "range_total": "여러 날의 우유 주문 수량 중 지정한 기간의 합계를 알고 싶어요.",
+    "reachable": "고양이 놀이터의 길 지도를 보고 지금 위치에서 갈 수 있는 장소를 세어 주세요.",
+    "run_length": "리본 무늬 기록에서 연속된 같은 문자를 짧게 묶어 적고 싶어요.",
+}
 
 PYTHON_CONCEPTS = {
     "PYTHON:basics",
@@ -147,12 +180,12 @@ def build_tasks() -> list[dict]:
                     "D": "이 문제는 Python으로 표현할 수 없습니다.",
                 } if is_choice else None)
                 prompt = (
-                    f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
+                    f"[오늘의 냥이 임무] {spec.title}\n\n[도와주세요!] {variant_context} {STORIES[spec.operation]}\n\n"
                     f"[문제] {spec.prompt}\n\n"
                     "[질문] 이 문제를 해결하는 데 가장 알맞은 방법을 하나 골라 주세요."
                     if is_choice else
-                    f"[오늘의 냥이 임무] {spec.title}\n\n[고양이 이야기] {variant_context}\n\n"
-                    f"[도와주세요!] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "
+                    f"[오늘의 냥이 임무] {spec.title}\n\n[도와주세요!] {variant_context} {STORIES[spec.operation]}\n\n"
+                    f"[문제] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "
                     "출력하세요. 입력 형식과 줄바꿈을 정확히 지켜야 합니다."
                 )
                 rows.append({
@@ -195,6 +228,8 @@ def consolidate_legacy_concepts(db, concepts: dict[str, Concept]) -> int:
     affected: set[tuple[int, int]] = set()
     removed = 0
     for legacy_name, target_name in LEGACY_CONCEPT_MAP.items():
+        legacy_name = legacy_name.removeprefix("PYTHON:")
+        target_name = target_name.removeprefix("PYTHON:")
         legacy = concepts.get(legacy_name)
         target = concepts.get(target_name)
         if legacy is None or target is None or legacy.id == target.id:
@@ -226,21 +261,25 @@ def main() -> None:
         removed = cleanup_benchmarks(db)
         created = updated = consolidated = 0
         if not args.cleanup_only:
-            concepts = {row.name: row for row in db.scalars(select(Concept)).all()}
+            concepts = {
+                row.name: row
+                for row in db.scalars(select(Concept).where(Concept.domain == "PYTHON")).all()
+            }
             existing = {
                 seed_key(row.title): row
                 for row in db.scalars(select(Task).where(Task.title.startswith(SEED_PREFIX))).all()
             }
             for data in build_tasks():
-                concept = concepts.get(data["concept"])
+                concept_name = data["concept"].removeprefix("PYTHON:")
+                concept = concepts.get(concept_name)
                 if concept is None:
-                    concept = Concept(name=data["concept"])
+                    concept = Concept(domain="PYTHON", name=concept_name)
                     db.add(concept)
                     db.flush()
                     concepts[concept.name] = concept
                 row = existing.get(seed_key(data["title"]))
                 values = {key: value for key, value in data.items() if key != "concept"}
-                values.update(concept_id=concept.id, domain="PYTHON", is_active=True)
+                values.update(concept_id=concept.id, is_active=True)
                 if row is None:
                     db.add(Task(**values)); created += 1
                 else:

@@ -54,8 +54,9 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/learning/tasks` | `200` | 조건별 활성 문제 조회 |
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
-| `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 사용자의 전체 개념별 숙련도 조회 |
+| `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 선택 과목의 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |
+| `PATCH` | `/api/v1/game/settings` | `200` | 사운드·접근성·선택 학습 과목 저장 |
 | `POST` | `/api/v1/attempts` | `202` | 코드 또는 객관식 답안 제출 |
 | `GET` | `/api/v1/attempts/{attempt_public_id}` | `200` | 채점 상태·결과 조회 |
 | `GET` | `/api/v1/daily/today` | `200` | 오늘 출석과 일일 문제 조회·생성 |
@@ -137,7 +138,11 @@
 
 #### `GET /api/v1/learning/recommendations`
 
-`limit=1..50`, 기본값 `10`을 지원한다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다.
+`limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 동일 우선순위 안의 문제는 설정된 게임 타임존의 날짜가 바뀔 때 순환하므로 오늘의 추천 과제도 함께 갱신된다.
+
+학습 과목은 `PATCH /api/v1/game/settings`에 `{"learning_domain":"SQL"}`처럼 전달한다. 성공 응답의 스냅샷에도 `settings.learning_domain`이 포함된다. 프런트엔드는 성공 직후 추천 목록과 개념별 숙련도를 함께 다시 조회한다. 지원하지 않는 과목은 `422`로 거부한다.
+
+로컬·테스트 환경에서는 `test_date=YYYY-MM-DD`로 현재 추천 요청의 날짜만 재현할 수 있다. 운영 환경은 이 매개변수가 포함된 요청을 `404`로 거부한다. 이 값은 사용자 데이터, 서버 시계, 출석 또는 보상 날짜를 변경하지 않는다.
 
 두 API는 `TaskRead[]`를 반환한다.
 
@@ -163,18 +168,19 @@
 
 `test_cases`와 `correct_option`은 채점 전용이므로 응답하지 않는다.
 
-추천 결과는 같은 학습 이력과 같은 문제 데이터에서는 같은 순서로 반환한다. 새 채점 기록이 생기면 최근 문제 제외 정책에 따라 목록이 달라질 수 있다.
+추천 결과는 같은 게임 날짜·학습 이력·문제 데이터에서는 같은 순서로 반환한다. 게임 날짜가 바뀌면 개념과 난이도 우선순위는 유지한 채 같은 우선순위 문제들이 순환하고, 새 채점 기록이 생기면 최근 문제 제외 정책에 따라 목록이 달라질 수 있다.
 
 #### `GET /api/v1/learning/proficiencies`
 
-최근 완료 채점 기록이 있는 모든 개념의 숙련도를 반환한다. `proficiency_level`은 개념별 최근 10개 완료 채점의 정답률이며 새로고침 후에도 서버 데이터에서 다시 계산된다.
+사용자의 `game_settings.learningDomain`과 같은 과목의 모든 Concept 숙련도를 반환한다. 아직 완료 채점 기록이 없는 Concept도 `attempts=0`, `proficiency_level=0`으로 포함한다. `proficiency_level`은 개념별 최근 10개 완료 채점의 정답률이며 새로고침 후에도 서버 데이터에서 다시 계산된다. 응답의 `domain`은 `concepts.domain`이다.
 
 ```json
 [
   {
     "concept_public_id": "0ccdf2d3-53df-4a11-a265-9eaf252280cc",
+    "domain": "SQL",
     "proficiency_level": 70,
-    "name": "SQL:basics",
+    "name": "basics",
     "attempts": 10
   }
 ]
@@ -203,6 +209,7 @@ CODE 문제 요청:
 
 ```json
 {
+  "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
   "submitted_code": "print('hello')",
   "context_type": "LEARNING",
@@ -214,6 +221,7 @@ CODE 문제 요청:
 
 ```json
 {
+  "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
   "selected_option": "B",
   "context_type": "LEARNING",
@@ -229,7 +237,14 @@ CODE 문제 요청:
 | `DAILY` | 필수 | 보내지 않음 |
 | `BATTLE` | 보내지 않음 | 필수 |
 
-`submitted_code`와 `selected_option` 중 정확히 하나만 보낸다. 알 수 없는 필드는 거부한다.
+`request_id`는 사용자가 제출 버튼을 누른 한 번의 동작마다 새로 만드는 UUID다. 같은 동작의
+재전송에는 같은 `request_id`와 같은 본문을 사용한다. `submitted_code`와 `selected_option` 중
+정확히 하나만 보낸다. 알 수 없는 필드는 거부한다.
+
+같은 사용자와 같은 본문으로 `request_id`가 재전송되면 새 제출을 만들지 않고 최초 attempt의
+`public_id`를 반환한다. 같은 `request_id`를 다른 사용자 또는 다른 답안에 사용하면 `409
+idempotency-conflict`다. 따라서 더블 클릭이나 네트워크 재전송이 숙련도 시도 횟수를 두 번
+늘리지 않는다.
 
 응답 `202`:
 
@@ -627,6 +642,8 @@ CODE 문제 요청:
 
 백엔드는 프런트가 persona를 보내도록 신뢰하지 않는다. 경로의 `cat_asset_public_id`로 현재 사용자의 보유 자산을 확인한 뒤 `ASSETS.cat_id`로 `CATS.persona`를 직접 조회한다. 해당 고양이의 최신 `CAT_MEMORIES` 최대 20개와 persona를 system instruction에 넣고, Gemini 한 번의 구조화 호출에서 답변과 선택적 기억 요약을 함께 생성한다.
 
+서버는 프롬프트 제어, 위험 요청, 의료·법률·재정 판단처럼 고위험 전문 조언만 Gemini 호출 전에 고정 답변으로 차단한다. 코딩과 일상 대화 외의 안전한 질문은 `GENERAL`로 분류해 Gemini가 직접 의도를 해석하고 답하게 한다. `GENERAL` 질문은 답변에만 사용하며 장기 기억에는 저장하지 않는다. 실시간·최신 정보나 확실하지 않은 사실은 추측하지 않도록 system instruction으로 제한한다.
+
 대화 원문은 DB에 저장하지 않는다. 프런트가 화면에 필요한 최근 대화를 임시 보관해 다음 요청에 다시 보내고, 장기적으로 유용한 사용자 선호·목표·학습 진도만 `CAT_MEMORIES.context_summary`에 누적한다. 비밀번호, API 키, 연락처 등 민감 정보는 기억 대상으로 지정하지 않는다.
 
 - 인증 실패: `401`
@@ -638,14 +655,16 @@ CODE 문제 요청:
 
 ## 6. 멱등성과 클라이언트 재시도
 
-구매와 가챠는 `request_id`를 사용한다.
+구매, 가챠와 답안 제출은 `request_id`를 사용한다.
 
 1. 새로운 사용자 동작에는 새로운 UUID를 생성한다.
 2. 응답을 받지 못한 같은 동작의 네트워크 재시도에는 같은 UUID와 같은 payload를 사용한다.
 3. 같은 UUID의 사용자 또는 payload가 달라지면 `409 Conflict`다.
 4. 성공한 동일 요청은 저장된 최초 결과를 반환하므로 잔액·자산을 다시 변경하지 않는다.
 
-답안 제출은 멱등 `request_id`를 받지 않는다. `202`에서 받은 attempt `public_id`로 결과를 재조회하며 네트워크 오류 때문에 제출을 자동으로 새로 만들지 않는다.
+답안 제출도 같은 규칙으로 멱등 처리한다. 최초 `POST`의 `request_id`를 응답을 받을 때까지
+보존하고, 전송 결과가 불분명한 경우 같은 본문과 같은 UUID로 재전송한다. `202`에서 받은
+attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을 만들지 않는다.
 
 ## 7. 현재 공개되지 않은 조회 API
 
@@ -682,3 +701,7 @@ CODE 문제 요청:
 - [현재 ERD](../architecture/current-erd.md)
 
 코드 기준 라우터 등록 위치는 `app/api/router.py`이며 FastAPI 애플리케이션은 이를 `/api/v1` prefix로 등록한다.
+
+## AX2 사용자/팀 보강
+
+현재 세션의 추가 platform 필드와 /session/me/round-teams 계약은 [AX2 VIEW 연동](../features/ax-platform-views.md)을 따른다.

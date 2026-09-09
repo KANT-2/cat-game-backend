@@ -14,12 +14,13 @@ def create_task(db: DbSession, data: TaskCreate) -> TaskRead:
     )
     if concept is None:
         raise ValueError("존재하지 않는 concept_public_id입니다.")
+    if concept.domain != data.domain:
+        raise ValueError("domain은 선택한 concept의 domain과 일치해야 합니다.")
 
     task = Task(
         concept_id=concept.id,
         title=data.title,
         type=data.type,
-        domain=data.domain,
         difficulty=data.difficulty,
         description=data.description,
         template_code=data.template_code,

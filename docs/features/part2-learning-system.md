@@ -10,7 +10,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 | SILVER | 50 | 정렬·파싱·컬렉션·반복 등 여러 개념을 섞은 응용 |
 | GOLD | 50 | 함수 작성, 탐색, 동적 계획법, 그래프 기초 등 종합 문제 |
 
-각 문제는 대표 개념 하나만 `concept_id`로 가진다. Python은 7개, SQL은 9개의 공식 Concept 이름을 사용하며 난이도는 Concept와 분리한다. `tasks.domain`은 `PYTHON`과 `SQL`, 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다. 상세 목록과 SQL 권한 제한 사유는 [Python·SQL Concept 기준](concept-policy.md)에 기록한다.
+각 문제는 대표 개념 하나만 `concept_id`로 가진다. Python은 7개, SQL은 9개의 공식 Concept 이름을 사용하며 과목은 `concepts.domain` 하나를 기준으로 한다. `tasks`에는 과목을 중복 저장하지 않는다. `concepts.domain`은 `PYTHON`과 `SQL`, 문제 난이도는 `BRONZE`, `SILVER`, `GOLD`만 허용한다. 상세 목록과 SQL 권한 제한 사유는 [Python·SQL Concept 기준](concept-policy.md)에 기록한다.
 
 시드는 `scripts/seed_learning_tasks.py`로 실행한다. 안정적인 `[SAMPLE:PYTHON:...]` 제목을 기준으로 새 행은 만들고 기존 행은 갱신해 재실행해도 150개를 유지한다. `[BENCHMARK]`, `BENCHMARK:`, `LOAD TEST:`, `PERF TEST:`로 시작하는 문제와 그 시도만 정리한다. `scripts/benchmark_grader_load.py`는 DB 데이터를 만들지 않는 개발 도구라 유지한다.
 
@@ -25,7 +25,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 정상 채점이 끝나면 대표 개념의 최근 완료 시도 최대 10개를 읽는다. `proficiency_level`은 정답률을 반올림한 0~100 정수다. 최소 3회 시도하고 숙련도가 50 이하일 때만 취약 개념이다. 상수는 `app/modules/learning/proficiency.py`에 모아 두었다.
 
 - `GET /api/v1/learning/weak-concepts`: 취약 개념 목록
-- `GET /api/v1/learning/proficiencies`: 최근 완료 채점 기록이 있는 전체 개념의 숙련도
+- `GET /api/v1/learning/proficiencies`: 현재 선택 과목의 모든 개념 숙련도. 미시도 개념도 0%로 포함한다.
 - `GET /api/v1/learning/recommendations?limit=10`: 추천 문제 목록
 
 추천은 숙련도가 낮은 취약 개념과 쉬운 난이도를 우선하며 최근 문제 20개를 먼저 제외한다. 후보가 없으면 전체 개념으로 넓히고, 마지막 fallback에서만 최근 문제 제외를 푼다. 같은 학습 이력에서는 문제 ID를 기준으로 안정된 순서를 반환한다.

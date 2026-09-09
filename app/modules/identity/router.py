@@ -1,12 +1,20 @@
 from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import settings
+from app.integrations.ax_platform import (
+    PlatformEnrichment,
+    PlatformService,
+    PlatformUnavailable,
+    RoundTeam,
+    get_platform_service,
+)
 from app.models.auth_session import AuthSession
 from app.models.user import User
 from app.modules.identity.rate_limit import (
@@ -29,6 +37,12 @@ from app.schemas.user import UserRead
 router = APIRouter(prefix="/session", tags=["identity"])
 
 DEV_USER_EMAIL = "player@local.nyang"
+
+Platform = Annotated[PlatformService, Depends(get_platform_service)]
+
+
+class SessionRead(UserRead):
+    platform: PlatformEnrichment
 
 
 class RegistrationCommand(BaseModel):
@@ -157,10 +171,28 @@ def logout(request: Request, response: Response, db: DbSession, user: CurrentUse
     response.delete_cookie("nyang_csrf", path="/")
 
 
-@router.get("/me", response_model=UserRead)
-def current_session(user: CurrentUser) -> UserRead:
+@router.get("/me", response_model=SessionRead)
+def current_session(user: CurrentUser, platform: Platform) -> SessionRead:
     """Return the public profile resolved by the active authentication adapter."""
-    return UserRead.model_validate(user)
+    return SessionRead(
+        **UserRead.model_validate(user).model_dump(),
+        platform=platform.enrich(user.homepage_user_id),
+    )
+
+
+@router.get("/me/round-teams", response_model=list[RoundTeam])
+def current_round_teams(
+    user: CurrentUser,
+    platform: Platform,
+    round_id: Annotated[int | None, Query(ge=1, le=9_223_372_036_854_775_807)] = None,
+) -> list[RoundTeam]:
+    """Read only the authenticated user's AX2 history, optionally for an AX2 round."""
+    if user.homepage_user_id is None:
+        raise HTTPException(status_code=404, detail="ax-platform-user-unlinked")
+    try:
+        return platform.round_teams(user.homepage_user_id, round_id)
+    except PlatformUnavailable as error:
+        raise HTTPException(status_code=503, detail=str(error)) from None
 
 
 @router.post("/development", response_model=UserRead)

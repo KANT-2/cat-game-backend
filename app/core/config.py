@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     ax_auth_me_path: str = "/api/auth/me/"
     ax_auth_timeout_seconds: float = 3.0
     ax_auth_session_cookie_name: str = "sessionid"
+    ax_platform_database_url: SecretStr | None = None
+    ax_platform_connect_timeout_seconds: int = Field(default=3, ge=1, le=30)
+    ax_platform_statement_timeout_ms: int = Field(default=1000, ge=1, le=30_000)
     daily_task_count: int = 3
     daily_reward_balance: int | None = None
     battle_correct_score: int | None = None

@@ -1,8 +1,13 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 
+import pytest
+from fastapi import HTTPException
+
+from app.core.config import settings
 from app.main import app
+from app.modules.learning.router import _recommendation_date
 from app.schemas.task import to_task_read
 from app.schemas.task_attempt import to_task_attempt_read
 
@@ -23,12 +28,13 @@ def test_part2_get_responses_have_explicit_openapi_schemas():
 def test_task_converter_exposes_only_public_relationship_ids():
     task = SimpleNamespace(
         id=12, public_id=uuid.uuid4(), concept_id=3, title="SQL select", type="CODE",
-        domain="SQL", difficulty="BRONZE", description="desc", template_code="SELECT ",
+        difficulty="BRONZE", description="desc", template_code="SELECT ",
         options=None, hint_text=None, is_active=True, reward_coins=30, test_cases="secret",
     )
-    concept = SimpleNamespace(id=3, public_id=uuid.uuid4())
+    concept = SimpleNamespace(id=3, public_id=uuid.uuid4(), domain="SQL", name="select")
     payload = to_task_read(task, concept).model_dump()
     assert payload["concept_public_id"] == concept.public_id
+    assert payload["domain"] == "SQL"
     assert "id" not in payload and "concept_id" not in payload and "test_cases" not in payload
 
 
@@ -84,3 +90,21 @@ def test_learning_tasks_openapi_exposes_selection_filters():
     ]
     assert parameters["limit"]["schema"]["minimum"] == 1
     assert parameters["limit"]["schema"]["maximum"] == 50
+
+
+def test_recommendations_exposes_local_test_date_override():
+    operation = app.openapi()["paths"]["/api/v1/learning/recommendations"]["get"]
+    parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
+
+    assert "test_date" in parameters
+
+
+def test_recommendation_date_override_is_limited_to_local_and_test(monkeypatch):
+    selected = date(2026, 9, 9)
+    monkeypatch.setattr(settings, "app_env", "local")
+    assert _recommendation_date(selected) == selected
+
+    monkeypatch.setattr(settings, "app_env", "production")
+    with pytest.raises(HTTPException) as exc_info:
+        _recommendation_date(selected)
+    assert exc_info.value.status_code == 404

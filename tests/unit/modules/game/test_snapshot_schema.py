@@ -29,6 +29,7 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
             "effects_enabled": True,
             "effects_volume": 80,
             "reduced_motion": False,
+            "learning_domain": "SQL",
         },
         cats=[
             {
@@ -52,6 +53,7 @@ def test_snapshot_serializes_public_catalog_contract_without_internal_ids() -> N
     assert "id" not in payload["cats"][0]
     assert "public_id" in payload["cats"][0]
     assert payload["cats"][0]["cat_asset_public_id"] == str(cat_asset_public_id)
+    assert payload["settings"]["learning_domain"] == "SQL"
 
 
 def test_snapshot_serializes_unowned_cat_with_null_asset_public_id() -> None:
@@ -92,3 +94,4 @@ def test_snapshot_serializes_unowned_cat_with_null_asset_public_id() -> None:
     ).model_dump(mode="json")
 
     assert payload["cats"][0]["cat_asset_public_id"] is None
+    assert payload["settings"]["learning_domain"] == "PYTHON"

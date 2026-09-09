@@ -10,9 +10,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.exceptions import IdempotencyConflictError
+from app.core.request_hash import build_request_hash
 from app.db.session import SessionLocal
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
+from app.models.concept import Concept
 from app.models.room import Room
 from app.models.room_participant import RoomParticipant
 from app.models.room_task import RoomTask
@@ -28,6 +31,7 @@ from app.modules.learning.proficiency import update_proficiency
 from app.schemas.task_attempt import TaskAttemptCreate
 
 logger = logging.getLogger(__name__)
+_OPERATION_TYPE = "TASK_ATTEMPT"
 
 
 class SubmissionError(ValueError):
@@ -47,6 +51,14 @@ def _by_public_id(db: Session, model, public_id: uuid.UUID):
 
 
 def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskAttempt:
+    request_hash = build_request_hash(
+        operation_type=_OPERATION_TYPE,
+        payload=payload.model_dump(),
+    )
+    existing = db.scalar(select(TaskAttempt).where(TaskAttempt.request_id == payload.request_id))
+    if existing is not None:
+        return _replay_attempt(existing, user.id, request_hash)
+
     task = _by_public_id(db, Task, payload.task_public_id)
     if task is None or not task.is_active:
         raise SubmissionError("task not found")
@@ -85,22 +97,48 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
     locked_user = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if locked_user is None:
         raise SubmissionError("user not found")
-    attempt = TaskAttempt(
-        user_id=user.id,
-        task_id=task.id,
-        attendance_task_id=attendance_task.id if attendance_task else None,
-        room_task_id=room_task.id if room_task else None,
-        context_type=payload.context_type,
-        submitted_code=payload.submitted_code or payload.selected_option,
-        used_hint=payload.used_hint,
-        status="PENDING",
-        is_correct=None,
+
+    existing = db.scalar(select(TaskAttempt).where(TaskAttempt.request_id == payload.request_id))
+    if existing is not None:
+        return _replay_attempt(existing, user.id, request_hash)
+
+    attempt_id = db.scalar(
+        insert(TaskAttempt)
+        .values(
+            request_id=payload.request_id,
+            request_hash=request_hash,
+            user_id=user.id,
+            task_id=task.id,
+            attendance_task_id=attendance_task.id if attendance_task else None,
+            room_task_id=room_task.id if room_task else None,
+            context_type=payload.context_type,
+            submitted_code=payload.submitted_code or payload.selected_option,
+            used_hint=payload.used_hint,
+            status="PENDING",
+            is_correct=None,
+        )
+        .on_conflict_do_nothing(index_elements=[TaskAttempt.request_id])
+        .returning(TaskAttempt.id)
     )
-    db.add(attempt)
+    if attempt_id is None:
+        existing = db.scalar(select(TaskAttempt).where(TaskAttempt.request_id == payload.request_id))
+        if existing is None:
+            raise RuntimeError("idempotent attempt insert conflict could not be read")
+        return _replay_attempt(existing, user.id, request_hash)
+
     locked_user.advance_state_version()
     db.commit()
+    attempt = db.get(TaskAttempt, attempt_id)
+    if attempt is None:
+        raise RuntimeError("created attempt could not be read")
     db.refresh(attempt)
     return attempt
+
+
+def _replay_attempt(existing: TaskAttempt, user_id: int, request_hash: str) -> TaskAttempt:
+    if existing.user_id != user_id or existing.request_hash != request_hash:
+        raise IdempotencyConflictError("request_id conflict")
+    return existing
 
 
 def claim_next_attempt(now: datetime | None = None) -> AttemptLease | None:
@@ -176,10 +214,11 @@ def grade_claimed_attempt(lease: AttemptLease, runner: TaskRunner | None = None)
         if attempt is None:
             return False
         task = db.get(Task, attempt.task_id)
-        if task is None:
+        concept = db.get(Concept, task.concept_id) if task is not None else None
+        if task is None or concept is None:
             grade_result = GradeResult(Verdict.SYSTEM_ERROR)
         else:
-            grade_result = _run_safely(lease.public_id, runner, task, attempt)
+            grade_result = _run_safely(lease.public_id, runner, task, concept.domain, attempt)
         return _persist_result(db, lease, task, grade_result)
     except Exception:  # noqa: BLE001 - an expired lease is retried by a worker
         db.rollback()
@@ -193,10 +232,11 @@ def _run_safely(
     attempt_public_id: uuid.UUID,
     runner: TaskRunner | None,
     task: Task,
+    domain: str,
     attempt: TaskAttempt,
 ) -> GradeResult:
     try:
-        return (runner or dispatcher.for_task(task)).grade(task, attempt.submitted_code)
+        return (runner or dispatcher.for_task(task, domain)).grade(task, attempt.submitted_code)
     except TestCaseSpecError:
         return GradeResult(Verdict.SYSTEM_ERROR)
     except Exception:  # noqa: BLE001 - worker boundary converts failures to a safe verdict

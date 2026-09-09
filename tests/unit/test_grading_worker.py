@@ -8,7 +8,7 @@ class FailingRunner:
 
 
 def test_worker_converts_runner_fault_without_exposing_internal_detail(caplog) -> None:
-    result = _run_safely("attempt-public-id", FailingRunner(), object(), object())
+    result = _run_safely("attempt-public-id", FailingRunner(), object(), "PYTHON", object())
 
     assert result.verdict is Verdict.SYSTEM_ERROR
     assert "secret infrastructure address" not in caplog.text

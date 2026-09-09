@@ -75,6 +75,69 @@ def test_task_attempts_have_durable_grading_lease_columns(engine):
     assert "ix_task_attempts_grading_queue" in indexes
 
 
+def test_concepts_are_the_only_task_domain_source(engine):
+    """과목은 concepts에만 저장되고 (domain, name)이 유일한지 확인한다."""
+    with engine.connect() as conn:
+        concept_columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'concepts'"
+                )
+            )
+        }
+        task_columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'tasks'"
+                )
+            )
+        }
+        constraints = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'public' AND table_name = 'concepts'"
+                )
+            )
+        }
+
+    assert "domain" in concept_columns
+    assert "domain" not in task_columns
+    assert {"ck_concepts_domain", "uq_concepts_domain_name"} <= constraints
+
+
+def test_task_attempts_have_idempotency_columns_and_unique_request_id(engine):
+    """연속 제출이 같은 attempt로 합쳐지도록 DB 제약을 확인한다."""
+    with engine.connect() as conn:
+        columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'task_attempts'"
+                )
+            )
+        }
+        constraints = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'public' AND table_name = 'task_attempts' "
+                    "AND constraint_type = 'UNIQUE'"
+                )
+            )
+        }
+
+    assert {"request_id", "request_hash"} <= columns
+    assert "uq_task_attempts_request_id" in constraints
+
+
 def test_users_have_positive_game_state_version(engine):
     """권위 상태 응답의 순서를 보장하는 사용자 버전 컬럼과 제약을 확인한다."""
     with engine.connect() as connection:

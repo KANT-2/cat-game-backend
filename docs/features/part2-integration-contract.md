@@ -170,6 +170,7 @@ CODE 문제:
 
 ```json
 {
+  "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
   "submitted_code": "a, b = map(int, input().split())\nprint(a + b)",
   "context_type": "LEARNING",
@@ -181,6 +182,7 @@ CODE 문제:
 
 ```json
 {
+  "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "task-uuid",
   "selected_option": "B",
   "context_type": "LEARNING",
@@ -203,6 +205,9 @@ CODE 문제:
 
 ### 4.2 제출 입력 규칙
 
+- `request_id`는 한 번의 제출 동작을 식별하는 클라이언트 생성 UUID다.
+- 동일 사용자·동일 본문의 `request_id` 재전송은 최초 attempt를 반환한다.
+- 동일 `request_id`의 사용자 또는 본문이 다르면 `409 idempotency-conflict`다.
 - `submitted_code`와 `selected_option` 중 정확히 하나만 전달한다.
 - `CODE` 문제는 `submitted_code`를 요구한다.
 - `MULTIPLE_CHOICE` 문제는 `selected_option`을 요구한다.
@@ -233,6 +238,9 @@ BATTLE
 
 ```text
 POST /attempts
+     │
+     ├─ 같은 request_id + 같은 본문 ──> 기존 attempt 반환
+     ├─ 같은 request_id + 다른 본문 ──> 409 Conflict
      │
      ▼
 PENDING
@@ -489,16 +497,20 @@ GET /api/v1/learning/proficiencies
 GET /api/v1/learning/recommendations?limit=10
 ```
 
+로컬·테스트 환경의 화면 검증에 한해 `test_date=YYYY-MM-DD`를 추가할 수 있다. 이 재정의는 해당 추천 요청에만 적용하며 사용자 데이터와 서버 시계를 변경하지 않는다. 운영 환경에서는 `test_date` 요청을 `404`로 거부한다.
+
 추천 우선순위:
 
-1. 숙련도가 낮은 취약 개념 우선
-2. 최근 20개 문제 우선 제외
-3. 난이도 `BRONZE → SILVER → GOLD` 우선
-4. 후보 부족 시 최근 문제 제외/취약 개념 조건을 순차 완화
-5. 같은 학습 이력에서는 난이도와 문제 ID를 기준으로 안정된 순서 유지
+1. 사용자 설정 `learningDomain`과 같은 `concepts.domain`의 문제만 선택
+2. 숙련도가 낮은 취약 개념 우선
+3. 최근 20개 문제 우선 제외
+4. 난이도 `BRONZE → SILVER → GOLD` 우선
+5. 후보 부족 시 최근 문제 제외/취약 개념 조건을 순차 완화
+6. 같은 게임 날짜와 학습 이력에서는 안정된 순서 유지
+7. 게임 타임존의 날짜가 바뀌면 같은 개념·난이도 우선순위 안에서 문제를 순환해 오늘의 추천을 교체
 
 추천 응답은 `TaskRead`를 사용하며 `test_cases`, `correct_option`은 노출하지 않는다.
-전체 숙련도 응답은 개념 공개 UUID, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다.
+숙련도 응답은 현재 `learningDomain`에 속한 모든 Concept의 공개 UUID, `domain`, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다. 아직 시도하지 않은 Concept도 `attempts=0`, `proficiency_level=0`으로 포함한다. 과목 설정을 변경한 클라이언트는 추천 문제와 숙련도를 함께 다시 조회한다.
 
 ---
 
@@ -511,6 +523,7 @@ GET /api/v1/daily/today
 ```
 
 요청 본문은 없다. 인증된 사용자의 게임 타임존 기준 당일 `Attendance`를 조회하며, 없으면 생성하고 추천 알고리즘으로 문제를 배정한다.
+새 일일 미션을 만드는 시점의 `learningDomain`과 같은 과목만 배정한다. 이미 생성된 당일 미션은 진행도와 보상 연결을 보존하기 위해 설정 변경으로 교체하지 않으며, 일반 추천 목록은 설정 직후 새 과목으로 다시 조회한다.
 
 성공 응답은 `200 OK`와 `DailyMissionRead`다.
 
@@ -751,7 +764,8 @@ POST /api/v1/attempts
 | 개발 사용자 준비 | `POST /api/v1/session/development` | 본문 없음 | 공개 사용자 DTO |
 | 문제 조회 | `GET /api/v1/learning/tasks` | type/domain/concept/difficulty/limit | 공개 Task 목록 |
 | 문제 추천 | `GET /api/v1/learning/recommendations` | `limit` | 공개 Task 목록 |
-| 전체 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·이름·시도 수·숙련도 |
+| 학습 과목 설정 | `PATCH /api/v1/game/settings` | `learning_domain=PYTHON 또는 SQL` | 선택 과목이 포함된 게임 스냅샷 |
+| 선택 과목 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·domain·이름·시도 수·숙련도 |
 | 취약 개념 | `GET /api/v1/learning/weak-concepts` | 없음 | 개념 UUID·숙련도 |
 | 문제 제출 | `POST /api/v1/attempts` | task UUID + code/option + context | attempt UUID + PENDING |
 | 채점 결과 | `GET /api/v1/attempts/{attempt_public_id}` | attempt UUID | 상태·정오답·verdict |

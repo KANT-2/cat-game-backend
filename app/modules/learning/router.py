@@ -1,18 +1,29 @@
 import uuid
-from typing import Literal
+from datetime import date
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.config import settings
+from app.core.time import game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
-from app.modules.learning.proficiency import concept_assessments, recommended_tasks, weak_concepts
+from app.modules.learning.proficiency import assess_concept, recommended_tasks, weak_concepts
 from app.schemas.task import TaskRead, to_task_read
 from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
+
+
+def _recommendation_date(test_date: date | None) -> date:
+    if test_date is None:
+        return game_today()
+    if settings.app_env not in {"local", "test"}:
+        raise HTTPException(status_code=404, detail="Not found")
+    return test_date
 
 
 def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
@@ -50,12 +61,12 @@ def list_tasks(
     difficulty: Literal["BRONZE", "SILVER", "GOLD"] | None = Query(None),
     limit: int = Query(20, ge=1, le=50),
 ) -> list[TaskRead]:
-    statement = select(Task).where(Task.is_active.is_(True))
+    statement = select(Task).join(Concept, Concept.id == Task.concept_id).where(Task.is_active.is_(True))
 
     if task_type is not None:
         statement = statement.where(Task.type == task_type)
     if domain is not None:
-        statement = statement.where(Task.domain == domain)
+        statement = statement.where(Concept.domain == domain)
     if difficulty is not None:
         statement = statement.where(Task.difficulty == difficulty)
 
@@ -77,9 +88,25 @@ def list_tasks(
 
 @router.get("/recommendations", response_model=list[TaskRead])
 def recommendations(
-    db: DbSession, user: CurrentUser, limit: int = Query(10, ge=1, le=50)
+    db: DbSession,
+    user: CurrentUser,
+    limit: int = Query(10, ge=1, le=50),
+    test_date: Annotated[
+        date | None,
+        Query(description="Local/test-only recommendation date override."),
+    ] = None,
 ) -> list[TaskRead]:
-    tasks = recommended_tasks(db, user.id, limit, since=user.learning_reset_at)
+    preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
+    if preferred_domain not in {"PYTHON", "SQL"}:
+        preferred_domain = "PYTHON"
+    tasks = recommended_tasks(
+        db,
+        user.id,
+        limit,
+        since=user.learning_reset_at,
+        recommendation_date=_recommendation_date(test_date),
+        domain=preferred_domain,
+    )
     completed_ids = _completed_task_ids(
         db,
         user.id,
@@ -97,6 +124,7 @@ def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
         rows.append(
             WeakConceptRead(
                 concept_public_id=concept.public_id,
+                domain=concept.domain,
                 name=concept.name,
                 attempts=assessment.attempts,
                 proficiency_level=assessment.proficiency_level,
@@ -107,12 +135,24 @@ def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
 
 @router.get("/proficiencies", response_model=list[ConceptProficiencyRead])
 def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRead]:
+    preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
+    if preferred_domain not in {"PYTHON", "SQL"}:
+        preferred_domain = "PYTHON"
+    concepts = db.scalars(
+        select(Concept).where(Concept.domain == preferred_domain).order_by(Concept.name)
+    ).all()
     rows = []
-    for assessment in concept_assessments(db, user.id, since=user.learning_reset_at):
-        concept = db.get(Concept, assessment.concept_id)
+    for concept in concepts:
+        assessment = assess_concept(
+            db,
+            user.id,
+            concept.id,
+            since=user.learning_reset_at,
+        )
         rows.append(
             ConceptProficiencyRead(
                 concept_public_id=concept.public_id,
+                domain=concept.domain,
                 name=concept.name,
                 attempts=assessment.attempts,
                 proficiency_level=assessment.proficiency_level,
