@@ -3,7 +3,6 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.models.item import Item
 from app.modules.game.catalog import ITEM_DEFINITIONS
 from app.modules.game.gacha import _REWARDS, _draw_reward, draw_game_gacha
 from tests.unit.modules.game.test_game_gacha import _unit_of_work, _user
@@ -30,18 +29,7 @@ def test_each_pool_interval_grants_the_exact_catalog_item_and_charges_once():
             continue
         user = _user()
         uow = _unit_of_work(user)
-        uow.items.items.append(
-            Item(
-                id=100,
-                public_id=uuid.uuid4(),
-                catalog_key=definition.catalog_key,
-                category="FURNITURE",
-                name="test",
-                price=100,
-            )
-        )
-        # Replace the fixture's old item to keep catalog keys unique.
-        uow.items.items = [uow.items.items[-1]]
+        uow.items.items = []
         source = Mock()
         source.random.return_value = roll
         request_id = uuid.uuid4()
@@ -54,7 +42,9 @@ def test_each_pool_interval_grants_the_exact_catalog_item_and_charges_once():
         )
         assert result["rewards"][0]["shop_item_id"] == definition.catalog_key
         assert user.balance == 70
-        assert uow.assets.assets[0].item_id == 100
+        granted_item = uow.items.get_by_catalog_key(definition.catalog_key)
+        assert granted_item is not None
+        assert uow.assets.assets[0].item_id == granted_item.id
         assert uow.assets.assets[0].quantity == 1
         assert (
             draw_game_gacha(
@@ -67,3 +57,27 @@ def test_each_pool_interval_grants_the_exact_catalog_item_and_charges_once():
             == result
         )
         assert user.balance == 70
+
+
+def test_draw_repairs_an_unseeded_expanded_catalog_before_charging():
+    definition = next(
+        reward for reward in _REWARDS if reward.catalog_key == "furniture.ocean.rug"
+    )
+    boundary = sum(reward.weight for reward in _REWARDS[: _REWARDS.index(definition)])
+    source = Mock()
+    source.random.return_value = boundary + definition.weight / 2
+    user = _user()
+    uow = _unit_of_work(user)
+    assert uow.items.get_by_catalog_key(definition.catalog_key) is None
+
+    result = draw_game_gacha(
+        unit_of_work=uow,
+        user_public_id=user.public_id,
+        request_id=uuid.uuid4(),
+        draw_count=1,
+        random_source=source,
+    )
+
+    assert result["rewards"][0]["shop_item_id"] == definition.catalog_key
+    assert uow.items.get_by_catalog_key(definition.catalog_key) is not None
+    assert user.balance == 70

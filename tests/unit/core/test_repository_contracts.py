@@ -11,7 +11,12 @@ from app.core.repository_contracts import (
 EXPECTED_METHODS = {
     ExecutionRepository: {"claim", "complete"},
     UserRepository: {"get_by_public_id", "get_for_update"},
-    ItemRepository: {"get_by_catalog_key", "get_by_public_id", "get_by_id"},
+    ItemRepository: {
+        "ensure_catalog_items",
+        "get_by_catalog_key",
+        "get_by_public_id",
+        "get_by_id",
+    },
     CatRepository: {
         "get_by_catalog_key",
         "get_by_public_id",

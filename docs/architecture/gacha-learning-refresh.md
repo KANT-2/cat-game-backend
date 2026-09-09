@@ -19,6 +19,11 @@ main에서 가져온 비서술 필드 전체의 SHA-256 회귀 검사로 Python 
 배포 시 프론트 풀 허용 목록을 먼저 배포하고 백엔드를 배포한다. 백엔드만 먼저 배포하면 이전
 프론트가 새 보상 ID를 거부할 수 있다. 배포 후 기존 DB에도 다음 seed를 재실행한다.
 
+가챠 명령은 운영 seed와 코드 배포 사이의 짧은 불일치에도 추첨이 실패하지 않도록, 비용 차감 전에
+정적 가구 카탈로그의 누락 행을 결정적 UUID로 `ON CONFLICT DO NOTHING` 보완한다. 이 보완과 비용 차감,
+자산 지급은 같은 Unit of Work에 있으므로 실패 시 함께 롤백된다. 전체 이름·가격 갱신과 학습 문구 반영은
+아래 seed 절차가 계속 담당한다.
+
 ```sh
 python -m scripts.seed_game_catalog
 python -m scripts.seed_learning_tasks

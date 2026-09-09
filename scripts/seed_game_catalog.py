@@ -3,21 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import uuid
 
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
 from app.models.cat import Cat
 from app.models.item import Item
-from app.modules.game.catalog import CAT_DEFINITIONS, ITEM_DEFINITIONS
-
-CATALOG_NAMESPACE = uuid.UUID("cf4c878d-b1d4-4f10-9c30-d79842280272")
-
-
-def catalog_public_id(kind: str, catalog_key: str) -> uuid.UUID:
-    """Return the deterministic public UUID for one stable catalog entry."""
-    return uuid.uuid5(CATALOG_NAMESPACE, f"{kind}:{catalog_key}")
+from app.modules.game.catalog import CAT_DEFINITIONS, ITEM_DEFINITIONS, catalog_public_id
 
 
 def seed_catalog(*, dry_run: bool = False) -> dict[str, int | bool]:

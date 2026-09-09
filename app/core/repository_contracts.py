@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Protocol
@@ -25,6 +26,15 @@ class ClaimStatus(StrEnum):
 class ExecutionClaim:
     status: ClaimStatus
     execution: GachaExecution
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogItemSeed:
+    public_id: UUID
+    catalog_key: str
+    category: str
+    name: str
+    price: int
 
 
 class ExecutionRepository(Protocol):
@@ -54,6 +64,8 @@ class UserRepository(Protocol):
 
 
 class ItemRepository(Protocol):
+    def ensure_catalog_items(self, items: Sequence[CatalogItemSeed]) -> None: ...
+
     def get_by_catalog_key(self, catalog_key: str) -> Item | None: ...
 
     def get_by_public_id(self, public_id: UUID) -> Item | None: ...
