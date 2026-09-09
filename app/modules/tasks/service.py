@@ -5,10 +5,10 @@ from sqlalchemy import select
 from app.api.dependencies import DbSession
 from app.models.concept import Concept
 from app.models.task import Task
-from app.schemas.task import TaskCreate
+from app.schemas.task import TaskCreate, TaskRead, to_task_read
 
 
-def create_task(db: DbSession, data: TaskCreate) -> Task:
+def create_task(db: DbSession, data: TaskCreate) -> TaskRead:
     concept = db.scalar(
         select(Concept).where(Concept.public_id == data.concept_public_id)
     )
@@ -32,4 +32,4 @@ def create_task(db: DbSession, data: TaskCreate) -> Task:
     db.add(task)
     db.commit()
     db.refresh(task)
-    return task
+    return to_task_read(task, concept)
