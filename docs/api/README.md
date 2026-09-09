@@ -697,3 +697,7 @@ attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을
 - [현재 ERD](../architecture/current-erd.md)
 
 코드 기준 라우터 등록 위치는 `app/api/router.py`이며 FastAPI 애플리케이션은 이를 `/api/v1` prefix로 등록한다.
+
+## AX2 사용자/팀 보강
+
+현재 세션의 추가 platform 필드와 /session/me/round-teams 계약은 [AX2 VIEW 연동](../features/ax-platform-views.md)을 따른다.
