@@ -28,15 +28,15 @@ def test_expired_attempt_is_released_without_accepting_stale_result(engine) -> N
             {"email": f"grading-lease-{suffix}@example.com", "username": f"lease-{suffix}"},
         ).scalar_one()
         concept_id = connection.execute(
-            text("INSERT INTO concepts (name) VALUES (:name) RETURNING id"),
+            text("INSERT INTO concepts (domain, name) VALUES ('PYTHON', :name) RETURNING id"),
             {"name": f"grading-lease-{suffix}"},
         ).scalar_one()
         task_id = connection.execute(
             text(
                 "INSERT INTO tasks "
-                "(concept_id, title, type, domain, difficulty, description, template_code, "
+                "(concept_id, title, type, difficulty, description, template_code, "
                 "test_cases, is_active, reward_coins) VALUES "
-                "(:concept_id, 'lease task', 'CODE', 'PYTHON', 'BRONZE', 'desc', '', "
+                "(:concept_id, 'lease task', 'CODE', 'BRONZE', 'desc', '', "
                 "'[]', true, 0) RETURNING id"
             ),
             {"concept_id": concept_id},

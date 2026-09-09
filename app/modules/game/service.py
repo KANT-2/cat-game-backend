@@ -193,10 +193,12 @@ def _item_key(item_by_id: dict[int, Item], item_id: int | None) -> str | None:
 
 
 def _read_settings(raw: dict[str, object]) -> GameSettingsRead:
+    learning_domain = "SQL" if raw.get("learningDomain") == "SQL" else "PYTHON"
     return GameSettingsRead(
         bgm_enabled=cast(bool, raw.get("bgmEnabled", True)),
         bgm_volume=cast(int, raw.get("bgmVolume", 70)),
         effects_enabled=cast(bool, raw.get("effectsEnabled", True)),
         effects_volume=cast(int, raw.get("effectsVolume", 80)),
         reduced_motion=cast(bool, raw.get("reducedMotion", False)),
+        learning_domain=learning_domain,
     )

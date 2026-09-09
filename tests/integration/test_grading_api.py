@@ -28,15 +28,15 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
             {"email": f"daily-other-{suffix}@example.com", "username": f"other-{suffix}"},
         ).one()
         concept_id = connection.execute(
-            text("INSERT INTO concepts (name) VALUES (:name) RETURNING id"),
+            text("INSERT INTO concepts (domain, name) VALUES ('PYTHON', :name) RETURNING id"),
             {"name": f"daily-grading-{suffix}"},
         ).scalar_one()
         task_id, task_public_id = connection.execute(
             text(
                 "INSERT INTO tasks "
-                "(concept_id, title, type, domain, difficulty, description, template_code, "
+                "(concept_id, title, type, difficulty, description, template_code, "
                 "test_cases, options, correct_option, is_active, reward_coins) VALUES "
-                "(:concept_id, 'daily task', 'MULTIPLE_CHOICE', 'PYTHON', 'BRONZE', "
+                "(:concept_id, 'daily task', 'MULTIPLE_CHOICE', 'BRONZE', "
                 "'desc', '', '[]', '[\"A\", \"B\"]'::jsonb, 'A', true, 25) "
                 "RETURNING id, public_id"
             ),

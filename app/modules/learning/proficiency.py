@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Literal
 
 from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from app.core.time import game_today
+from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user_proficiency import UserProficiency
@@ -103,6 +105,7 @@ def recommended_tasks(
     limit: int = 10,
     since: datetime | None = None,
     recommendation_date: date | None = None,
+    domain: Literal["PYTHON", "SQL"] | None = None,
 ) -> list[Task]:
     """Return personalized tasks with a stable order that rotates each game day."""
     weak = sorted(weak_concepts(db, user_id, since), key=lambda item: item.proficiency_level)
@@ -116,6 +119,8 @@ def recommended_tasks(
 
     def candidates(exclude_recent: bool, weak_only: bool) -> list[Task]:
         query = select(Task).where(Task.is_active.is_(True))
+        if domain is not None:
+            query = query.join(Concept, Concept.id == Task.concept_id).where(Concept.domain == domain)
         if weak_only:
             query = query.where(Task.concept_id.in_(weak_ids))
         if exclude_recent:

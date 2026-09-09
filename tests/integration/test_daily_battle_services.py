@@ -29,7 +29,7 @@ def user(db, name):
 
 
 def tasks(db, count=3):
-    concept = Concept(name=f"daily-battle-{id(db)}")
+    concept = Concept(domain="PYTHON", name=f"daily-battle-{id(db)}")
     db.add(concept)
     db.flush()
     rows = []
@@ -38,7 +38,6 @@ def tasks(db, count=3):
             concept_id=concept.id,
             title=f"service task {number}",
             type="MULTIPLE_CHOICE",
-            domain="PYTHON",
             difficulty="BRONZE",
             description="choose",
             template_code="",
@@ -96,6 +95,42 @@ def test_recommendations_change_on_the_next_game_date(db_session):
 
     assert [task.id for task in first] != [task.id for task in next_day]
     assert {task.id for task in first} != {task.id for task in next_day}
+
+
+def test_recommendations_return_only_the_selected_learning_domain(db_session):
+    current_user = user(db_session, "domain-recommendation")
+    tasks(db_session, 3)
+    sql_concept = Concept(domain="SQL", name=f"test-{id(db_session)}")
+    db_session.add(sql_concept)
+    db_session.flush()
+    for number in range(3):
+        db_session.add(
+            Task(
+                concept_id=sql_concept.id,
+                title=f"sql service task {number}",
+                type="CODE",
+                difficulty="BRONZE",
+                description="select",
+                template_code="SELECT 1;",
+                test_cases="[]",
+                options=None,
+                correct_option=None,
+                is_active=True,
+            )
+        )
+    db_session.flush()
+
+    selected = recommended_tasks(db_session, current_user.id, 3, domain="SQL")
+    selected_domains = set(
+        db_session.scalars(
+            select(Concept.domain).where(
+                Concept.id.in_({task.concept_id for task in selected})
+            )
+        ).all()
+    )
+
+    assert len(selected) == 3
+    assert selected_domains == {"SQL"}
 
 
 def test_battle_room_lifecycle_and_finish(db_session, monkeypatch):

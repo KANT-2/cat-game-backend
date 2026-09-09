@@ -134,18 +134,21 @@ def main() -> None:
     args = parser.parse_args()
     db = SessionLocal()
     try:
-        concepts = {row.name: row for row in db.scalars(select(Concept)).all()}
+        concepts = {
+            row.name: row
+            for row in db.scalars(select(Concept).where(Concept.domain == "SQL")).all()
+        }
         existing = {seed_key(row.title): row for row in db.scalars(select(Task).where(Task.title.startswith(SEED_PREFIX))).all()}
         created = updated = 0
         for data in build_tasks():
-            concept_name = data.pop("concept")
+            concept_name = data.pop("concept").removeprefix("SQL:")
             concept = concepts.get(concept_name)
             if concept is None:
-                concept = Concept(name=concept_name)
+                concept = Concept(domain="SQL", name=concept_name)
                 db.add(concept)
                 db.flush()
                 concepts[concept_name] = concept
-            values = {**data, "concept_id": concept.id, "domain": "SQL", "is_active": True}
+            values = {**data, "concept_id": concept.id, "is_active": True}
             row = existing.get(seed_key(data["title"]))
             if row is None:
                 db.add(Task(**values))

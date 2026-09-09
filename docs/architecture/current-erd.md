@@ -64,7 +64,8 @@ erDiagram
     CONCEPTS {
         int id PK
         uuid public_id UK "UUIDv4"
-        string name UK
+        string domain "PYTHON, SQL"
+        string name "domain과 묶어 UK"
     }
 
     TASKS {
@@ -73,7 +74,6 @@ erDiagram
         int concept_id FK
         string title
         string type "CODE, MULTIPLE_CHOICE"
-        string domain "PYTHON, SQL"
         string difficulty "BRONZE, SILVER, GOLD"
         text description
         text template_code
@@ -279,6 +279,6 @@ erDiagram
 - 가구 배치 수는 사용자가 보유한 해당 아이템의 `ASSETS.quantity`를 초과할 수 없다.
 - `GACHA_EXECUTIONS.request_id`는 전역 UNIQUE이고 다른 사용자나 다른 요청 내용의 재사용은 충돌이다.
 - `USERS.homepage_user_id`는 nullable UNIQUE이며 동일한 홈페이지 사용자를 둘 이상의 게임 사용자 행에 연결할 수 없다.
-- `TASKS.type = CODE`는 `domain`에 따라 Python 또는 격리된 PostgreSQL 채점기로 분기한다.
+- `TASKS.type = CODE`는 연결된 `CONCEPTS.domain`에 따라 Python 또는 격리된 PostgreSQL 채점기로 분기한다.
 - `TASKS.type = MULTIPLE_CHOICE`는 `options`와 `correct_option`을 사용하며 채점 전용 값은 API에 노출하지 않는다.
 - `TASK_ATTEMPTS.result_detail`에는 verdict와 공개 가능한 오류 요약만 저장한다.

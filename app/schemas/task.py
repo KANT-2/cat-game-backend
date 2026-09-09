@@ -1,7 +1,8 @@
 import uuid
 from random import SystemRandom
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.concept import Concept
 from app.models.task import Task
@@ -13,7 +14,7 @@ class TaskRead(ReadSchema):
     concept_name: str
     title: str
     type: str
-    domain: str
+    domain: Literal["PYTHON", "SQL"]
     difficulty: str
     description: str
     template_code: str
@@ -27,16 +28,18 @@ class TaskRead(ReadSchema):
 
 
 class TaskCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     concept_public_id: uuid.UUID
     title: str
-    type: str  # "MULTIPLE_CHOICE" or "CODE"
-    domain: str
-    difficulty: str  # "BRONZE" / "SILVER" / "GOLD"
+    type: Literal["MULTIPLE_CHOICE", "CODE"]
+    domain: Literal["PYTHON", "SQL"]
+    difficulty: Literal["BRONZE", "SILVER", "GOLD"]
     description: str
     template_code: str = ""
     options: dict[str, str] | None = None
     hint_text: str | None = None
-    test_cases: list[dict] = []
+    test_cases: list[dict] = Field(default_factory=list)
     correct_option: str | None = None
 
 
@@ -52,7 +55,7 @@ def to_task_read(task: Task, concept: Concept, *, completed: bool = False) -> Ta
         concept_name=getattr(concept, "name", ""),
         title=task.title,
         type=task.type,
-        domain=task.domain,
+        domain=concept.domain,
         difficulty=task.difficulty,
         description=task.description,
         template_code=task.template_code,

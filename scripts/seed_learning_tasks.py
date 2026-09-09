@@ -195,6 +195,8 @@ def consolidate_legacy_concepts(db, concepts: dict[str, Concept]) -> int:
     affected: set[tuple[int, int]] = set()
     removed = 0
     for legacy_name, target_name in LEGACY_CONCEPT_MAP.items():
+        legacy_name = legacy_name.removeprefix("PYTHON:")
+        target_name = target_name.removeprefix("PYTHON:")
         legacy = concepts.get(legacy_name)
         target = concepts.get(target_name)
         if legacy is None or target is None or legacy.id == target.id:
@@ -226,21 +228,25 @@ def main() -> None:
         removed = cleanup_benchmarks(db)
         created = updated = consolidated = 0
         if not args.cleanup_only:
-            concepts = {row.name: row for row in db.scalars(select(Concept)).all()}
+            concepts = {
+                row.name: row
+                for row in db.scalars(select(Concept).where(Concept.domain == "PYTHON")).all()
+            }
             existing = {
                 seed_key(row.title): row
                 for row in db.scalars(select(Task).where(Task.title.startswith(SEED_PREFIX))).all()
             }
             for data in build_tasks():
-                concept = concepts.get(data["concept"])
+                concept_name = data["concept"].removeprefix("PYTHON:")
+                concept = concepts.get(concept_name)
                 if concept is None:
-                    concept = Concept(name=data["concept"])
+                    concept = Concept(domain="PYTHON", name=concept_name)
                     db.add(concept)
                     db.flush()
                     concepts[concept.name] = concept
                 row = existing.get(seed_key(data["title"]))
                 values = {key: value for key, value in data.items() if key != "concept"}
-                values.update(concept_id=concept.id, domain="PYTHON", is_active=True)
+                values.update(concept_id=concept.id, is_active=True)
                 if row is None:
                     db.add(Task(**values)); created += 1
                 else:

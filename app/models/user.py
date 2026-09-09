@@ -39,7 +39,7 @@ class User(Base):
     wallpaper_item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
     floor_item_id: Mapped[int | None] = mapped_column(ForeignKey("items.id"), nullable=True)
     active_cat_id: Mapped[int | None] = mapped_column(ForeignKey("cats.id"), nullable=True)
-    game_settings: Mapped[dict[str, bool]] = mapped_column(
+    game_settings: Mapped[dict[str, object]] = mapped_column(
         JSONB,
         nullable=False,
         default=lambda: {
@@ -48,6 +48,7 @@ class User(Base):
             "effectsEnabled": True,
             "effectsVolume": 80,
             "reducedMotion": False,
+            "learningDomain": "PYTHON",
         },
     )
 
