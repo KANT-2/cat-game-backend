@@ -11,7 +11,7 @@ from app.core.time import game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
-from app.modules.learning.proficiency import concept_assessments, recommended_tasks, weak_concepts
+from app.modules.learning.proficiency import assess_concept, recommended_tasks, weak_concepts
 from app.schemas.task import TaskRead, to_task_read
 from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
@@ -124,6 +124,7 @@ def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
         rows.append(
             WeakConceptRead(
                 concept_public_id=concept.public_id,
+                domain=concept.domain,
                 name=concept.name,
                 attempts=assessment.attempts,
                 proficiency_level=assessment.proficiency_level,
@@ -134,12 +135,24 @@ def weaknesses(db: DbSession, user: CurrentUser) -> list[WeakConceptRead]:
 
 @router.get("/proficiencies", response_model=list[ConceptProficiencyRead])
 def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRead]:
+    preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
+    if preferred_domain not in {"PYTHON", "SQL"}:
+        preferred_domain = "PYTHON"
+    concepts = db.scalars(
+        select(Concept).where(Concept.domain == preferred_domain).order_by(Concept.name)
+    ).all()
     rows = []
-    for assessment in concept_assessments(db, user.id, since=user.learning_reset_at):
-        concept = db.get(Concept, assessment.concept_id)
+    for concept in concepts:
+        assessment = assess_concept(
+            db,
+            user.id,
+            concept.id,
+            since=user.learning_reset_at,
+        )
         rows.append(
             ConceptProficiencyRead(
                 concept_public_id=concept.public_id,
+                domain=concept.domain,
                 name=concept.name,
                 attempts=assessment.attempts,
                 proficiency_level=assessment.proficiency_level,

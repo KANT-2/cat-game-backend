@@ -510,7 +510,7 @@ GET /api/v1/learning/recommendations?limit=10
 7. 게임 타임존의 날짜가 바뀌면 같은 개념·난이도 우선순위 안에서 문제를 순환해 오늘의 추천을 교체
 
 추천 응답은 `TaskRead`를 사용하며 `test_cases`, `correct_option`은 노출하지 않는다.
-전체 숙련도 응답은 개념 공개 UUID, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다.
+숙련도 응답은 현재 `learningDomain`에 속한 모든 Concept의 공개 UUID, `domain`, 이름, 최근 완료 시도 수, `0..100` 숙련도를 제공한다. 아직 시도하지 않은 Concept도 `attempts=0`, `proficiency_level=0`으로 포함한다. 과목 설정을 변경한 클라이언트는 추천 문제와 숙련도를 함께 다시 조회한다.
 
 ---
 
@@ -765,7 +765,7 @@ POST /api/v1/attempts
 | 문제 조회 | `GET /api/v1/learning/tasks` | type/domain/concept/difficulty/limit | 공개 Task 목록 |
 | 문제 추천 | `GET /api/v1/learning/recommendations` | `limit` | 공개 Task 목록 |
 | 학습 과목 설정 | `PATCH /api/v1/game/settings` | `learning_domain=PYTHON 또는 SQL` | 선택 과목이 포함된 게임 스냅샷 |
-| 전체 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·이름·시도 수·숙련도 |
+| 선택 과목 숙련도 | `GET /api/v1/learning/proficiencies` | 없음 | 개념 UUID·domain·이름·시도 수·숙련도 |
 | 취약 개념 | `GET /api/v1/learning/weak-concepts` | 없음 | 개념 UUID·숙련도 |
 | 문제 제출 | `POST /api/v1/attempts` | task UUID + code/option + context | attempt UUID + PENDING |
 | 채점 결과 | `GET /api/v1/attempts/{attempt_public_id}` | attempt UUID | 상태·정오답·verdict |

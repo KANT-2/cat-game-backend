@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -9,6 +10,7 @@ class UserProficiencyRead(BaseModel):
 
 
 class ConceptProficiencyRead(UserProficiencyRead):
+    domain: Literal["PYTHON", "SQL"]
     name: str
     attempts: int
 
