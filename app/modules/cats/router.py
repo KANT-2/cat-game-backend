@@ -1,3 +1,4 @@
+import logging
 import uuid
 from functools import lru_cache
 from typing import Annotated
@@ -7,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import CurrentUser
 from app.core.config import settings
 from app.core.exceptions import (
+    AIProviderUnavailableError,
+    InvalidAIResponseError,
     InvalidMemorySummaryError,
     ResourceNotFoundError,
 )
@@ -23,6 +26,7 @@ from app.schemas.cat_conversation import CatChatCreate, CatChatRead, CatConversa
 from app.schemas.cat_memory import CatMemoryCreate, CatMemoryRead
 
 router = APIRouter(prefix="/cats", tags=["cats"])
+logger = logging.getLogger(__name__)
 
 
 def get_cat_unit_of_work() -> UnitOfWork:
@@ -120,6 +124,12 @@ def create_cat_chat(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except (AIProviderUnavailableError, InvalidAIResponseError):
+        logger.warning("cat_chat_provider_unavailable", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="cat-chat-unavailable",
+        ) from None
 
 
 @router.delete(
