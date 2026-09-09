@@ -54,7 +54,7 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/learning/tasks` | `200` | 조건별 활성 문제 조회 |
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
-| `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 사용자의 전체 개념별 숙련도 조회 |
+| `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 선택 과목의 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |
 | `PATCH` | `/api/v1/game/settings` | `200` | 사운드·접근성·선택 학습 과목 저장 |
 | `POST` | `/api/v1/attempts` | `202` | 코드 또는 객관식 답안 제출 |
@@ -140,7 +140,7 @@
 
 `limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 동일 우선순위 안의 문제는 설정된 게임 타임존의 날짜가 바뀔 때 순환하므로 오늘의 추천 과제도 함께 갱신된다.
 
-학습 과목은 `PATCH /api/v1/game/settings`에 `{"learning_domain":"SQL"}`처럼 전달한다. 성공 응답의 스냅샷에도 `settings.learning_domain`이 포함된다. 프런트엔드는 성공 직후 추천 목록을 다시 조회한다. 지원하지 않는 과목은 `422`로 거부한다.
+학습 과목은 `PATCH /api/v1/game/settings`에 `{"learning_domain":"SQL"}`처럼 전달한다. 성공 응답의 스냅샷에도 `settings.learning_domain`이 포함된다. 프런트엔드는 성공 직후 추천 목록과 개념별 숙련도를 함께 다시 조회한다. 지원하지 않는 과목은 `422`로 거부한다.
 
 로컬·테스트 환경에서는 `test_date=YYYY-MM-DD`로 현재 추천 요청의 날짜만 재현할 수 있다. 운영 환경은 이 매개변수가 포함된 요청을 `404`로 거부한다. 이 값은 사용자 데이터, 서버 시계, 출석 또는 보상 날짜를 변경하지 않는다.
 
@@ -172,14 +172,15 @@
 
 #### `GET /api/v1/learning/proficiencies`
 
-최근 완료 채점 기록이 있는 모든 개념의 숙련도를 반환한다. `proficiency_level`은 개념별 최근 10개 완료 채점의 정답률이며 새로고침 후에도 서버 데이터에서 다시 계산된다.
+사용자의 `game_settings.learningDomain`과 같은 과목의 모든 Concept 숙련도를 반환한다. 아직 완료 채점 기록이 없는 Concept도 `attempts=0`, `proficiency_level=0`으로 포함한다. `proficiency_level`은 개념별 최근 10개 완료 채점의 정답률이며 새로고침 후에도 서버 데이터에서 다시 계산된다. 응답의 `domain`은 `concepts.domain`이다.
 
 ```json
 [
   {
     "concept_public_id": "0ccdf2d3-53df-4a11-a265-9eaf252280cc",
+    "domain": "SQL",
     "proficiency_level": 70,
-    "name": "SQL:basics",
+    "name": "basics",
     "attempts": 10
   }
 ]

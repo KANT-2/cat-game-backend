@@ -19,6 +19,7 @@ from app.modules.battle.service import (
 )
 from app.modules.daily_mission.service import claim_reward, get_or_create_daily
 from app.modules.learning.proficiency import recommended_tasks
+from app.modules.learning.router import proficiencies
 
 
 def user(db, name):
@@ -131,6 +132,23 @@ def test_recommendations_return_only_the_selected_learning_domain(db_session):
 
     assert len(selected) == 3
     assert selected_domains == {"SQL"}
+
+
+def test_proficiencies_include_zero_attempt_concepts_only_for_selected_domain(db_session):
+    current_user = user(db_session, "domain-proficiency")
+    current_user.game_settings = {**current_user.game_settings, "learningDomain": "SQL"}
+    sql_concept = Concept(domain="SQL", name=f"untried-{id(db_session)}")
+    python_concept = Concept(domain="PYTHON", name=f"untried-{id(db_session)}")
+    db_session.add_all([sql_concept, python_concept])
+    db_session.flush()
+
+    rows = proficiencies(db_session, current_user)
+
+    assert rows
+    assert {row.domain for row in rows} == {"SQL"}
+    untried = next(row for row in rows if row.concept_public_id == sql_concept.public_id)
+    assert untried.attempts == 0
+    assert untried.proficiency_level == 0
 
 
 def test_battle_room_lifecycle_and_finish(db_session, monkeypatch):

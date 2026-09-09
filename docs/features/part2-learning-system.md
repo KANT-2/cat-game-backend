@@ -25,7 +25,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 정상 채점이 끝나면 대표 개념의 최근 완료 시도 최대 10개를 읽는다. `proficiency_level`은 정답률을 반올림한 0~100 정수다. 최소 3회 시도하고 숙련도가 50 이하일 때만 취약 개념이다. 상수는 `app/modules/learning/proficiency.py`에 모아 두었다.
 
 - `GET /api/v1/learning/weak-concepts`: 취약 개념 목록
-- `GET /api/v1/learning/proficiencies`: 최근 완료 채점 기록이 있는 전체 개념의 숙련도
+- `GET /api/v1/learning/proficiencies`: 현재 선택 과목의 모든 개념 숙련도. 미시도 개념도 0%로 포함한다.
 - `GET /api/v1/learning/recommendations?limit=10`: 추천 문제 목록
 
 추천은 숙련도가 낮은 취약 개념과 쉬운 난이도를 우선하며 최근 문제 20개를 먼저 제외한다. 후보가 없으면 전체 개념으로 넓히고, 마지막 fallback에서만 최근 문제 제외를 푼다. 같은 학습 이력에서는 문제 ID를 기준으로 안정된 순서를 반환한다.
