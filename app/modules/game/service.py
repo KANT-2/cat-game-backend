@@ -1,12 +1,12 @@
 """Read model for the server-authoritative game state."""
 
 from collections import Counter
-from datetime import UTC, datetime, time, timedelta
 from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.time import game_day_bounds, game_today
 from app.models.asset import Asset
 from app.models.attendance import Attendance
 from app.models.cat import Cat
@@ -56,11 +56,10 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
             .order_by(Attendance.check_in_date)
         ).all()
     )
-    today = datetime.now(UTC).date()
-    day_start = datetime.combine(today, time.min, tzinfo=UTC)
+    today = game_today()
+    day_start, day_end = game_day_bounds(today)
     if user.learning_reset_at is not None and user.learning_reset_at > day_start:
         day_start = user.learning_reset_at
-    day_end = day_start + timedelta(days=1)
     completed_rows = list(
         db.execute(
             select(Task.public_id, Task.type)

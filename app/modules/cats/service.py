@@ -105,8 +105,8 @@ def chat_with_cat(
 ) -> CatChatRead:
     """Reply as an owned cat without storing raw user input.
 
-    Prompt-control, unsafe, professional, and unsupported-domain input is answered before the
-    provider boundary. Accepted messages store only a server-authored category summary.
+    Prompt-control, unsafe, and professional input is answered before the provider boundary.
+    Other safe input reaches the provider, while only coding and companion categories are remembered.
     """
     decision = classify_cat_chat(message)
     with unit_of_work as uow:
@@ -148,6 +148,15 @@ def chat_with_cat(
         return CatChatRead(
             cat_asset_public_id=cat_asset_public_id,
             reply="냐아… 잠깐 졸았나 봐. 한 번만 다시 말해 줄래?",
+            category=decision.category,
+            memory_count=memory_count,
+            remembered=False,
+        )
+
+    if not decision.remember:
+        return CatChatRead(
+            cat_asset_public_id=cat_asset_public_id,
+            reply=reply,
             category=decision.category,
             memory_count=memory_count,
             remembered=False,

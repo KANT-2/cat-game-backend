@@ -34,6 +34,7 @@ class CatChatRead(BaseModel):
     category: Literal[
         "COMPANION",
         "CODING",
+        "GENERAL",
         "UNKNOWN",
         "PROMPT_INJECTION",
         "SAFETY",

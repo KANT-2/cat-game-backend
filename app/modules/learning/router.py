@@ -1,10 +1,13 @@
 import uuid
-from typing import Literal
+from datetime import date
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.config import settings
+from app.core.time import game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
@@ -13,6 +16,14 @@ from app.schemas.task import TaskRead, to_task_read
 from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
+
+
+def _recommendation_date(test_date: date | None) -> date:
+    if test_date is None:
+        return game_today()
+    if settings.app_env not in {"local", "test"}:
+        raise HTTPException(status_code=404, detail="Not found")
+    return test_date
 
 
 def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
@@ -77,9 +88,21 @@ def list_tasks(
 
 @router.get("/recommendations", response_model=list[TaskRead])
 def recommendations(
-    db: DbSession, user: CurrentUser, limit: int = Query(10, ge=1, le=50)
+    db: DbSession,
+    user: CurrentUser,
+    limit: int = Query(10, ge=1, le=50),
+    test_date: Annotated[
+        date | None,
+        Query(description="Local/test-only recommendation date override."),
+    ] = None,
 ) -> list[TaskRead]:
-    tasks = recommended_tasks(db, user.id, limit, since=user.learning_reset_at)
+    tasks = recommended_tasks(
+        db,
+        user.id,
+        limit,
+        since=user.learning_reset_at,
+        recommendation_date=_recommendation_date(test_date),
+    )
     completed_ids = _completed_task_ids(
         db,
         user.id,

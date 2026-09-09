@@ -4,6 +4,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.exceptions import IdempotencyConflictError
 from app.models.task import Task
 from app.modules.grading.service import SubmissionError, create_attempt, get_attempt
 from app.schemas.task_attempt import (
@@ -21,6 +22,9 @@ router = APIRouter(prefix="/attempts", tags=["grading"])
 def submit(payload: TaskAttemptCreate, db: DbSession, user: CurrentUser):
     try:
         attempt = create_attempt(db, payload, user)
+    except IdempotencyConflictError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="idempotency-conflict") from exc
     except SubmissionError as exc:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc

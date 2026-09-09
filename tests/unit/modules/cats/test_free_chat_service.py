@@ -115,3 +115,25 @@ def test_invalid_provider_output_falls_back_without_writing_memory() -> None:
     assert result.remembered is False
     assert unit_of_work.cat_memories.memories == []
     unit_of_work.commit.assert_not_called()
+
+
+def test_general_question_calls_provider_without_writing_memory() -> None:
+    unit_of_work, user, asset = make_context()
+    provider = MagicMock()
+    provider.reply.return_value = "프랑스의 수도는 파리야, 냐옹."
+
+    result = chat_with_cat(
+        unit_of_work=unit_of_work,
+        provider=provider,
+        user_public_id=user.public_id,
+        cat_asset_public_id=asset.public_id,
+        message="프랑스 수도는 어디야?",
+    )
+
+    assert result.category == "GENERAL"
+    assert result.reply == "프랑스의 수도는 파리야, 냐옹."
+    assert result.remembered is False
+    assert result.memory_count == 0
+    provider.reply.assert_called_once()
+    assert unit_of_work.cat_memories.memories == []
+    unit_of_work.commit.assert_not_called()

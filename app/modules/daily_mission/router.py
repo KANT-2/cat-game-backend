@@ -1,10 +1,9 @@
 import uuid
-from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.time import game_today
 from app.models.concept import Concept
 from app.modules.daily_mission.service import (
     DailyMissionError,
@@ -40,10 +39,7 @@ def payload(db, attendance) -> DailyMissionRead:
 @router.get("/today", response_model=DailyMissionRead)
 def today(db: DbSession, user: CurrentUser) -> DailyMissionRead:
     try:
-        from app.core.config import settings
-
-        game_date = datetime.now(ZoneInfo(settings.game_timezone)).date()
-        return payload(db, get_or_create_daily(db, user, game_date))
+        return payload(db, get_or_create_daily(db, user, game_today()))
     except DailyMissionError as exc:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc

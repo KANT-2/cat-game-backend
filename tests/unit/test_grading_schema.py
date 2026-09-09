@@ -8,6 +8,7 @@ from app.schemas.task_attempt import TaskAttemptCreate
 
 def valid(**changes):
     data = {
+        "request_id": uuid.uuid4(),
         "task_public_id": uuid.uuid4(),
         "submitted_code": "print(input())",
         "context_type": "LEARNING",

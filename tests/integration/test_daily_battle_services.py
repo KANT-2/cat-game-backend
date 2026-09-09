@@ -18,6 +18,7 @@ from app.modules.battle.service import (
     start_room,
 )
 from app.modules.daily_mission.service import claim_reward, get_or_create_daily
+from app.modules.learning.proficiency import recommended_tasks
 
 
 def user(db, name):
@@ -73,6 +74,28 @@ def test_daily_assignment_streak_completion_and_idempotent_reward(db_session, mo
     assert first.daily_reward_claimed_at is not None
     assert second.daily_reward_claimed_at == first.daily_reward_claimed_at
     assert current_user.balance == 25
+
+
+def test_recommendations_change_on_the_next_game_date(db_session):
+    current_user = user(db_session, "daily-recommendation")
+    tasks(db_session, 4)
+    first_date = datetime.now(UTC).date()
+
+    first = recommended_tasks(
+        db_session,
+        current_user.id,
+        3,
+        recommendation_date=first_date,
+    )
+    next_day = recommended_tasks(
+        db_session,
+        current_user.id,
+        3,
+        recommendation_date=first_date + timedelta(days=1),
+    )
+
+    assert [task.id for task in first] != [task.id for task in next_day]
+    assert {task.id for task in first} != {task.id for task in next_day}
 
 
 def test_battle_room_lifecycle_and_finish(db_session, monkeypatch):
