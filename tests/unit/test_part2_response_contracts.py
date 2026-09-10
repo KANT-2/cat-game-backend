@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.main import app
-from app.modules.learning.router import _recommendation_date
+from app.modules.learning.router import _learning_progress_start, _recommendation_date
 from app.schemas.task import to_task_read
 from app.schemas.task_attempt import to_task_attempt_read
 
@@ -108,3 +108,16 @@ def test_recommendation_date_override_is_limited_to_local_and_test(monkeypatch):
     with pytest.raises(HTTPException) as exc_info:
         _recommendation_date(selected)
     assert exc_info.value.status_code == 404
+
+
+def test_learning_progress_starts_at_game_day_boundary(monkeypatch):
+    monkeypatch.setattr("app.modules.learning.router.game_today", lambda: date(2026, 9, 10))
+
+    assert _learning_progress_start(None) == datetime(2026, 9, 9, 15, 0, tzinfo=UTC)
+
+
+def test_manual_learning_reset_after_day_boundary_takes_precedence(monkeypatch):
+    reset_at = datetime(2026, 9, 10, 3, 30, tzinfo=UTC)
+    monkeypatch.setattr("app.modules.learning.router.game_today", lambda: date(2026, 9, 10))
+
+    assert _learning_progress_start(reset_at) == reset_at

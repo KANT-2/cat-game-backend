@@ -47,6 +47,7 @@
 | `GET` | `/health` | 없음 | `200` | 서버 상태 확인 |
 | `POST` | `/api/v1/session/development` | 없음 | `200` | 로컬·테스트 개발 사용자 생성 또는 재사용 |
 | `GET` | `/api/v1/session/me` | 필요 | `200` | 현재 사용자 공개 프로필 |
+| `GET` | `/api/v1/session/me/profile-image` | 필요 | `200` | 학생관리시스템 프로필 이미지 프록시 |
 
 ### Part 2 — 학습·채점·일일 미션·배틀
 
@@ -118,6 +119,12 @@
 }
 ```
 
+학생관리시스템 인증 API 또는 VIEW 연동 시 응답의 `platform.profile.profile_image`가 채워진다.
+인증 API 값을 우선하고 VIEW 값은 추가 정보와 fallback으로 사용한다. 브라우저는
+원본 경로 대신 `GET /api/v1/session/me/profile-image`를 사용한다. 이 이미지 엔드포인트는
+인증된 현재 사용자의 이미지 중 `AX_AUTH_BASE_URL`과 같은 origin만 허용하며, 이미지가
+없으면 `404`, 플랫폼 또는 원본 이미지 조회 장애면 `503`을 반환한다.
+
 ## 4. Part 2 API
 
 ### 4.1 문제 조회
@@ -138,7 +145,7 @@
 
 #### `GET /api/v1/learning/recommendations`
 
-`limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 동일 우선순위 안의 문제는 설정된 게임 타임존의 날짜가 바뀔 때 순환하므로 오늘의 추천 과제도 함께 갱신된다.
+`limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 동일 우선순위 안의 문제는 설정된 게임 타임존의 날짜가 바뀔 때 순환하므로 오늘의 추천 과제도 함께 갱신된다. 문제의 `completed` 표시는 게임 날짜가 바뀌면 초기화되며 과거 풀이 기록은 숙련도와 추천 계산을 위해 보존한다. 사용자가 같은 날 학습 진도를 수동 초기화했다면 그 시각 이후의 정답만 오늘 완료로 표시한다.
 
 학습 과목은 `PATCH /api/v1/game/settings`에 `{"learning_domain":"SQL"}`처럼 전달한다. 성공 응답의 스냅샷에도 `settings.learning_domain`이 포함된다. 프런트엔드는 성공 직후 추천 목록과 개념별 숙련도를 함께 다시 조회한다. 지원하지 않는 과목은 `422`로 거부한다.
 

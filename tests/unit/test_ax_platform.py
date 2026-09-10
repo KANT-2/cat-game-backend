@@ -6,10 +6,13 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from starlette.requests import Request
 
-from app.api.dependencies import resolve_current_user
-from app.core.config import Settings
+from app.api.dependencies import HostUser, resolve_current_user
+from app.core.config import Settings, settings
 from app.integrations.ax_platform import (
+    PlatformEnrichment,
+    PlatformProfile,
     PlatformRepository,
     PlatformService,
     PlatformUnavailable,
@@ -17,6 +20,7 @@ from app.integrations.ax_platform import (
 )
 from app.main import create_app
 from app.models.user import User
+from app.modules.identity.router import _session_platform_enrichment, _trusted_profile_image_url
 
 
 def config():
@@ -146,3 +150,111 @@ def test_unauthenticated_requests_never_read_views(monkeypatch):
         assert client.get("/api/v1/session/me").status_code == 401
         assert client.get("/api/v1/session/me/round-teams").status_code == 401
     connect.assert_not_called()
+
+
+def test_profile_image_url_accepts_only_the_configured_student_system(monkeypatch):
+    monkeypatch.setattr(settings, "ax_auth_base_url", "https://students.example/app")
+
+    assert _trusted_profile_image_url("/media/avatar.png") == (
+        "https://students.example/media/avatar.png"
+    )
+    assert _trusted_profile_image_url("https://students.example/media/avatar.png") == (
+        "https://students.example/media/avatar.png"
+    )
+    assert _trusted_profile_image_url("https://attacker.example/avatar.png") is None
+
+
+def test_session_profile_prefers_auth_api_and_keeps_view_team(client):
+    _, user, service = client
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+    request.state.host_user = HostUser(
+        id=42,
+        display_name="API Name",
+        role="student",
+        email="api@example.test",
+        profile_image="/media/profiles/api.jpg",
+    )
+    service.enrich = Mock(
+        return_value=PlatformEnrichment(
+            status="available",
+            profile=PlatformProfile(
+                user_email="db@example.test",
+                display_name_snapshot="DB Name",
+                profile_image="/media/profiles/db.jpg",
+                team_name="1조",
+            ),
+        )
+    )
+
+    result = _session_platform_enrichment(request, user, service)
+
+    assert result.status == "available"
+    assert result.profile.user_email == "db@example.test"
+    assert result.profile.display_name_snapshot == "API Name"
+    assert result.profile.profile_image == "/media/profiles/api.jpg"
+    assert result.profile.team_name == "1조"
+
+
+def test_profile_image_proxy_uses_trusted_url_and_forwards_session_cookie(client, monkeypatch):
+    http, _, service = client
+    monkeypatch.setattr(settings, "ax_auth_base_url", "https://students.example")
+    monkeypatch.setattr(settings, "ax_auth_session_cookie_name", "sessionid")
+    monkeypatch.setattr(
+        service,
+        "enrich",
+        Mock(
+            return_value=PlatformEnrichment(
+                status="available",
+                profile=PlatformProfile(profile_image="/media/avatar.png"),
+            )
+        ),
+    )
+    requests = []
+
+    class ImageResponse:
+        def __init__(self):
+            self.headers = {"content-type": "image/png"}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return None
+
+        def raise_for_status(self):
+            return None
+
+        async def aiter_bytes(self):
+            yield b"image-bytes"
+
+    class ImageClient:
+        def __init__(self, **_):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return None
+
+        def stream(self, method, url, **kwargs):
+            requests.append((method, url, kwargs))
+            return ImageResponse()
+
+    monkeypatch.setattr("app.modules.identity.router.httpx.AsyncClient", ImageClient)
+
+    response = http.get("/api/v1/session/me/profile-image", cookies={"sessionid": "secret"})
+
+    assert response.status_code == 200
+    assert response.content == b"image-bytes"
+    assert response.headers["content-type"] == "image/png"
+    assert requests == [
+        (
+            "GET",
+            "https://students.example/media/avatar.png",
+            {
+                "headers": {"Accept": "image/avif,image/webp,image/png,image/jpeg,image/gif"},
+                "cookies": {"sessionid": "secret"},
+            },
+        )
+    ]

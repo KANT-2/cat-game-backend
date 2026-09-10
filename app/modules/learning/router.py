@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import settings
-from app.core.time import game_today
+from app.core.time import game_day_bounds, game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
@@ -29,6 +29,14 @@ def _recommendation_date(test_date: date | None) -> date:
 def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
     concept = db.get(Concept, task.concept_id)
     return to_task_read(task, concept, completed=completed)
+
+
+def _learning_progress_start(learning_reset_at: datetime | None) -> datetime:
+    """Return the later of today's boundary and the user's manual reset time."""
+    day_start, _ = game_day_bounds(game_today())
+    if learning_reset_at is not None and learning_reset_at > day_start:
+        return learning_reset_at
+    return day_start
 
 
 def _completed_task_ids(
@@ -81,7 +89,7 @@ def list_tasks(
         db,
         user.id,
         [task.id for task in tasks],
-        since=user.learning_reset_at,
+        since=_learning_progress_start(user.learning_reset_at),
     )
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
 
@@ -111,7 +119,7 @@ def recommendations(
         db,
         user.id,
         [task.id for task in tasks],
-        since=user.learning_reset_at,
+        since=_learning_progress_start(user.learning_reset_at),
     )
     return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
 

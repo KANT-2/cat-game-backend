@@ -1,15 +1,18 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from urllib.parse import urljoin, urlsplit
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.dependencies import CurrentUser, DbSession
+from app.api.dependencies import CurrentUser, DbSession, HostUser
 from app.core.config import settings
 from app.integrations.ax_platform import (
     PlatformEnrichment,
+    PlatformProfile,
     PlatformService,
     PlatformUnavailable,
     RoundTeam,
@@ -43,6 +46,10 @@ Platform = Annotated[PlatformService, Depends(get_platform_service)]
 
 class SessionRead(UserRead):
     platform: PlatformEnrichment
+
+
+PROFILE_IMAGE_CONTENT_TYPES = {"image/gif", "image/jpeg", "image/png", "image/webp"}
+PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 
 
 class RegistrationCommand(BaseModel):
@@ -172,12 +179,97 @@ def logout(request: Request, response: Response, db: DbSession, user: CurrentUse
 
 
 @router.get("/me", response_model=SessionRead)
-def current_session(user: CurrentUser, platform: Platform) -> SessionRead:
+def current_session(request: Request, user: CurrentUser, platform: Platform) -> SessionRead:
     """Return the public profile resolved by the active authentication adapter."""
     return SessionRead(
         **UserRead.model_validate(user).model_dump(),
-        platform=platform.enrich(user.homepage_user_id),
+        platform=_session_platform_enrichment(request, user, platform),
     )
+
+
+@router.get("/me/profile-image", response_class=Response)
+async def current_profile_image(request: Request, user: CurrentUser, platform: Platform) -> Response:
+    """Proxy the authenticated student's trusted platform profile image."""
+    enrichment = _session_platform_enrichment(request, user, platform)
+    if enrichment.status == "unavailable":
+        raise HTTPException(status_code=503, detail="profile-image-unavailable")
+    image_path = enrichment.profile.profile_image if enrichment.profile is not None else None
+    source_url = _trusted_profile_image_url(image_path)
+    if source_url is None:
+        raise HTTPException(status_code=404, detail="profile-image-not-found")
+    session_cookie = request.cookies.get(settings.ax_auth_session_cookie_name)
+    cookies = (
+        {settings.ax_auth_session_cookie_name: session_cookie}
+        if session_cookie is not None
+        else None
+    )
+    try:
+        async with (
+            httpx.AsyncClient(timeout=settings.ax_auth_timeout_seconds) as client,
+            client.stream(
+                "GET",
+                source_url,
+                headers={"Accept": "image/avif,image/webp,image/png,image/jpeg,image/gif"},
+                cookies=cookies,
+            ) as response,
+        ):
+            response.raise_for_status()
+            content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+            if content_type not in PROFILE_IMAGE_CONTENT_TYPES:
+                raise ValueError("unsupported profile image content type")
+            chunks: list[bytes] = []
+            size = 0
+            async for chunk in response.aiter_bytes():
+                size += len(chunk)
+                if size > PROFILE_IMAGE_MAX_BYTES:
+                    raise ValueError("profile image is too large")
+                chunks.append(chunk)
+    except (httpx.HTTPError, ValueError) as exc:
+        raise HTTPException(status_code=503, detail="profile-image-unavailable") from exc
+    return Response(
+        content=b"".join(chunks),
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+def _session_platform_enrichment(
+    request: Request,
+    user: User,
+    platform: PlatformService,
+) -> PlatformEnrichment:
+    """Prefer the authenticated API profile and preserve DB VIEW enrichment as fallback."""
+    enrichment = platform.enrich(user.homepage_user_id)
+    host_user = getattr(request.state, "host_user", None)
+    if not isinstance(host_user, HostUser):
+        return enrichment
+    profile = enrichment.profile or PlatformProfile()
+    return PlatformEnrichment(
+        status="available",
+        profile=profile.model_copy(
+            update={
+                "display_name_snapshot": host_user.display_name,
+                "profile_image": host_user.profile_image or profile.profile_image,
+            }
+        ),
+    )
+
+
+def _trusted_profile_image_url(image_path: str | None) -> str | None:
+    base_url = settings.ax_auth_base_url
+    if not image_path or not base_url:
+        return None
+    base = urlsplit(base_url)
+    candidate = urlsplit(urljoin(base_url.rstrip("/") + "/", image_path))
+    if (
+        base.scheme not in {"http", "https"}
+        or candidate.scheme != base.scheme
+        or candidate.netloc != base.netloc
+        or candidate.username is not None
+        or candidate.password is not None
+    ):
+        return None
+    return candidate.geturl()
 
 
 @router.get("/me/round-teams", response_model=list[RoundTeam])

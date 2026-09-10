@@ -10,12 +10,19 @@
 2. 같은 사이트의 게임 API 요청에 Django `sessionid` 쿠키가 포함된다.
 3. 게임 서버가 쿠키를 `AX_AUTH_BASE_URL + AX_AUTH_ME_PATH`에 전달한다.
 4. 홈페이지 Bridge API가 세션, `is_active`, `approval_status=approved`를 검증한다.
-5. 성공 응답의 `id`, `display_name`, `role`로 게임 사용자를 생성하거나 갱신한다.
+5. 성공 응답의 `id`, `display_name`, `role`로 게임 사용자를 생성하거나 갱신하고,
+   `profile_image`가 있으면 현재 프로필 이미지로 사용한다.
 
 권장 성공 응답은 다음과 같다.
 
 ```json
-{"id": 28, "display_name": "김여름", "role": "student"}
+{
+  "id": 28,
+  "display_name": "김여름",
+  "role": "student",
+  "email": "player@example.test",
+  "profile_image": "/media/profiles/avatar.jpg"
+}
 ```
 
 `id`는 홈페이지 `accounts_user.id`(BigAutoField)이며 게임 DB의
@@ -24,6 +31,8 @@
 홈페이지가 응답하지 않거나 계약과 다른 응답을 주면 503으로 처리한다.
 
 `display_name`과 `role`은 로그인 확인 때마다 홈페이지 값을 Source of Truth로 동기화한다.
+`profile_image`는 nullable이며 이미지 파일이 아니라 홈페이지 미디어 서버 기준 경로다.
+인증 API가 반환한 이미지 경로를 우선 사용하고, 통합 DB VIEW는 추가 정보와 fallback에 사용한다.
 로그아웃 Webhook은 MVP 범위가 아니며 이후 게임 API 요청에서 다시 세션을 검증한다.
 
 ## 필요한 환경변수

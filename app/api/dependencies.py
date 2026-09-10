@@ -34,6 +34,7 @@ class HostUser(BaseModel):
     display_name: str
     role: str
     email: str | None = None
+    profile_image: str | None = None
 
 
 def get_current_user(
@@ -88,6 +89,7 @@ async def resolve_current_user(
 ) -> User:
     """Prefer first-party auth, then validate the configured host session bridge."""
     if local_user is not None:
+        request.state.host_user = None
         return local_user
     session_cookie = request.cookies.get(settings.ax_auth_session_cookie_name)
     if not session_cookie:
@@ -105,7 +107,7 @@ async def resolve_current_user(
                 cookies={settings.ax_auth_session_cookie_name: session_cookie},
                 headers={"Accept": "application/json"},
             )
-        if response.status_code in {401, 403}:
+        if response.status_code in {401, 403} or 300 <= response.status_code < 400:
             raise _unauthorized()
         response.raise_for_status()
         payload = response.json()
@@ -136,6 +138,7 @@ async def resolve_current_user(
         if host_user.email:
             user.email = host_user.email
     request.state.auth_session = None
+    request.state.host_user = host_user
     db.commit()
     db.refresh(user)
     return user
