@@ -130,12 +130,12 @@ SILVER = [
 ]
 
 GOLD = [
-    Spec("functions", "회문 함수", "is_palindrome(text) 함수를 작성하고 입력 문자열의 결과를 YES/NO로 출력하세요.", "비교용 문자열을 뒤집어 보세요.", "palindrome"),
-    Spec("functions", "괄호 균형", "is_balanced(text) 함수를 작성해 괄호가 올바르면 YES를 출력하세요.", "스택을 사용하세요.", "balanced"),
-    Spec("functions", "계단 경우의 수", "ways(n) 함수를 작성해 1칸 또는 2칸씩 N칸을 오르는 경우의 수를 출력하세요.", "이전 두 값을 저장하세요.", "stairs"),
-    Spec("collections", "이진 탐색 위치", "search(values, target) 함수로 정렬 목록의 target 인덱스를 출력하세요. 없으면 -1입니다.", "탐색 범위를 절반씩 줄이세요.", "binary_search"),
+    Spec("functions", "회문 함수", "입력 문자열의 회문 여부를 판단하는 함수를 활용해 YES/NO로 출력하세요.", "비교용 문자열을 뒤집어 보세요.", "palindrome"),
+    Spec("functions", "괄호 균형", "괄호 균형을 판단하는 함수를 활용해 올바르면 YES를 출력하세요.", "스택을 사용하세요.", "balanced"),
+    Spec("functions", "계단 경우의 수", "경우의 수를 계산하는 함수를 활용해 1칸 또는 2칸씩 N칸을 오르는 경우의 수를 출력하세요.", "이전 두 값을 저장하세요.", "stairs"),
+    Spec("collections", "이진 탐색 위치", "이진 탐색 함수를 활용해 정렬 목록의 target 인덱스를 출력하세요. 없으면 -1입니다.", "탐색 범위를 절반씩 줄이세요.", "binary_search"),
     Spec("collections", "학생별 최고점", "name:score 목록에서 학생별 최고점 합계를 출력하세요.", "이름별 최대값을 dict에 저장하세요.", "best_scores"),
-    Spec("functions", "최대공약수", "gcd(a, b) 함수를 작성해 최대공약수를 출력하세요.", "유클리드 호제법을 사용하세요.", "gcd"),
+    Spec("functions", "최대공약수", "최대공약수를 계산하는 함수를 활용해 결과를 출력하세요.", "유클리드 호제법을 사용하세요.", "gcd"),
     Spec("collections", "목표 합 쌍", "정수 목록과 target을 읽고 합이 target인 서로 다른 인덱스 쌍의 수를 출력하세요.", "정렬 또는 해시 집합을 고려하세요.", "pair_sum"),
     Spec("collections", "구간 합 질의", "정수 목록과 l, r을 읽고 l부터 r까지(0-based, 양 끝 포함) 합을 출력하세요.", "누적 합 함수를 작성하세요.", "range_total"),
     Spec("collections", "연결 요소 크기", "간선 목록과 시작점을 읽고 시작점에서 도달 가능한 정점 수를 출력하세요.", "인접 목록과 DFS/BFS를 사용하세요.", "reachable"),
@@ -192,13 +192,9 @@ def build_tasks() -> list[dict]:
                     "title": f"{SEED_PREFIX}{difficulty}:{local_number:03d}] 🐾 {variant_title}: {spec.title}",
                     "concept": f"PYTHON:{spec.concept}", "difficulty": difficulty,
                     "type": "MULTIPLE_CHOICE" if is_choice else "CODE", "description": prompt,
-                    "template_code": "" if is_choice else (
-                        "def solve() -> None:\n"
-                        "    # 냥이의 입력을 읽고 정답을 출력해 주세요. 야옹!\n"
-                        "    pass\n\n"
-                        "if __name__ == '__main__':\n"
-                        "    solve()\n"
-                    ),
+                    # The grader executes each submission as a complete program for every stdin case.
+                    # No function name or wrapper is part of that contract, so the editor starts empty.
+                    "template_code": "",
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
                     "hint_text": f"고양이 힌트 🐾 {spec.hint}",

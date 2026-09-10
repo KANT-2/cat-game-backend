@@ -54,7 +54,7 @@ def task(level: str, number: int, concept: str, title: str, prompt: str, query: 
             "nums는 숫자 연습표예요. 아래 문제에 적힌 테이블과 열 이름을 그대로 사용해 주세요.\n\n"
             f"[문제] {prompt}"
         ),
-        "template_code": "-- 냥이의 부탁을 해결할 SQL을 작성해 주세요. 야옹!\n",
+        "template_code": "-- 아래에 SQL을 작성하세요.\n",
         "test_cases": query_case(query),
         "options": None,
         "correct_option": None,
@@ -124,9 +124,9 @@ def build_tasks() -> list[dict]:
     scores = [75, 92, 84, 68, 92]
     for i in range(1, 6):
         spec = json.dumps({"mode": "MUTATION", "verification_query": f"SELECT score FROM students WHERE id={i}", "expected_rows": [[scores[i - 1] + i]]})
-        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "template_code": "-- UPDATE 문을 작성하세요.\n", "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False)})
+        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False)})
         ddl_spec = json.dumps({"mode": "SCHEMA", "verification_query": f"SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='badges_{i}' ORDER BY ordinal_position", "expected_rows": [["id"], ["label"]]})
-        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "template_code": "-- CREATE TABLE 문을 작성하세요.\n", "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False)})
+        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False)})
         gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": "원자성과 확정·취소를 생각하세요."})
     rows += gold
     assert len(rows) == 150
