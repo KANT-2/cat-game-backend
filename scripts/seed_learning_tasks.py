@@ -175,6 +175,26 @@ DIRECT_HINTS = {
     "run_length": "현재 문자와 연속 개수를 유지하다 문자가 바뀔 때 `문자+개수`를 결과에 추가하세요.",
 }
 
+CONCEPT_START_HINTS = {
+    "basics": "`input()`으로 받은 값을 문제 순서대로 변수에 담고 필요한 숫자형으로 변환하세요.",
+    "conditionals": "먼저 참과 거짓을 가르는 조건식을 한 줄로 적고 두 출력 경로를 나누세요.",
+    "loops": "작은 입력을 손으로 써 본 뒤 반복할 범위와 반복 중 갱신할 값을 정하세요.",
+    "strings": "입력 문자열의 공백과 대소문자를 어떻게 다룰지 먼저 정하세요.",
+    "collections": "입력 목록에서 유지할 값과 빠르게 찾거나 셀 값을 구분해 알맞은 컬렉션을 고르세요.",
+    "functions": "함수의 입력과 반환값을 먼저 정한 뒤 작은 예시 한 개로 동작을 확인하세요.",
+    "exceptions": "계산할 수 없는 입력을 먼저 검사해 정상 계산과 분리하세요.",
+}
+
+
+def python_hint(spec: Spec) -> str:
+    return "\n".join(
+        (
+            f"[시작] {CONCEPT_START_HINTS[spec.concept]}",
+            f"[핵심] {DIRECT_HINTS[spec.operation]}",
+            "[확인] 예시 입력을 직접 계산해 보고, `print`에는 설명 문장 없이 요구된 값만 출력하세요.",
+        )
+    )
+
 
 def cases(operation: str, variant: int) -> list[dict[str, str]]:
     data = {
@@ -230,7 +250,7 @@ def build_tasks() -> list[dict]:
                     "template_code": "",
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
-                    "hint_text": f"고양이 힌트 🐾 {DIRECT_HINTS[spec.operation]}",
+                    "hint_text": python_hint(spec),
                     "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[difficulty],
                 })
     assert len(rows) == 150

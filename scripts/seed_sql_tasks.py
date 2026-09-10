@@ -72,7 +72,24 @@ def sql_hint(concept: str, title: str) -> str:
         if "재귀 합계" in title:
             return "`WITH RECURSIVE`에서 1을 시작값으로 두고 N까지 1씩 늘린 뒤 바깥에서 `sum`하세요."
         return "`avg(score) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)` 창 범위를 사용하세요."
+    if concept == "data_manipulation":
+        return "`UPDATE students` 뒤 `SET`에서 기존 score에 값을 더하고, `WHERE id = ...`로 한 학생만 고르세요."
+    if concept == "schema":
+        return "`CREATE TABLE 테이블명 (...)` 안에 id는 int, label은 text 열로 선언하세요."
     return "문제에서 요구한 SQL 절을 데이터 안내의 테이블과 열 이름으로 순서대로 구성하세요."
+
+
+def staged_sql_hint(concept: str, title: str) -> str:
+    if concept == "data_manipulation":
+        start = "[대상] 바꿀 행의 id와 바꿀 열을 문제에서 먼저 표시하세요."
+        check = "[확인] `WHERE`가 한 학생만 선택하는지, 새 score가 기존 값에 더해졌는지 확인하세요."
+    elif concept == "schema":
+        start = "[대상] 만들 테이블 이름과 필요한 열 이름·자료형을 먼저 적어 보세요."
+        check = "[확인] 세미콜론 전까지 테이블명, 열 순서, int/text 자료형이 요구와 같은지 확인하세요."
+    else:
+        start = "[대상] 최종 결과에 필요한 열, 필터 조건, 정렬 순서를 문제에서 각각 찾아 표시하세요."
+        check = "[확인] `SELECT` 열 순서와 `ORDER BY`가 문제의 출력 순서와 같은지 마지막으로 확인하세요."
+    return "\n".join((start, f"[작성] {sql_hint(concept, title)}", check))
 
 
 def task(level: str, number: int, concept: str, title: str, prompt: str, query: str) -> dict:
@@ -92,7 +109,7 @@ def task(level: str, number: int, concept: str, title: str, prompt: str, query: 
         "test_cases": query_case(query),
         "options": None,
         "correct_option": None,
-        "hint_text": f"고양이 힌트 🐾 {sql_hint(concept, title)}",
+        "hint_text": staged_sql_hint(concept, title),
     }
 
 
@@ -158,10 +175,10 @@ def build_tasks() -> list[dict]:
     scores = [75, 92, 84, 68, 92]
     for i in range(1, 6):
         spec = json.dumps({"mode": "MUTATION", "verification_query": f"SELECT score FROM students WHERE id={i}", "expected_rows": [[scores[i - 1] + i]]})
-        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": "고양이 힌트 🐾 `UPDATE students` 뒤 `SET`에서 기존 score에 값을 더하고, `WHERE id = ...`로 한 학생만 고르세요."})
+        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": staged_sql_hint("data_manipulation", f"학생 {i} 점수 수정")})
         ddl_spec = json.dumps({"mode": "SCHEMA", "verification_query": f"SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='badges_{i}' ORDER BY ordinal_position", "expected_rows": [["id"], ["label"]]})
-        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": "고양이 힌트 🐾 `CREATE TABLE 테이블명 (...)` 안에 id는 int, label은 text 열로 선언하세요."})
-        gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": "고양이 힌트 🐾 트랜잭션을 시작하고, 확정하거나 취소하는 세 명령의 묶음을 찾으세요."})
+        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": staged_sql_hint("schema", f"배지 테이블 {i}")})
+        gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": staged_sql_hint("transactions", f"트랜잭션 판단 {i}")})
     rows += gold
     assert len(rows) == 150
     assert len({row["title"] for row in rows}) == 150
