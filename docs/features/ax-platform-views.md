@@ -12,7 +12,8 @@
 다른 게임 명령에는 AX2 DB 연결 비용이나 장애 영향을 추가하지 않는다.
 VIEW의 role/is_active/approval_status/is_staff/is_superuser는 인증이나 권한 판단에
 사용하지 않는다. 기존 브리지의 표시 이름, 이메일, 역할 동기화도 유지한다.
-VIEW는 별도 `platform.profile`로 보강하며 게임 DB에 복제하지 않는다.
+인증 API의 `profile_image`를 우선 사용한다. VIEW는 별도 `platform.profile`의 팀 정보와
+API에서 누락된 이미지 경로를 보강하며 게임 DB에 복제하지 않는다.
 
 ## API
 
@@ -35,7 +36,7 @@ VIEW는 별도 `platform.profile`로 보강하며 게임 DB에 복제하지 않�
 }
 ```
 
-- `available`: VIEW 행 있음. 팀 미소속은 `team_name: null`일 수 있다.
+- `available`: 인증 API 프로필 또는 VIEW 행 있음. 팀 미소속은 `team_name: null`일 수 있다.
 - `not_found`: 매핑된 사용자의 VIEW 행 없음.
 - `unlinked`: 게임 사용자에 플랫폼 식별자 없음.
 - `disabled`: DB URL 미설정/빈 값.
@@ -43,7 +44,12 @@ VIEW는 별도 `platform.profile`로 보강하며 게임 DB에 복제하지 않�
 
 `available` 이외에는 `profile: null`이며 기존 인증/기본 프로필의 200 응답은 유지한다.
 VIEW의 대표 팀 선정 규칙은 플랫폼이 소유한다. 게임에서 최신 Round를 임의로 선택하지 않는다.
-이미지 값은 원본 문자열이며 서버가 원격 이미지를 가져오지 않는다.
+`profile_image`는 인증 API 또는 플랫폼 VIEW의 원본 경로 문자열이다. 두 값이 모두 있으면
+인증 API 값을 우선한다. 브라우저는 이 값을 직접 요청하지 않고
+`GET /api/v1/session/me/profile-image`를 사용한다. 이 엔드포인트는 로그인 세션을 확인한 뒤
+`AX_AUTH_BASE_URL`과 같은 origin의 이미지만 대신 조회한다. 허용 형식은 JPEG, PNG, WebP,
+GIF이며 최대 5 MiB다. 프로필 또는 이미지가 없으면 404, 플랫폼 조회나 이미지 원본 요청이
+실패하면 503을 반환한다. 외부 origin URL은 404로 거절한다.
 
 `GET /api/v1/session/me/round-teams?round_id=2`는 인증된 사용자의 Round별 팀 이력을
 조회한다. 생략하면 전체 이력, 지정하면 AX2 `round_id`에 한정한다. 이 필터는 플랫폼의
@@ -59,7 +65,8 @@ VIEW의 대표 팀 선정 규칙은 플랫폼이 소유한다. 게임에서 최�
 
 ## 배포 설정
 
-- `AX_PLATFORM_DATABASE_URL`: `SecretStr`, 기본값 미설정. 배포 Secret 저장소에서 주입한다.
+- `AX_PLATFORM_DATABASE_URL`: 선택적 `SecretStr`, 기본값 미설정. 통합 DB VIEW 보강을
+  사용할 때만 배포 Secret 저장소에서 주입한다.
   비밀번호 없는 형식 예: `postgresql://ax_evaluation@10.2.16.91:5432/ax_evaluation`.
   `postgresql+psycopg://`도 지원한다. 실제 비밀번호는 안전한 채널로 받아 URL 인코딩 후
   Secret에만 설정한다. 코드, 문서, GitHub, 로그에 실제 URL/비밀번호를 기록하지 않는다.
@@ -86,5 +93,5 @@ DB 계정은 두 VIEW에 필요한 SELECT/스키마 USAGE만 부여하는 구성
 Round 필터/사용자 격리, 실제 쓰기 거절, SQL timeout과 브리지→게임→VIEW 연결을 검증한다.
 통합 테스트는 기존 테스트와 동일하게 폐기 가능한 `DATABASE_URL`에서만 실행한다.
 
-프론트 최신 main의 `BackendApiClient.parseUser`는 public_id/username/balance만 읽으므로
-추가 응답 필드와 호환되며 프론트 수정은 없다. 기존 게임 모델/마이그레이션도 변경하지 않는다.
+프론트는 `platform.profile.profile_image`가 있을 때 인증된 이미지 프록시 URL을 프로필에
+표시한다. 기존 게임 모델/마이그레이션은 변경하지 않는다.

@@ -10,12 +10,18 @@ from app.core.config import settings
 
 class Response:
     status_code = 200
+    is_redirect = False
 
     def raise_for_status(self):
         return None
 
     def json(self):
-        return {"id": 42, "display_name": "여름", "role": "student"}
+        return {
+            "id": 42,
+            "display_name": "여름",
+            "role": "student",
+            "profile_image": "/media/profiles/summer.jpg",
+        }
 
 
 class Client:
@@ -58,8 +64,10 @@ async def test_host_session_jit_provisions_and_updates_user(monkeypatch):
     monkeypatch.setattr(settings, "ax_auth_base_url", "http://host.test")
     monkeypatch.setattr(dependencies.httpx, "AsyncClient", Client)
     db = DB()
-    user = await dependencies.resolve_current_user(request("secret"), db, None)
+    first_request = request("secret")
+    user = await dependencies.resolve_current_user(first_request, db, None)
     assert (user.homepage_user_id, user.username, user.role) == (42, "여름", "STUDENT")
+    assert first_request.state.host_user.profile_image == "/media/profiles/summer.jpg"
     user.username = "old"
     updated = await dependencies.resolve_current_user(request("secret"), db, None)
     assert updated is user
