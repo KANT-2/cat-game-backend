@@ -248,7 +248,6 @@ def _session_platform_enrichment(
         status="available",
         profile=profile.model_copy(
             update={
-                "user_email": host_user.email or profile.user_email,
                 "display_name_snapshot": host_user.display_name,
                 "profile_image": host_user.profile_image or profile.profile_image,
             }

@@ -178,6 +178,7 @@ def test_session_profile_prefers_auth_api_and_keeps_view_team(client):
         return_value=PlatformEnrichment(
             status="available",
             profile=PlatformProfile(
+                user_email="db@example.test",
                 display_name_snapshot="DB Name",
                 profile_image="/media/profiles/db.jpg",
                 team_name="1조",
@@ -188,6 +189,7 @@ def test_session_profile_prefers_auth_api_and_keeps_view_team(client):
     result = _session_platform_enrichment(request, user, service)
 
     assert result.status == "available"
+    assert result.profile.user_email == "db@example.test"
     assert result.profile.display_name_snapshot == "API Name"
     assert result.profile.profile_image == "/media/profiles/api.jpg"
     assert result.profile.team_name == "1조"

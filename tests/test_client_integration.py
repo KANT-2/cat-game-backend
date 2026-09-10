@@ -101,8 +101,9 @@ def test_development_session_reuses_public_user(monkeypatch) -> None:
 
 def test_current_session_exposes_only_public_user_fields() -> None:
     user = user_fixture()
+    request = _request()
 
-    response = current_session(user, PlatformService(Settings(_env_file=None)))
+    response = current_session(request, user, PlatformService(Settings(_env_file=None)))
 
     assert response.public_id == user.public_id
     payload = response.model_dump()
