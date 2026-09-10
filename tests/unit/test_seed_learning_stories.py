@@ -16,8 +16,8 @@ from scripts import seed_sql_tasks as sql_seed
 @pytest.mark.parametrize(
     ("seed", "digest"),
     [
-        (python_seed, "eb82b750c3ebcef5d08ce57931affb65dc54f8e33ad67368184b5d5299295ad7"),
-        (sql_seed, "883238e31f28f18ee05954780dd85c1d5ea81fb7789a173ad5cb8966c372ae4c"),
+        (python_seed, "fa8984fb4f42a20e9764ee5e55cb3294edad1441e7f7fd0518953bb426fb3290"),
+        (sql_seed, "77b9e2fe67593a3c9a26f4938093e826633fadf7f21619e98ebabab84ec538ec"),
     ],
 )
 def test_story_refresh_preserves_main_grading_contract(seed, digest):
@@ -25,12 +25,12 @@ def test_story_refresh_preserves_main_grading_contract(seed, digest):
     assert len(rows) == len({seed.seed_key(row["title"]) for row in rows}) == 150
     assert Counter(row["difficulty"] for row in rows) == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}
     data = [
-        {k: v for k, v in row.items() if k not in ("title", "description", "template_code")}
+        {k: v for k, v in row.items() if k not in ("title", "description", "template_code", "hint_text")}
         | {"key": seed.seed_key(row["title"])}
         for row in rows
     ]
     # Golden digest covers every grading case, option, answer, concept, difficulty, reward and
-    # stable seed key. Prose and intentionally revised editor starter text are excluded.
+    # stable seed key. Prose, hints and intentionally revised editor starter text are excluded.
     assert (
         hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         == digest
@@ -75,3 +75,22 @@ def test_sql_editor_uses_only_a_non_solution_comment() -> None:
         keyword not in code_tasks[0]["template_code"].upper()
         for keyword in ("SELECT", "UPDATE", "CREATE")
     )
+
+
+def test_python_hints_give_operation_specific_next_steps() -> None:
+    tasks = python_seed.build_tasks()
+    hints = {row["hint_text"] for row in tasks}
+    assert len(hints) == 30
+    assert "map(int, input().split())" in next(row["hint_text"] for row in tasks if "두 수의 합" in row["title"])
+    assert "left와 right" in next(row["hint_text"] for row in tasks if "이진 탐색 위치" in row["title"])
+    assert "prefix[r + 1] - prefix[l]" in next(row["hint_text"] for row in tasks if "구간 합 질의" in row["title"])
+
+
+def test_sql_hints_name_the_clauses_needed_for_each_problem_family() -> None:
+    tasks = sql_seed.build_tasks()
+    assert len({row["hint_text"] for row in tasks}) >= 12
+    assert "WHERE" in next(row["hint_text"] for row in tasks if "학번 1 학생" in row["title"])
+    assert "LEFT JOIN" in next(row["hint_text"] for row in tasks if "주문 없는 학생" in row["title"])
+    assert "GROUP BY" in next(row["hint_text"] for row in tasks if "팀별 인원" in row["title"])
+    assert "dense_rank()" in next(row["hint_text"] for row in tasks if "점수 순위" in row["title"])
+    assert "UPDATE students" in next(row["hint_text"] for row in tasks if "점수 수정" in row["title"])

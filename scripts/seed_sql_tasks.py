@@ -41,6 +41,40 @@ def query_case(reference_query: str) -> str:
     return json.dumps([{"input": SEED_SQL, "expected_output": expected}], ensure_ascii=False)
 
 
+def sql_hint(concept: str, title: str) -> str:
+    if "이름 패턴" in title:
+        return "`substring(name FROM 위치 FOR 1)`로 문자를 꺼내고 `ORDER BY id`로 정렬하세요."
+    if concept == "filtering":
+        return "`WHERE`에 문제의 비교 조건을 쓰고, 요구된 순서는 `ORDER BY`, 개수 제한은 `LIMIT`로 처리하세요."
+    if concept == "basics":
+        return "`SELECT` 뒤에 요구된 열이나 계산식을 적고, 별칭은 `AS`, 이름 길이는 `length(name)`을 사용하세요."
+    if concept == "aggregation":
+        if "HAVING" in title:
+            return "`GROUP BY student_id`로 묶은 뒤 `HAVING count(*) >= 기준값`으로 그룹을 거르세요."
+        return "행 조건은 `WHERE`에 쓰고, 기준 열로 `GROUP BY`한 뒤 `count`, `max`, `sum` 중 문제의 집계 함수를 사용하세요."
+    if concept == "joins":
+        if "주문 없는" in title:
+            return "학생을 남겨야 하므로 `students LEFT JOIN orders ON ...`을 쓰고 금액 조건도 `ON` 안에 두세요."
+        return "학생 id와 주문의 student_id를 `JOIN ... ON`으로 연결한 뒤 `WHERE`, `GROUP BY`, `ORDER BY`를 문제 순서대로 붙이세요."
+    if concept == "subqueries":
+        if "주문 보유" in title:
+            return "학생별 주문 존재 여부를 `WHERE EXISTS (SELECT 1 FROM orders ... )` 형태로 확인하세요."
+        if "평균 초과" in title:
+            return "비교 기준 평균을 괄호 안 `SELECT avg(score)`로 먼저 구해 바깥 `WHERE score > (...)`에서 사용하세요."
+        return "바깥 학생의 team과 안쪽 학생의 team을 연결한 상관 서브쿼리에서 `max(score)`를 구하세요."
+    if concept == "advanced_queries":
+        if "점수 순위" in title:
+            return "`dense_rank() OVER (ORDER BY score DESC)`로 동점에 같은 순위를 매기세요."
+        if "누적 주문액" in title:
+            return "`sum(amount) OVER (PARTITION BY student_id ORDER BY id)`로 학생별 누적 합을 구하세요."
+        if "직전 점수" in title:
+            return "`lag(score) OVER (ORDER BY id)`로 직전 점수를 가져와 현재 score에서 빼세요."
+        if "재귀 합계" in title:
+            return "`WITH RECURSIVE`에서 1을 시작값으로 두고 N까지 1씩 늘린 뒤 바깥에서 `sum`하세요."
+        return "`avg(score) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)` 창 범위를 사용하세요."
+    return "문제에서 요구한 SQL 절을 데이터 안내의 테이블과 열 이름으로 순서대로 구성하세요."
+
+
 def task(level: str, number: int, concept: str, title: str, prompt: str, query: str) -> dict:
     cat = CAT_HELPERS[(number - 1) % len(CAT_HELPERS)]
     return {
@@ -58,7 +92,7 @@ def task(level: str, number: int, concept: str, title: str, prompt: str, query: 
         "test_cases": query_case(query),
         "options": None,
         "correct_option": None,
-        "hint_text": "고양이 힌트 🐾 결과의 행 순서까지 문제의 요구와 일치시켜야 해요.",
+        "hint_text": f"고양이 힌트 🐾 {sql_hint(concept, title)}",
     }
 
 
@@ -124,10 +158,10 @@ def build_tasks() -> list[dict]:
     scores = [75, 92, 84, 68, 92]
     for i in range(1, 6):
         spec = json.dumps({"mode": "MUTATION", "verification_query": f"SELECT score FROM students WHERE id={i}", "expected_rows": [[scores[i - 1] + i]]})
-        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False)})
+        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": "고양이 힌트 🐾 `UPDATE students` 뒤 `SET`에서 기존 score에 값을 더하고, `WHERE id = ...`로 한 학생만 고르세요."})
         ddl_spec = json.dumps({"mode": "SCHEMA", "verification_query": f"SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='badges_{i}' ORDER BY ordinal_position", "expected_rows": [["id"], ["label"]]})
-        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False)})
-        gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": "원자성과 확정·취소를 생각하세요."})
+        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": "고양이 힌트 🐾 `CREATE TABLE 테이블명 (...)` 안에 id는 int, label은 text 열로 선언하세요."})
+        gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": "고양이 힌트 🐾 트랜잭션을 시작하고, 확정하거나 취소하는 세 명령의 묶음을 찾으세요."})
     rows += gold
     assert len(rows) == 150
     assert len({row["title"] for row in rows}) == 150

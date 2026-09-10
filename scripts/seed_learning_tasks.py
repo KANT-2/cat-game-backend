@@ -142,6 +142,39 @@ GOLD = [
     Spec("strings", "연속 문자 압축", "encode(text) 함수를 작성해 aaabb를 a3b2처럼 압축해 출력하세요.", "현재 문자와 개수를 유지하세요.", "run_length"),
 ]
 
+DIRECT_HINTS = {
+    "sum": "`map(int, input().split())`으로 두 수를 읽고 `+` 결과를 출력하세요.",
+    "length": "`input()`으로 문자열 한 줄을 읽고 `len(문자열)`을 출력하세요.",
+    "even": "정수를 읽은 뒤 `n % 2 == 0`을 조건으로 두 문장 중 하나를 출력하세요.",
+    "range_sum": "`range(1, n + 1)`로 1부터 N까지 만들고 `sum(...)` 결과를 출력하세요.",
+    "max": "한 줄을 `map(int, input().split())`으로 바꾼 뒤 `max(...)`를 사용하세요.",
+    "manhattan": "x와 y를 정수로 읽고 원점까지의 거리인 `abs(x) + abs(y)`를 출력하세요.",
+    "unique": "입력값을 `split()`한 뒤 `set(...)`으로 중복을 없애고 `len(...)`으로 세세요.",
+    "frequency": "단어 목록의 첫 값을 저장하고 `count(...)` 또는 딕셔너리로 등장 횟수를 세세요.",
+    "truncate": "입력 문자열을 먼저 `float`로 바꾸고, 그 결과를 `int`로 바꿔 출력하세요.",
+    "range_check": "`1 <= n <= 100` 조건이 참인지 확인해 요구된 두 문장 중 하나를 출력하세요.",
+    "even_square_sum": "목록을 순회하며 `n % 2 == 0`인 값만 `n ** 2`로 바꿔 합치세요.",
+    "word_count": "문장을 `lower()`로 통일하고 `split()`한 목록의 길이를 출력하세요.",
+    "second_largest": "`set(...)`으로 중복을 없애고 정렬한 뒤 끝에서 두 번째 값을 고르세요.",
+    "mode_char": "문자별 횟수를 센 뒤 `(-횟수, 문자)` 기준으로 정렬하면 동률은 알파벳순이 됩니다.",
+    "divisor_count": "1부터 N까지 순회하며 `n % i == 0`일 때만 개수를 1씩 늘리세요.",
+    "average": "정수 목록의 `sum(values) / len(values)`를 계산하고 `:.2f` 형식으로 출력하세요.",
+    "safe_div": "b가 0인지 먼저 검사하고, 0이 아닐 때만 `a // b`를 계산하세요.",
+    "intersection": "두 줄을 각각 집합으로 바꿔 `&`로 교집합을 구하고 정렬해 출력하세요.",
+    "increasing_prefix": "두 번째 값부터 이전 값과 비교하고, 증가하지 않는 순간 반복을 멈추세요.",
+    "kv_sum": "각 항목을 `split(':', 1)`로 나누고 오른쪽 값을 정수로 바꿔 합치세요.",
+    "palindrome": "판별 함수에서 문자열과 `text[::-1]`을 비교하고 결과에 따라 YES/NO를 출력하세요.",
+    "balanced": "`(`는 스택에 넣고 `)`는 하나 꺼내세요. 중간에 꺼낼 값이 없거나 끝에 남으면 균형이 아닙니다.",
+    "stairs": "첫 두 경우의 수를 저장하고, 다음 값은 직전 두 값의 합으로 갱신하세요.",
+    "binary_search": "left와 right를 두고 mid 값을 target과 비교해 탐색 구간을 절반씩 줄이세요.",
+    "best_scores": "name별 최고 score를 딕셔너리에 저장하고 마지막에 최고점 값들을 모두 더하세요.",
+    "gcd": "b가 0이 될 때까지 `a, b = b, a % b`를 반복한 뒤 a를 출력하세요.",
+    "pair_sum": "각 값을 보며 `target - value`가 앞서 본 집합에 있는지 확인하고 쌍의 수를 늘리세요.",
+    "range_total": "누적 합 배열을 만들고 0-based 양 끝 포함 구간을 `prefix[r + 1] - prefix[l]`로 구하세요.",
+    "reachable": "간선을 인접 목록에 넣고 시작점부터 DFS/BFS하며 방문한 정점 집합의 크기를 출력하세요.",
+    "run_length": "현재 문자와 연속 개수를 유지하다 문자가 바뀔 때 `문자+개수`를 결과에 추가하세요.",
+}
+
 
 def cases(operation: str, variant: int) -> list[dict[str, str]]:
     data = {
@@ -197,7 +230,7 @@ def build_tasks() -> list[dict]:
                     "template_code": "",
                     "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
                     "options": options, "correct_option": "A" if is_choice else None,
-                    "hint_text": f"고양이 힌트 🐾 {spec.hint}",
+                    "hint_text": f"고양이 힌트 🐾 {DIRECT_HINTS[spec.operation]}",
                     "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[difficulty],
                 })
     assert len(rows) == 150
