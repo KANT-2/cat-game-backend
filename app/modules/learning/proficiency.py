@@ -1,3 +1,5 @@
+import hashlib
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -107,7 +109,7 @@ def recommended_tasks(
     recommendation_date: date | None = None,
     domain: Literal["PYTHON", "SQL"] | None = None,
 ) -> list[Task]:
-    """Return personalized tasks with a stable order that rotates each game day."""
+    """Return recent-safe, concept-diverse tasks in a user-specific daily order."""
     weak = sorted(weak_concepts(db, user_id, since), key=lambda item: item.proficiency_level)
     weak_ids = [item.concept_id for item in weak]
     selected_date = recommendation_date or game_today()
@@ -135,7 +137,7 @@ def recommended_tasks(
         else:
             query = query.order_by(difficulty_rank, Task.id)
         rows = list(db.scalars(query).all())
-        return _rotate_daily_priority_groups(rows, user_id, selected_date, weak_ids)[:limit]
+        return _diversify_daily_tasks(rows, user_id, selected_date, weak_ids, limit)
 
     for exclude_recent, weak_only in ((True, True), (True, False), (False, True), (False, False)):
         if weak_only and not weak_ids:
@@ -146,30 +148,54 @@ def recommended_tasks(
     return []
 
 
-def _rotate_daily_priority_groups(
+def _diversify_daily_tasks(
     tasks: list[Task],
     user_id: int,
     recommendation_date: date,
     weak_concept_ids: list[int],
+    limit: int,
 ) -> list[Task]:
-    """Rotate ties daily without changing concept or difficulty priority."""
+    """Round-robin concepts while keeping weak and easier tasks ahead of harder ones."""
     concept_rank = {concept_id: index for index, concept_id in enumerate(weak_concept_ids)}
     difficulty_rank = {"BRONZE": 1, "SILVER": 2, "GOLD": 3}
-    groups: dict[tuple[int, int], list[Task]] = {}
-    group_order: list[tuple[int, int]] = []
+    by_concept: dict[int, list[Task]] = {}
     for task in tasks:
-        key = (
-            concept_rank.get(task.concept_id, 999),
-            difficulty_rank.get(task.difficulty, 3),
-        )
-        if key not in groups:
-            groups[key] = []
-            group_order.append(key)
-        groups[key].append(task)
+        by_concept.setdefault(task.concept_id, []).append(task)
 
-    rotated: list[Task] = []
-    for key in group_order:
-        group = groups[key]
-        offset = (recommendation_date.toordinal() + user_id) % len(group)
-        rotated.extend(group[offset:] + group[:offset])
-    return rotated
+    concept_order = sorted(
+        by_concept,
+        key=lambda concept_id: (
+            concept_rank.get(concept_id, 999),
+            _daily_random_rank(user_id, recommendation_date, f"concept:{concept_id}"),
+        ),
+    )
+    type_counts: Counter[str] = Counter()
+    selected: list[Task] = []
+    while len(selected) < limit:
+        added = False
+        for concept_id in concept_order:
+            candidates = by_concept[concept_id]
+            if not candidates:
+                continue
+            task = min(
+                candidates,
+                key=lambda item: (
+                    difficulty_rank.get(item.difficulty, 3),
+                    type_counts[getattr(item, "type", "CODE")],
+                    _daily_random_rank(user_id, recommendation_date, f"task:{item.id}"),
+                ),
+            )
+            candidates.remove(task)
+            selected.append(task)
+            type_counts[getattr(task, "type", "CODE")] += 1
+            added = True
+            if len(selected) == limit:
+                return selected
+        if not added:
+            break
+    return selected
+
+
+def _daily_random_rank(user_id: int, recommendation_date: date, value: str) -> bytes:
+    seed = f"{user_id}:{recommendation_date.isoformat()}:{value}".encode()
+    return hashlib.blake2b(seed, digest_size=8).digest()

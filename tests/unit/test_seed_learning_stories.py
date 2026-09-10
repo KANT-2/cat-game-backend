@@ -81,6 +81,8 @@ def test_python_hints_give_operation_specific_next_steps() -> None:
     tasks = python_seed.build_tasks()
     hints = {row["hint_text"] for row in tasks}
     assert len(hints) == 30
+    assert all(len(row["hint_text"].splitlines()) == 3 for row in tasks)
+    assert all("[시작]" in row["hint_text"] and "[핵심]" in row["hint_text"] for row in tasks)
     assert "map(int, input().split())" in next(row["hint_text"] for row in tasks if "두 수의 합" in row["title"])
     assert "left와 right" in next(row["hint_text"] for row in tasks if "이진 탐색 위치" in row["title"])
     assert "prefix[r + 1] - prefix[l]" in next(row["hint_text"] for row in tasks if "구간 합 질의" in row["title"])
@@ -89,6 +91,8 @@ def test_python_hints_give_operation_specific_next_steps() -> None:
 def test_sql_hints_name_the_clauses_needed_for_each_problem_family() -> None:
     tasks = sql_seed.build_tasks()
     assert len({row["hint_text"] for row in tasks}) >= 12
+    assert all(len(row["hint_text"].splitlines()) == 3 for row in tasks if row["type"] == "CODE")
+    assert all("[대상]" in row["hint_text"] and "[작성]" in row["hint_text"] for row in tasks)
     assert "WHERE" in next(row["hint_text"] for row in tasks if "학번 1 학생" in row["title"])
     assert "LEFT JOIN" in next(row["hint_text"] for row in tasks if "주문 없는 학생" in row["title"])
     assert "GROUP BY" in next(row["hint_text"] for row in tasks if "팀별 인원" in row["title"])

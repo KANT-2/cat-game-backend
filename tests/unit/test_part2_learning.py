@@ -14,7 +14,7 @@ from app.modules.grading.runners import (
 )
 from app.modules.learning.proficiency import (
     ConceptAssessment,
-    _rotate_daily_priority_groups,
+    _diversify_daily_tasks,
     calculate_proficiency,
 )
 from app.modules.learning.router import list_tasks
@@ -67,21 +67,57 @@ def test_learning_domain_setting_accepts_only_supported_task_domains():
         SettingsCommand(learning_domain="JAVASCRIPT")
 
 
-def test_daily_recommendation_rotates_ties_without_crossing_priority_groups():
+def test_daily_recommendation_balances_concepts_and_changes_daily_order():
     tasks = [
-        SimpleNamespace(id=1, concept_id=10, difficulty="BRONZE"),
-        SimpleNamespace(id=2, concept_id=10, difficulty="BRONZE"),
-        SimpleNamespace(id=3, concept_id=10, difficulty="SILVER"),
-        SimpleNamespace(id=4, concept_id=20, difficulty="BRONZE"),
+        SimpleNamespace(id=1, concept_id=10, difficulty="BRONZE", type="CODE"),
+        SimpleNamespace(id=2, concept_id=10, difficulty="BRONZE", type="MULTIPLE_CHOICE"),
+        SimpleNamespace(id=3, concept_id=20, difficulty="BRONZE", type="CODE"),
+        SimpleNamespace(id=4, concept_id=20, difficulty="SILVER", type="CODE"),
+        SimpleNamespace(id=5, concept_id=30, difficulty="BRONZE", type="MULTIPLE_CHOICE"),
+        SimpleNamespace(id=6, concept_id=30, difficulty="GOLD", type="CODE"),
     ]
 
-    first_day = _rotate_daily_priority_groups(tasks, 7, date(2026, 9, 8), [10, 20])
-    next_day = _rotate_daily_priority_groups(tasks, 7, date(2026, 9, 9), [10, 20])
+    first_day = _diversify_daily_tasks(tasks, 7, date(2026, 9, 8), [], 4)
+    repeated = _diversify_daily_tasks(tasks, 7, date(2026, 9, 8), [], 4)
+    next_day = _diversify_daily_tasks(tasks, 7, date(2026, 9, 9), [], 4)
 
-    assert [task.id for task in first_day[:2]] == [1, 2]
-    assert [task.id for task in next_day[:2]] == [2, 1]
-    assert [task.id for task in first_day[2:]] == [3, 4]
-    assert [task.id for task in next_day[2:]] == [3, 4]
+    assert [task.id for task in first_day] == [task.id for task in repeated]
+    assert len({task.concept_id for task in first_day[:3]}) == 3
+    assert [task.id for task in first_day] != [task.id for task in next_day]
+    assert {task.type for task in first_day} == {"CODE", "MULTIPLE_CHOICE"}
+
+
+def test_daily_recommendation_keeps_weak_concept_priority_order():
+    tasks = [
+        SimpleNamespace(id=1, concept_id=10, difficulty="BRONZE", type="CODE"),
+        SimpleNamespace(id=2, concept_id=10, difficulty="SILVER", type="CODE"),
+        SimpleNamespace(id=3, concept_id=20, difficulty="BRONZE", type="CODE"),
+        SimpleNamespace(id=4, concept_id=20, difficulty="SILVER", type="CODE"),
+    ]
+
+    selected = _diversify_daily_tasks(tasks, 7, date(2026, 9, 8), [20, 10], 4)
+
+    assert [task.concept_id for task in selected] == [20, 10, 20, 10]
+    assert [task.difficulty for task in selected] == ["BRONZE", "BRONZE", "SILVER", "SILVER"]
+
+
+@pytest.mark.parametrize("rows", [build_tasks(), build_sql_tasks()])
+def test_seeded_recommendation_page_contains_varied_concepts_and_task_types(rows):
+    concept_ids = {name: index for index, name in enumerate(sorted({row["concept"] for row in rows}), 1)}
+    tasks = [
+        SimpleNamespace(
+            id=index,
+            concept_id=concept_ids[row["concept"]],
+            difficulty=row["difficulty"],
+            type=row["type"],
+        )
+        for index, row in enumerate(rows, 1)
+    ]
+
+    selected = _diversify_daily_tasks(tasks, 17, date(2026, 9, 10), [], 10)
+
+    assert len({task.concept_id for task in selected}) >= 7
+    assert {task.type for task in selected} == {"CODE", "MULTIPLE_CHOICE"}
 
 
 def test_seed_has_150_balanced_unique_tasks_and_hidden_answers():
