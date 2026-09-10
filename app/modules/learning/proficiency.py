@@ -169,6 +169,12 @@ def _diversify_daily_tasks(
             _daily_random_rank(user_id, recommendation_date, f"concept:{concept_id}"),
         ),
     )
+    task_positions = _rotated_task_positions(
+        by_concept,
+        user_id,
+        recommendation_date,
+        difficulty_rank,
+    )
     type_counts: Counter[str] = Counter()
     selected: list[Task] = []
     while len(selected) < limit:
@@ -182,7 +188,7 @@ def _diversify_daily_tasks(
                 key=lambda item: (
                     difficulty_rank.get(item.difficulty, 3),
                     type_counts[getattr(item, "type", "CODE")],
-                    _daily_random_rank(user_id, recommendation_date, f"task:{item.id}"),
+                    task_positions[item.id],
                 ),
             )
             candidates.remove(task)
@@ -199,3 +205,32 @@ def _diversify_daily_tasks(
 def _daily_random_rank(user_id: int, recommendation_date: date, value: str) -> bytes:
     seed = f"{user_id}:{recommendation_date.isoformat()}:{value}".encode()
     return hashlib.blake2b(seed, digest_size=8).digest()
+
+
+def _rotated_task_positions(
+    by_concept: dict[int, list[Task]],
+    user_id: int,
+    recommendation_date: date,
+    difficulty_rank: dict[str, int],
+) -> dict[int, int]:
+    positions: dict[int, int] = {}
+    for concept_id, tasks in by_concept.items():
+        by_difficulty: dict[int, list[Task]] = {}
+        for task in tasks:
+            rank = difficulty_rank.get(task.difficulty, 3)
+            by_difficulty.setdefault(rank, []).append(task)
+        position = 0
+        for rank in sorted(by_difficulty):
+            group = sorted(
+                by_difficulty[rank],
+                key=lambda task: _user_random_rank(user_id, f"task:{task.id}"),
+            )
+            offset = (recommendation_date.toordinal() + user_id + concept_id) % len(group)
+            for task in group[offset:] + group[:offset]:
+                positions[task.id] = position
+                position += 1
+    return positions
+
+
+def _user_random_rank(user_id: int, value: str) -> bytes:
+    return hashlib.blake2b(f"{user_id}:{value}".encode(), digest_size=8).digest()

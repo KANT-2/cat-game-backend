@@ -101,6 +101,18 @@ def test_daily_recommendation_keeps_weak_concept_priority_order():
     assert [task.difficulty for task in selected] == ["BRONZE", "BRONZE", "SILVER", "SILVER"]
 
 
+def test_daily_recommendation_changes_members_when_one_group_has_more_than_limit():
+    tasks = [
+        SimpleNamespace(id=index, concept_id=10, difficulty="BRONZE", type="CODE")
+        for index in range(1, 5)
+    ]
+
+    first = _diversify_daily_tasks(tasks, 7, date(2026, 9, 10), [], 3)
+    next_day = _diversify_daily_tasks(tasks, 7, date(2026, 9, 11), [], 3)
+
+    assert {task.id for task in first} != {task.id for task in next_day}
+
+
 @pytest.mark.parametrize("rows", [build_tasks(), build_sql_tasks()])
 def test_seeded_recommendation_page_contains_varied_concepts_and_task_types(rows):
     concept_ids = {name: index for index, name in enumerate(sorted({row["concept"] for row in rows}), 1)}
