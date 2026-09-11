@@ -26,6 +26,12 @@ from app.modules.learning.proficiency import (
     calculate_proficiency,
 )
 from app.modules.learning.router import list_tasks
+from app.modules.learning.tier import (
+    PROMOTION_POLICY,
+    ConceptTierProgress,
+    TierProgress,
+    unlocked_difficulties,
+)
 from app.schemas.task import TaskRead
 from app.schemas.task_attempt import TaskAttemptCreate
 from scripts.seed_learning_tasks import build_tasks
@@ -152,16 +158,22 @@ class _RngMustNotRun:
         raise AssertionError("persisted options must not reshuffle")
 
 
-def test_active_presentation_is_reused_without_rerolling_mode_or_options():
-    task = SimpleNamespace(id=3, public_id=uuid.uuid4(), concept_id=4, is_active=True)
+def test_active_presentation_is_reused_without_rerolling_mode_or_options(monkeypatch):
+    task = SimpleNamespace(
+        id=3, public_id=uuid.uuid4(), concept_id=4, is_active=True, difficulty="BRONZE"
+    )
     user = SimpleNamespace(id=5)
-    concept = SimpleNamespace(id=4)
+    concept = SimpleNamespace(id=4, domain="PYTHON")
     presentation = SimpleNamespace(
         presentation_type="MULTIPLE_CHOICE",
         options={"A": "wrong", "B": "correct", "C": "near", "D": "boundary"},
         correct_option="B",
     )
     db = _ExistingPresentationSession(task, user, concept, presentation)
+    monkeypatch.setattr(
+        "app.modules.learning.presentation.get_or_advance_tier",
+        lambda *_: (SimpleNamespace(current_tier="BRONZE"), None),
+    )
 
     result = start_task_presentation(db, task.public_id, user, rng=_RngMustNotRun())
 
@@ -374,8 +386,11 @@ class _LearningTaskSession:
     def get(self, _model, _identifier):
         return self.concept
 
+    def commit(self):
+        pass
 
-def test_learning_task_selection_applies_filters_and_completed_state():
+
+def test_learning_task_selection_applies_filters_and_completed_state(monkeypatch):
     concept_public_id = uuid.uuid4()
     concept = SimpleNamespace(id=9, public_id=concept_public_id, domain="PYTHON", name="functions")
     task = SimpleNamespace(
@@ -393,6 +408,10 @@ def test_learning_task_selection_applies_filters_and_completed_state():
         reward_coins=60,
     )
     db = _LearningTaskSession(concept, [task], [task.id])
+    monkeypatch.setattr(
+        "app.modules.learning.router.get_or_advance_tier",
+        lambda *_: (SimpleNamespace(current_tier="SILVER"), None),
+    )
 
     response = list_tasks(
         db=db,
@@ -418,9 +437,13 @@ def test_learning_task_selection_applies_filters_and_completed_state():
     assert "LIMIT" in sql
 
 
-def test_multiple_choice_filter_selects_capable_non_gold_tasks():
+def test_multiple_choice_filter_selects_capable_non_gold_tasks(monkeypatch):
     concept = SimpleNamespace(id=9, public_id=uuid.uuid4(), domain="SQL", name="joins")
     db = _LearningTaskSession(concept, [], [])
+    monkeypatch.setattr(
+        "app.modules.learning.router.get_or_advance_tier",
+        lambda *_: (SimpleNamespace(current_tier="GOLD"), None),
+    )
 
     list_tasks(
         db=db,
@@ -435,8 +458,12 @@ def test_multiple_choice_filter_selects_capable_non_gold_tasks():
     assert "tasks.type =" not in sql
 
 
-def test_learning_task_selection_returns_empty_for_unknown_concept():
+def test_learning_task_selection_returns_empty_for_unknown_concept(monkeypatch):
     db = _LearningTaskSession(None, [], [])
+    monkeypatch.setattr(
+        "app.modules.learning.router.get_or_advance_tier",
+        lambda *_: (SimpleNamespace(current_tier="BRONZE"), None),
+    )
 
     response = list_tasks(
         db=db,
@@ -447,3 +474,55 @@ def test_learning_task_selection_returns_empty_for_unknown_concept():
 
     assert response == []
     assert db.scalar_statements == []
+
+
+def test_tier_promotion_requires_total_and_every_concept_threshold():
+    ready = TierProgress(
+        difficulty="BRONZE",
+        completed=40,
+        total=50,
+        required=40,
+        concept_required_percent=50,
+        concepts=(
+            ConceptTierProgress(1, "basics", 8, 15, 8),
+            ConceptTierProgress(2, "loops", 3, 5, 3),
+        ),
+    )
+    missing_concept = TierProgress(
+        difficulty="SILVER",
+        completed=45,
+        total=50,
+        required=45,
+        concept_required_percent=60,
+        concepts=(ConceptTierProgress(1, "functions", 2, 5, 3),),
+    )
+
+    assert ready.is_met is True
+    assert missing_concept.is_met is False
+    assert unlocked_difficulties("BRONZE") == ("BRONZE",)
+    assert unlocked_difficulties("SILVER") == ("BRONZE", "SILVER")
+    assert unlocked_difficulties("GOLD") == ("BRONZE", "SILVER", "GOLD")
+    assert PROMOTION_POLICY["BRONZE"] == (40, 50, "SILVER")
+    assert PROMOTION_POLICY["SILVER"] == (45, 60, "GOLD")
+
+
+@pytest.mark.parametrize(
+    ("difficulty", "completed", "required", "expected"),
+    [
+        ("BRONZE", 39, 40, False),
+        ("BRONZE", 40, 40, True),
+        ("SILVER", 44, 45, False),
+        ("SILVER", 45, 45, True),
+    ],
+)
+def test_tier_total_threshold_boundaries(difficulty, completed, required, expected):
+    progress = TierProgress(
+        difficulty=difficulty,
+        completed=completed,
+        total=50,
+        required=required,
+        concept_required_percent=50,
+        concepts=(ConceptTierProgress(1, "covered", 5, 5, 3),),
+    )
+
+    assert progress.is_met is expected

@@ -20,6 +20,7 @@ from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.user import User
+from app.models.user_learning_tier import UserLearningTier
 from app.models.user_proficiency import UserProficiency
 
 ATTENDANCE_DAILY_COINS = 100
@@ -240,6 +241,7 @@ def reset_learning_progress(db: Session, user: User) -> dict[str, object]:
     proficiency_result = db.execute(
         delete(UserProficiency).where(UserProficiency.user_id == user.id)
     )
+    db.execute(delete(UserLearningTier).where(UserLearningTier.user_id == user.id))
     attendance_ids = select(Attendance.id).where(Attendance.user_id == user.id)
     db.execute(
         update(AttendanceTask)

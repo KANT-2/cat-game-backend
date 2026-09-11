@@ -9,6 +9,7 @@ from app.models.attendance_task import AttendanceTask
 from app.models.task import Task
 from app.models.user import User
 from app.modules.learning.proficiency import recommended_tasks
+from app.modules.learning.tier import get_or_advance_tier, unlocked_difficulties
 
 
 class DailyMissionError(ValueError):
@@ -42,6 +43,9 @@ def get_or_create_daily(db: Session, user: User, today: date) -> Attendance:
         settings.daily_task_count,
         recommendation_date=today,
         domain=preferred_domain,
+        allowed_difficulties=unlocked_difficulties(
+            get_or_advance_tier(db, user, preferred_domain)[0].current_tier
+        ),
     )
     if len(tasks) < settings.daily_task_count:
         raise DailyMissionError("not enough active tasks to assign the daily mission")
