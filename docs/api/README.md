@@ -59,6 +59,7 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/learning/tasks` | `200` | 조건별 활성 문제 조회 |
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
+| `GET` | `/api/v1/learning/tier` | `200` | 선택 과목의 현재 티어와 승급 진행도 조회 |
 | `POST` | `/api/v1/attempts/presentations` | `200` | 시도 표시 방식과 객관식 보기 순서 고정 |
 | `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 선택 과목의 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |

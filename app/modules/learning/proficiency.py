@@ -108,6 +108,7 @@ def recommended_tasks(
     since: datetime | None = None,
     recommendation_date: date | None = None,
     domain: Literal["PYTHON", "SQL"] | None = None,
+    allowed_difficulties: tuple[str, ...] | None = None,
 ) -> list[Task]:
     """Return recent-safe, concept-diverse tasks in a user-specific daily order."""
     weak = sorted(weak_concepts(db, user_id, since), key=lambda item: item.proficiency_level)
@@ -123,6 +124,8 @@ def recommended_tasks(
         query = select(Task).where(Task.is_active.is_(True))
         if domain is not None:
             query = query.join(Concept, Concept.id == Task.concept_id).where(Concept.domain == domain)
+        if allowed_difficulties is not None:
+            query = query.where(Task.difficulty.in_(allowed_difficulties))
         if weak_only:
             query = query.where(Task.concept_id.in_(weak_ids))
         if exclude_recent:

@@ -22,6 +22,7 @@ EXPECTED_TABLES = {
     "tasks",
     "assets",
     "user_proficiency",
+    "user_learning_tiers",
     "users",
 }
 

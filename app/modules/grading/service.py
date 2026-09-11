@@ -29,6 +29,7 @@ from app.modules.grading.runners import TaskRunner, dispatcher
 from app.modules.grading.sandbox.runner import GradeResult, Verdict
 from app.modules.grading.test_cases import TestCaseSpecError
 from app.modules.learning.proficiency import update_proficiency
+from app.modules.learning.tier import get_or_advance_tier, unlocked_difficulties
 from app.schemas.task_attempt import TaskAttemptCreate
 
 logger = logging.getLogger(__name__)
@@ -63,6 +64,11 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
     task = _by_public_id(db, Task, payload.task_public_id)
     if task is None or not task.is_active:
         raise SubmissionError("task not found")
+    concept = db.get(Concept, task.concept_id)
+    if payload.context_type == "LEARNING" and concept is not None:
+        tier, _ = get_or_advance_tier(db, user, concept.domain)
+        if task.difficulty not in unlocked_difficulties(tier.current_tier):
+            raise SubmissionError("task difficulty is locked")
     if (
         payload.context_type == "LEARNING"
         and task.options
@@ -337,6 +343,9 @@ def _persist_result(
         if completion_id is not None:
             attempt.coins_awarded = task.reward_coins
             locked_user.balance += task.reward_coins
+        concept = db.get(Concept, task.concept_id)
+        if concept is not None:
+            get_or_advance_tier(db, locked_user, concept.domain)
     if is_correct and attempt.presentation_id is not None:
         presentation = db.get(TaskPresentation, attempt.presentation_id)
         if presentation is not None:

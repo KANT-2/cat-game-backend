@@ -1,6 +1,6 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-11 기준 ORM 모델과 Alembic head를 반영한 21개 업무 테이블의 현재 구조다.
+2026-09-11 기준 ORM 모델과 Alembic head를 반영한 22개 업무 테이블의 현재 구조다.
 
 팀 기준 문서는 [Notion ERD - 현재 최종본](https://app.notion.com/p/ERD-03fdb49922e58311880781f373402039)이다.
 
@@ -12,6 +12,7 @@
 - `PLACED_OBJECTS.position_data`의 필수 좌표는 `x`, `y`, `z`다. 이전 `rotation` 값은 마이그레이션에서 `z`로 옮긴다.
 - `TASKS`는 하나의 논리 문제에 직접 답안 채점 데이터와 선택적인 객관식 prompt·보기를 함께 저장한다.
 - `TASK_PRESENTATIONS`는 난이도 확률로 고른 표시 방식과 섞은 보기 순서를 사용자 세션별로 고정한다.
+- `USER_LEARNING_TIERS`는 Python과 SQL의 해금 난이도를 독립적으로 저장한다.
 - `USERS.homepage_user_id`는 Django Auth Bridge가 반환한 홈페이지 사용자 ID를 `BIGINT UNIQUE`로 연결하며 API에는 노출하지 않는다.
 - `TASK_ATTEMPTS.result_detail`은 외부에 공개 가능한 채점 결과만 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
 - 채점 워커는 `grading_started_at`과 `grading_lease_token`으로 시도를 임대한다. 만료된 `RUNNING` 임대는 회수할 수 있고 이전 워커의 늦은 결과는 토큰으로 거부한다.
@@ -106,6 +107,17 @@ erDiagram
         int user_id FK
         int concept_id FK
         int proficiency_level
+    }
+
+    USER_LEARNING_TIERS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        string domain "PYTHON, SQL"
+        string current_tier "BRONZE, SILVER, GOLD"
+        datetime silver_unlocked_at "nullable"
+        datetime gold_unlocked_at "nullable"
+        datetime updated_at
     }
 
     TASK_ATTEMPTS {
@@ -256,6 +268,7 @@ erDiagram
     TASKS ||--o{ ATTENDANCE_TASKS : scheduled_as
 
     USERS ||--o{ USER_PROFICIENCY : has
+    USERS ||--o{ USER_LEARNING_TIERS : unlocks
     CONCEPTS ||--o{ USER_PROFICIENCY : measured_by
     CONCEPTS ||--o{ TASKS : categorizes
 

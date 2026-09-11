@@ -12,6 +12,7 @@ def test_reset_learning_progress_removes_progress_without_changing_balance() -> 
     db.execute.side_effect = [
         SimpleNamespace(rowcount=3),
         SimpleNamespace(rowcount=1),
+        SimpleNamespace(rowcount=1),
     ]
 
     result = reset_learning_progress(db, user)
@@ -23,7 +24,8 @@ def test_reset_learning_progress_removes_progress_without_changing_balance() -> 
     assert user.learning_reset_at is not None
     statements = [str(call.args[0]) for call in db.execute.call_args_list]
     assert statements[0].startswith("DELETE FROM user_proficiency")
-    assert statements[1].startswith("UPDATE attendance_tasks")
+    assert statements[1].startswith("DELETE FROM user_learning_tiers")
+    assert statements[2].startswith("UPDATE attendance_tasks")
     db.commit.assert_called_once()
 
 

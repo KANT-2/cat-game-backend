@@ -20,6 +20,7 @@ EXPECTED_TABLES = [
     "room_tasks",
     "assets",
     "user_proficiency",
+    "user_learning_tiers",
     "placed_objects",
     "gacha_executions",
     "task_completions", "daily_reward_claims",

@@ -10,6 +10,7 @@ from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_presentation import TaskPresentation
 from app.models.user import User
+from app.modules.learning.tier import get_or_advance_tier, unlocked_difficulties
 from app.schemas.task import TaskRead, to_task_read
 
 MULTIPLE_CHOICE_PROBABILITY = {
@@ -63,6 +64,10 @@ def start_task_presentation(
     concept = db.get(Concept, task.concept_id)
     if concept is None:
         raise LookupError("task concept not found")
+
+    tier, _ = get_or_advance_tier(db, user, concept.domain)
+    if task.difficulty not in unlocked_difficulties(tier.current_tier):
+        raise LookupError("task difficulty is locked")
 
     db.scalar(select(User).where(User.id == user.id).with_for_update())
     active = db.scalar(

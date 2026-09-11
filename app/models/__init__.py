@@ -19,6 +19,7 @@ from app.models.task_attempt import TaskAttempt
 from app.models.task_completion import TaskCompletion
 from app.models.task_presentation import TaskPresentation
 from app.models.user import User
+from app.models.user_learning_tier import UserLearningTier
 from app.models.user_proficiency import UserProficiency
 
 __all__ = [
@@ -43,5 +44,6 @@ __all__ = [
     "TaskCompletion",
     "TaskPresentation",
     "User",
+    "UserLearningTier",
     "UserProficiency",
 ]

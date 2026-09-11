@@ -150,6 +150,10 @@ def test_daily_attempt_completion_and_result_ownership(engine) -> None:
                 {"user_id": owner_id},
             )
             connection.execute(
+                text("DELETE FROM user_learning_tiers WHERE user_id = :user_id"),
+                {"user_id": owner_id},
+            )
+            connection.execute(
                 text("DELETE FROM task_attempts WHERE user_id = :user_id"),
                 {"user_id": owner_id},
             )

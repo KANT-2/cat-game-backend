@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import settings
@@ -12,10 +12,46 @@ from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.modules.learning.proficiency import assess_concept, recommended_tasks, weak_concepts
+from app.modules.learning.tier import PROMOTION_POLICY, get_or_advance_tier, unlocked_difficulties
+from app.schemas.learning_tier import ConceptTierProgressRead, LearningTierRead
 from app.schemas.task import TaskRead, to_task_read
 from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
 
 router = APIRouter(prefix="/learning", tags=["learning"])
+
+
+def _tier_payload(db: DbSession, user: CurrentUser, domain):
+    row, progress = get_or_advance_tier(db, user, domain)
+    db.commit()
+    return LearningTierRead(
+        domain=domain,
+        current_tier=row.current_tier,
+        unlocked_difficulties=list(unlocked_difficulties(row.current_tier)),
+        next_tier=PROMOTION_POLICY.get(row.current_tier, (0, 0, None))[2],
+        completed=progress.completed,
+        total=progress.total,
+        required=progress.required,
+        concept_required_percent=progress.concept_required_percent,
+        concepts=[
+            ConceptTierProgressRead(
+                concept_public_id=db.get(Concept, item.concept_id).public_id,
+                name=item.name,
+                completed=item.completed,
+                total=item.total,
+                required=item.required,
+                is_met=item.is_met,
+            )
+            for item in progress.concepts
+        ],
+    )
+
+
+@router.get("/tier", response_model=LearningTierRead)
+def learning_tier(db: DbSession, user: CurrentUser) -> LearningTierRead:
+    domain = user.game_settings.get("learningDomain", "PYTHON")
+    if domain not in {"PYTHON", "SQL"}:
+        domain = "PYTHON"
+    return _tier_payload(db, user, domain)
 
 
 def _recommendation_date(test_date: date | None) -> date:
@@ -71,6 +107,23 @@ def list_tasks(
 ) -> list[TaskRead]:
     statement = select(Task).join(Concept, Concept.id == Task.concept_id).where(Task.is_active.is_(True))
 
+    tier_domain = domain if isinstance(domain, str) else None
+    domains = (tier_domain,) if tier_domain else ("PYTHON", "SQL")
+    allowed_by_domain = {}
+    for selected_domain in domains:
+        tier, _ = get_or_advance_tier(db, user, selected_domain)
+        allowed_by_domain[selected_domain] = unlocked_difficulties(tier.current_tier)
+    db.commit()
+    statement = statement.where(
+        or_(
+            *(
+                (Concept.domain == selected_domain)
+                & Task.difficulty.in_(allowed)
+                for selected_domain, allowed in allowed_by_domain.items()
+            )
+        )
+    )
+
     if task_type == "MULTIPLE_CHOICE":
         statement = statement.where(Task.options.is_not(None), Task.difficulty != "GOLD")
     if domain is not None:
@@ -114,7 +167,11 @@ def recommendations(
         since=user.learning_reset_at,
         recommendation_date=_recommendation_date(test_date),
         domain=preferred_domain,
+        allowed_difficulties=unlocked_difficulties(
+            get_or_advance_tier(db, user, preferred_domain)[0].current_tier
+        ),
     )
+    db.commit()
     completed_ids = _completed_task_ids(
         db,
         user.id,
