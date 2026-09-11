@@ -47,13 +47,16 @@ def test_cors_preflight_accepts_configured_pwa_origin() -> None:
         headers={
             "Origin": configured_origin,
             "Access-Control-Request-Method": "GET",
-            "Access-Control-Request-Headers": "X-CSRF-Token, X-Request-ID, X-User-Public-ID",
+            "Access-Control-Request-Headers": (
+                "X-API-Key, X-CSRF-Token, X-Request-ID, X-User-Public-ID"
+            ),
         },
     )
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == configured_origin
     assert "X-Request-ID" in response.headers["access-control-allow-headers"]
+    assert "X-API-Key" in response.headers["access-control-allow-headers"]
     assert response.headers["X-Request-ID"]
 
 

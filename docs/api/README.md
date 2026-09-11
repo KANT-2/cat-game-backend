@@ -23,6 +23,10 @@
 
 로컬 프런트엔드는 `POST /api/v1/session/development`로 개발 사용자를 준비하고, 반환된 `public_id`를 보호 API의 `X-User-Public-ID`에 사용한다. 운영 환경에서는 개발 세션 API와 UUID 헤더 인증을 사용하지 않는다.
 
+문제 생성·수정·삭제는 회원 세션 대신 팀 전용 `X-API-Key`를 사용한다. 서버의 `TASKS_API_KEY`와
+일치하지 않으면 `401`, 서버 키가 설정되지 않았으면 `503`을 반환한다. 키는 Git과 프런트엔드 번들에
+저장하지 않는다.
+
 ### 공통 상태 코드
 
 | HTTP | 의미 |
@@ -57,6 +61,9 @@
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
 | `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 선택 과목의 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |
+| `POST` | `/api/v1/tasks` | `200` | 팀 키로 Python·SQL 문제 생성 |
+| `PATCH` | `/api/v1/tasks/{task_public_id}` | `200` | 팀 키로 문제 일부 수정 |
+| `DELETE` | `/api/v1/tasks/{task_public_id}` | `204` | 팀 키로 문제 비활성화 |
 | `PATCH` | `/api/v1/game/settings` | `200` | 사운드·접근성·선택 학습 과목 저장 |
 | `POST` | `/api/v1/attempts` | `202` | 코드 또는 객관식 답안 제출 |
 | `GET` | `/api/v1/attempts/{attempt_public_id}` | `200` | 채점 상태·결과 조회 |
@@ -86,7 +93,8 @@
 | `DELETE` | `/api/v1/cats/{cat_asset_public_id}/memories/{memory_public_id}` | `204` | 기억 선택 삭제 |
 | `DELETE` | `/api/v1/cats/{cat_asset_public_id}/memories` | `204` | 해당 고양이 기억 전체 삭제 |
 
-위 표에서 `/health`와 개발 사용자 준비를 제외한 기능 API는 모두 인증이 필요하다.
+위 표에서 `/health`와 개발 사용자 준비를 제외한 기능 API는 인증이 필요하다. `/api/v1/tasks` 관리 API는
+회원 인증 대신 팀 전용 API 키를 사용한다.
 
 ## 3. 공통·인증 API
 
@@ -128,6 +136,15 @@
 ## 4. Part 2 API
 
 ### 4.1 문제 조회
+
+#### 팀 전용 문제 관리 API
+
+`POST /api/v1/tasks`, `PATCH /api/v1/tasks/{task_public_id}`와
+`DELETE /api/v1/tasks/{task_public_id}`는 모두 `X-API-Key` 헤더가 필요하다. 생성 본문은 `TaskCreate`,
+수정 본문은 같은 필드 중 바꿀 값만 보낸다. `domain`은 연결된 Concept의 `PYTHON` 또는 `SQL` 값과
+일치해야 한다. 삭제는 풀이 기록을 보존하기 위해 행을 제거하지 않고 `is_active=false`로 바꾼다.
+
+실제 키는 `.env`의 `TASKS_API_KEY`에만 저장하며 요청 예시나 문서에 원문을 남기지 않는다.
 
 #### `GET /api/v1/learning/tasks`
 
