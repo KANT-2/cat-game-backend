@@ -95,6 +95,10 @@ def test_expired_attempt_is_released_without_accepting_stale_result(engine) -> N
                 {"user_id": user_id},
             )
             connection.execute(
+                text("DELETE FROM user_learning_tiers WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
+            connection.execute(
                 text("DELETE FROM task_attempts WHERE user_id = :user_id"),
                 {"user_id": user_id},
             )
