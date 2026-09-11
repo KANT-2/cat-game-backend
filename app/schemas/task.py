@@ -43,6 +43,25 @@ class TaskCreate(BaseModel):
     correct_option: str | None = None
 
 
+class TaskUpdate(BaseModel):
+    """Fields that team members may change on an existing learning task."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    concept_public_id: uuid.UUID | None = None
+    title: str | None = None
+    type: Literal["MULTIPLE_CHOICE", "CODE"] | None = None
+    domain: Literal["PYTHON", "SQL"] | None = None
+    difficulty: Literal["BRONZE", "SILVER", "GOLD"] | None = None
+    description: str | None = None
+    template_code: str | None = None
+    options: dict[str, str] | None = None
+    hint_text: str | None = None
+    test_cases: list[dict] | None = None
+    correct_option: str | None = None
+    is_active: bool | None = None
+
+
 def to_task_read(task: Task, concept: Concept, *, completed: bool = False) -> TaskRead:
     options = task.options
     if options:
