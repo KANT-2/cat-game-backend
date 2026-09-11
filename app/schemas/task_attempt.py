@@ -8,6 +8,18 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.schemas.base import ReadSchema
+from app.schemas.task import TaskRead
+
+
+class TaskPresentationStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_public_id: uuid.UUID
+
+
+class TaskPresentationRead(BaseModel):
+    presentation_public_id: uuid.UUID
+    task: TaskRead
 
 
 class TaskAttemptCreate(BaseModel):
@@ -15,6 +27,7 @@ class TaskAttemptCreate(BaseModel):
 
     request_id: uuid.UUID
     task_public_id: uuid.UUID
+    presentation_public_id: uuid.UUID | None = None
     submitted_code: str | None = Field(default=None, max_length=32_768)
     selected_option: str | None = Field(default=None, max_length=256)
     context_type: Literal["LEARNING", "DAILY", "BATTLE"]

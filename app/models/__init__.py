@@ -17,6 +17,7 @@ from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.task_completion import TaskCompletion
+from app.models.task_presentation import TaskPresentation
 from app.models.user import User
 from app.models.user_proficiency import UserProficiency
 
@@ -40,6 +41,7 @@ __all__ = [
     "Task",
     "TaskAttempt",
     "TaskCompletion",
+    "TaskPresentation",
     "User",
     "UserProficiency",
 ]

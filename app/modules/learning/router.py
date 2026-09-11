@@ -71,8 +71,8 @@ def list_tasks(
 ) -> list[TaskRead]:
     statement = select(Task).join(Concept, Concept.id == Task.concept_id).where(Task.is_active.is_(True))
 
-    if task_type is not None:
-        statement = statement.where(Task.type == task_type)
+    if task_type == "MULTIPLE_CHOICE":
+        statement = statement.where(Task.options.is_not(None), Task.difficulty != "GOLD")
     if domain is not None:
         statement = statement.where(Concept.domain == domain)
     if difficulty is not None:

@@ -1,5 +1,4 @@
 import hashlib
-from collections import Counter
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -175,7 +174,6 @@ def _diversify_daily_tasks(
         recommendation_date,
         difficulty_rank,
     )
-    type_counts: Counter[str] = Counter()
     selected: list[Task] = []
     while len(selected) < limit:
         added = False
@@ -187,13 +185,11 @@ def _diversify_daily_tasks(
                 candidates,
                 key=lambda item: (
                     difficulty_rank.get(item.difficulty, 3),
-                    type_counts[getattr(item, "type", "CODE")],
                     task_positions[item.id],
                 ),
             )
             candidates.remove(task)
             selected.append(task)
-            type_counts[getattr(task, "type", "CODE")] += 1
             added = True
             if len(selected) == limit:
                 return selected

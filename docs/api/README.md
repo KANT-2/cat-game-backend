@@ -59,6 +59,7 @@
 | --- | --- | --- | --- |
 | `GET` | `/api/v1/learning/tasks` | `200` | 조건별 활성 문제 조회 |
 | `GET` | `/api/v1/learning/recommendations` | `200` | 취약 개념 우선 추천 문제 조회 |
+| `POST` | `/api/v1/attempts/presentations` | `200` | 시도 표시 방식과 객관식 보기 순서 고정 |
 | `GET` | `/api/v1/learning/proficiencies` | `200` | 현재 선택 과목의 개념별 숙련도 조회 |
 | `GET` | `/api/v1/learning/weak-concepts` | `200` | 현재 사용자의 취약 개념 조회 |
 | `POST` | `/api/v1/tasks` | `200` | 팀 키로 Python·SQL 문제 생성 |
@@ -152,7 +153,7 @@
 
 | 이름 | 타입·허용값 | 기본값 |
 | --- | --- | --- |
-| `type` | `CODE`, `MULTIPLE_CHOICE` | 전체 |
+| `type` | `CODE`, `MULTIPLE_CHOICE` | 전체. `MULTIPLE_CHOICE`는 객관식 표시가 가능한 비-GOLD 논리 문제를 선택하며, 실제 표시 유형은 세션 시작 시 확률 정책으로 결정 |
 | `domain` | `PYTHON`, `SQL` | 전체 |
 | `concept_public_id` | UUID | 전체 |
 | `difficulty` | `BRONZE`, `SILVER`, `GOLD` | 전체 |
@@ -162,7 +163,7 @@
 
 #### `GET /api/v1/learning/recommendations`
 
-`limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 최근 풀이 20개를 먼저 제외하고, 개념별로 한 문제씩 번갈아 선택하며 코드형·객관식을 가능한 범위에서 섞는다. 사용자와 게임 날짜를 반영한 재현 가능한 해시 순서이므로 같은 조건에서는 안정적이고 다음 날에는 오늘의 추천 과제가 바뀐다. 문제의 `completed` 표시는 게임 날짜가 바뀌면 초기화되며 과거 풀이 기록은 숙련도와 추천 계산을 위해 보존한다. 사용자가 같은 날 학습 진도를 수동 초기화했다면 그 시각 이후의 정답만 오늘 완료로 표시한다.
+`limit=1..50`, 기본값 `10`을 지원한다. 사용자의 `game_settings.learningDomain`(`PYTHON` 또는 `SQL`, 기존 사용자의 기본값은 `PYTHON`)과 같은 `concepts.domain`의 문제만 추천한다. `tasks`에는 과목을 중복 저장하지 않으며 공개 응답의 `domain`은 연결된 Concept에서 가져온다. 취약 개념을 우선하고 부족한 수는 아직 정답 처리하지 않은 활성 문제로 채운다. 최근 풀이 20개를 먼저 제외하고 개념별로 한 문제씩 번갈아 선택한다. 사용자와 게임 날짜를 반영한 재현 가능한 해시 순서이므로 같은 조건에서는 안정적이고 다음 날에는 오늘의 추천 과제가 바뀐다. 문제의 `completed` 표시는 게임 날짜가 바뀌면 초기화되며 과거 풀이 기록은 숙련도와 추천 계산을 위해 보존한다. 사용자가 같은 날 학습 진도를 수동 초기화했다면 그 시각 이후의 정답만 오늘 완료로 표시한다.
 
 학습 과목은 `PATCH /api/v1/game/settings`에 `{"learning_domain":"SQL"}`처럼 전달한다. 성공 응답의 스냅샷에도 `settings.learning_domain`이 포함된다. 프런트엔드는 성공 직후 추천 목록과 개념별 숙련도를 함께 다시 조회한다. 지원하지 않는 과목은 `422`로 거부한다.
 
@@ -174,6 +175,8 @@
 [
   {
     "public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
+    "presentation_public_id": null,
+    "presentation_required": true,
     "concept_public_id": "0ccdf2d3-53df-4a11-a265-9eaf252280cc",
     "concept_name": "PYTHON:loops",
     "title": "반복문 문제",
@@ -191,6 +194,13 @@
 ```
 
 `test_cases`와 `correct_option`은 채점 전용이므로 응답하지 않는다.
+
+BRONZE와 SILVER의 dual-mode 문제는 `presentation_required=true`다. 클라이언트는 문제를 열기 전에
+`POST /api/v1/attempts/presentations`에 `task_public_id`를 보낸다. 서버는 Python과 SQL 모두
+BRONZE 50%, SILVER 20%, GOLD 0% 정책으로 표시 방식을 한 번 결정한다. 활성 표시 세션이 있으면
+새로 뽑지 않고 같은 유형과 보기 순서를 반환한다. 응답의 `task`는 선택된 `type`, 설명과 `options`,
+`presentation_public_id`를 포함하며 `correct_option`은 제외한다. 오답 뒤에는 같은 표시 세션을 재사용하고,
+정답 처리 뒤에 세션을 닫는다.
 
 추천 결과는 같은 게임 날짜·학습 이력·문제 데이터에서는 같은 순서로 반환한다. 게임 날짜가 바뀌면 개념과 난이도 우선순위는 유지한 채 같은 우선순위 문제들이 순환하고, 새 채점 기록이 생기면 최근 문제 제외 정책에 따라 목록이 달라질 수 있다.
 
@@ -235,6 +245,7 @@ CODE 문제 요청:
 {
   "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
+  "presentation_public_id": "f3101edc-07b4-46bd-b747-6b3a59ee7452",
   "submitted_code": "print('hello')",
   "context_type": "LEARNING",
   "used_hint": false
@@ -247,6 +258,7 @@ CODE 문제 요청:
 {
   "request_id": "7b6020cc-a8b6-4a2b-a24d-1490fd375ae1",
   "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
+  "presentation_public_id": "f3101edc-07b4-46bd-b747-6b3a59ee7452",
   "selected_option": "B",
   "context_type": "LEARNING",
   "used_hint": false

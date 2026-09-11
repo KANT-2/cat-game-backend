@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 
 from sqlalchemy import select
 
@@ -92,23 +94,56 @@ def staged_sql_hint(concept: str, title: str) -> str:
     return "\n".join((start, f"[작성] {sql_hint(concept, title)}", check))
 
 
+def sql_multiple_choice(query: str, seed: str) -> tuple[dict[str, str], str]:
+    candidates = [
+        re.sub(r"\s+ORDER BY\s+.+$", "", query, flags=re.IGNORECASE),
+        re.sub(r">=", ">", query, count=1),
+        re.sub(r"\bSELECT\s+.+?\s+FROM\b", "SELECT * FROM", query, count=1, flags=re.IGNORECASE),
+        re.sub(r"\bDESC\b", "ASC", query, count=1, flags=re.IGNORECASE),
+    ]
+    number_match = re.search(r"\d+", query)
+    if number_match is not None:
+        number = int(number_match.group())
+        for replacement in (number + 1, number + 2, max(0, number - 1)):
+            candidates.append(
+                query[: number_match.start()] + str(replacement) + query[number_match.end() :]
+            )
+    distractors = []
+    for candidate in candidates:
+        if candidate != query and candidate not in distractors:
+            distractors.append(candidate)
+    if len(distractors) < 3:
+        raise ValueError(f"could not derive three SQL distractors for {query!r}")
+    labels = ["A", "B", "C", "D"]
+    correct_index = hashlib.sha256(seed.encode()).digest()[0] % len(labels)
+    values = distractors[:3]
+    values.insert(correct_index, query)
+    return dict(zip(labels, values, strict=True)), labels[correct_index]
+
+
 def task(level: str, number: int, concept: str, title: str, prompt: str, query: str) -> dict:
     cat = CAT_HELPERS[(number - 1) % len(CAT_HELPERS)]
+    description = (
+        f"[도와주세요!] {cat}가 {STORIES[(number - 1) % len(STORIES)]}\n\n"
+        "[데이터 안내] students는 고양이 학교 학생과 놀이 점수, orders는 학생별 주문, "
+        "nums는 숫자 연습표예요. 아래 문제에 적힌 테이블과 열 이름을 그대로 사용해 주세요.\n\n"
+        f"[문제] {prompt}"
+    )
+    multiple_choice_prompt = options = correct_option = None
+    if level != "GOLD":
+        options, correct_option = sql_multiple_choice(query, f"{level}:{number}:{title}")
+        multiple_choice_prompt = f"{description}\n\n[질문] 요구사항을 정확히 만족하는 SQL을 고르세요."
     return {
         "title": f"{SEED_PREFIX}{level}:{number:03d}] 🐾 {cat}의 데이터 부탁: {title}",
         "concept": f"SQL:{concept}",
         "difficulty": level,
         "type": "CODE",
-        "description": (
-            f"[도와주세요!] {cat}가 {STORIES[(number - 1) % len(STORIES)]}\n\n"
-            "[데이터 안내] students는 고양이 학교 학생과 놀이 점수, orders는 학생별 주문, "
-            "nums는 숫자 연습표예요. 아래 문제에 적힌 테이블과 열 이름을 그대로 사용해 주세요.\n\n"
-            f"[문제] {prompt}"
-        ),
+        "description": description,
         "template_code": "-- 아래에 SQL을 작성하세요.\n",
         "test_cases": query_case(query),
-        "options": None,
-        "correct_option": None,
+        "multiple_choice_prompt": multiple_choice_prompt,
+        "options": options,
+        "correct_option": correct_option,
         "hint_text": staged_sql_hint(concept, title),
     }
 
@@ -178,7 +213,14 @@ def build_tasks() -> list[dict]:
         gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": staged_sql_hint("data_manipulation", f"학생 {i} 점수 수정")})
         ddl_spec = json.dumps({"mode": "SCHEMA", "verification_query": f"SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='badges_{i}' ORDER BY ordinal_position", "expected_rows": [["id"], ["label"]]})
         gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": staged_sql_hint("schema", f"배지 테이블 {i}")})
-        gold.append({**task("GOLD", 45 + i, "transactions", f"트랜잭션 판단 {i}", "여러 변경을 하나의 작업으로 확정하거나 취소할 때 사용하는 명령 묶음을 고르세요.", "SELECT 1"), "type": "MULTIPLE_CHOICE", "template_code": "", "test_cases": "[]", "options": {"A": "BEGIN / COMMIT / ROLLBACK", "B": "SELECT / FROM / WHERE", "C": "GRANT / REVOKE", "D": "COPY / CALL"}, "correct_option": "A", "hint_text": staged_sql_hint("transactions", f"트랜잭션 판단 {i}")})
+        gold.append(task(
+            "GOLD",
+            45 + i,
+            "transactions",
+            f"트랜잭션 전 결제 확인 {i}",
+            f"트랜잭션을 시작하기 전에 id가 {i} 이상인 PAID 주문의 id와 amount를 id순으로 조회하세요.",
+            f"SELECT id,amount FROM orders WHERE status='PAID' AND id>={i} ORDER BY id",
+        ))
     rows += gold
     assert len(rows) == 150
     assert len({row["title"] for row in rows}) == 150

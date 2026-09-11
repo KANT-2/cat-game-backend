@@ -16,8 +16,8 @@ from scripts import seed_sql_tasks as sql_seed
 @pytest.mark.parametrize(
     ("seed", "digest"),
     [
-        (python_seed, "fa8984fb4f42a20e9764ee5e55cb3294edad1441e7f7fd0518953bb426fb3290"),
-        (sql_seed, "77b9e2fe67593a3c9a26f4938093e826633fadf7f21619e98ebabab84ec538ec"),
+        (python_seed, "1635da3c880647f456ba5dea71dca13a08fbb9b7f81bc1f7083965a745a397e3"),
+        (sql_seed, "652bbc94c7361fc50f559d61f1a02cba9e7555226359c0c484deb4bf28dc6560"),
     ],
 )
 def test_story_refresh_preserves_main_grading_contract(seed, digest):
@@ -25,7 +25,12 @@ def test_story_refresh_preserves_main_grading_contract(seed, digest):
     assert len(rows) == len({seed.seed_key(row["title"]) for row in rows}) == 150
     assert Counter(row["difficulty"] for row in rows) == {"BRONZE": 50, "SILVER": 50, "GOLD": 50}
     data = [
-        {k: v for k, v in row.items() if k not in ("title", "description", "template_code", "hint_text")}
+        {
+            k: v
+            for k, v in row.items()
+            if k
+            not in ("title", "description", "multiple_choice_prompt", "template_code", "hint_text")
+        }
         | {"key": seed.seed_key(row["title"])}
         for row in rows
     ]
@@ -38,7 +43,7 @@ def test_story_refresh_preserves_main_grading_contract(seed, digest):
     for row in rows:
         assert "[고양이 이야기]" not in row["description"]
         assert row["description"].count("[도와주세요!]") == 1
-        if row["type"] == "MULTIPLE_CHOICE":
+        if row["options"] is not None:
             assert row["correct_option"] in row["options"]
     text = " ".join(row["description"] for row in rows)
     for material in ("츄르", "우유", "장난감", "방석", "캣타워", "리본", "목걸이"):

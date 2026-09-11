@@ -17,6 +17,7 @@ EXPECTED_TABLES = {
     "room_tasks",
     "rooms",
     "task_attempts",
+    "task_presentations",
     "task_completions",
     "tasks",
     "assets",

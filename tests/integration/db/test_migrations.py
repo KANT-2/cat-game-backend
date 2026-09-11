@@ -12,6 +12,7 @@ EXPECTED_TABLES = [
     "items",
     "tasks",
     "task_attempts",
+    "task_presentations",
     "attendances",
     "attendance_tasks",
     "rooms",
@@ -73,6 +74,31 @@ def test_task_attempts_have_durable_grading_lease_columns(engine):
 
     assert {"grading_started_at", "grading_lease_token"} <= columns
     assert "ix_task_attempts_grading_queue" in indexes
+
+
+def test_task_presentations_persist_mode_and_option_order(engine):
+    with engine.connect() as conn:
+        columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'task_presentations'"
+                )
+            )
+        }
+        indexes = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT indexname FROM pg_indexes "
+                    "WHERE schemaname = 'public' AND tablename = 'task_presentations'"
+                )
+            )
+        }
+
+    assert {"presentation_type", "description", "options", "correct_option", "status"} <= columns
+    assert "uq_task_presentations_active" in indexes
 
 
 def test_concepts_are_the_only_task_domain_source(engine):

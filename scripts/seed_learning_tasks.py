@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import dataclass
 
@@ -218,38 +219,83 @@ def cases(operation: str, variant: int) -> list[dict[str, str]]:
     return [{"input": item[0], "expected_output": item[1]} for item in data[operation]]
 
 
+def _positioned_options(correct: str, distractors: list[str], seed: str) -> tuple[dict[str, str], str]:
+    labels = ["A", "B", "C", "D"]
+    correct_index = hashlib.sha256(seed.encode()).digest()[0] % len(labels)
+    values = distractors[:3]
+    values.insert(correct_index, correct)
+    return dict(zip(labels, values, strict=True)), labels[correct_index]
+
+
+def python_multiple_choice(spec: Spec, variant: int) -> tuple[str, dict[str, str], str]:
+    example = cases(spec.operation, variant)[0]
+    sample_input = example["input"].strip()
+    correct = example["expected_output"].strip()
+    distractors: list[str] = []
+    try:
+        number = int(correct)
+        candidates = [str(number + 1), str(number - 1), sample_input.split()[0], "0"]
+    except ValueError:
+        try:
+            number = float(correct)
+            candidates = [f"{number + 1:.2f}", f"{number - 1:.2f}", "0.00", sample_input]
+        except ValueError:
+            candidates = {
+                "even": ["야옹~", "갸우뚱...", "상자 밖!", "True"],
+                "range_check": ["야옹~", "갸우뚱...", "상자 밖!", "False"],
+                "safe_div": ["ZERO", "0", "오류", "나눌 수 없음"],
+                "palindrome": ["YES", "NO", "True", "회문"],
+                "balanced": ["YES", "NO", "0", "균형"],
+                "mode_char": ["a", "b", "n", "banana"],
+                "run_length": ["a3b2c1", "a3b2c", "abc", "3a2b1c"],
+            }.get(spec.operation, [correct[::-1], sample_input, "YES", "NO"])
+    for candidate in candidates:
+        if candidate != correct and candidate not in distractors:
+            distractors.append(candidate)
+    fallback = 1
+    while len(distractors) < 3:
+        candidate = f"{correct} ({fallback})"
+        if candidate != correct:
+            distractors.append(candidate)
+        fallback += 1
+    options, correct_option = _positioned_options(
+        correct, distractors, f"{spec.operation}:{variant}"
+    )
+    prompt = (
+        f"[오늘의 냥이 임무] {spec.title}\n\n"
+        f"[도와주세요!] {VARIANTS[variant - 1][1]} {STORIES[spec.operation]}\n\n"
+        f"[문제] {spec.prompt}\n\n"
+        f"[질문] 예시 입력 `{sample_input}`을 올바르게 처리했을 때 출력은 무엇인가요?"
+    )
+    return prompt, options, correct_option
+
+
 def build_tasks() -> list[dict]:
     rows = []
     for difficulty, specs in (("BRONZE", BRONZE), ("SILVER", SILVER), ("GOLD", GOLD)):
         for variant in range(1, 6):
             for spec in specs:
                 local_number = (variant - 1) * 10 + specs.index(spec) + 1
-                is_choice = difficulty == "BRONZE" and local_number % 2 == 0
                 variant_title, variant_context = VARIANTS[variant - 1]
-                options = ({
-                    "A": spec.hint,
-                    "B": "항상 외부 패키지를 설치해야만 해결할 수 있습니다.",
-                    "C": "입력값은 확인하지 않고 고정 문자열만 출력하면 됩니다.",
-                    "D": "이 문제는 Python으로 표현할 수 없습니다.",
-                } if is_choice else None)
                 prompt = (
                     f"[오늘의 냥이 임무] {spec.title}\n\n[도와주세요!] {variant_context} {STORIES[spec.operation]}\n\n"
                     f"[문제] {spec.prompt}\n\n"
-                    "[질문] 이 문제를 해결하는 데 가장 알맞은 방법을 하나 골라 주세요."
-                    if is_choice else
-                    f"[오늘의 냥이 임무] {spec.title}\n\n[도와주세요!] {variant_context} {STORIES[spec.operation]}\n\n"
-                    f"[문제] {spec.prompt}\n\n[약속] 표준 입력만 읽고 표준 출력에 정답만 "
+                    "[약속] 표준 입력만 읽고 표준 출력에 정답만 "
                     "출력하세요. 입력 형식과 줄바꿈을 정확히 지켜야 합니다."
                 )
+                mcq_prompt = options = correct_option = None
+                if difficulty != "GOLD":
+                    mcq_prompt, options, correct_option = python_multiple_choice(spec, variant)
                 rows.append({
                     "title": f"{SEED_PREFIX}{difficulty}:{local_number:03d}] 🐾 {variant_title}: {spec.title}",
                     "concept": f"PYTHON:{spec.concept}", "difficulty": difficulty,
-                    "type": "MULTIPLE_CHOICE" if is_choice else "CODE", "description": prompt,
+                    "type": "CODE", "description": prompt,
                     # The grader executes each submission as a complete program for every stdin case.
                     # No function name or wrapper is part of that contract, so the editor starts empty.
                     "template_code": "",
-                    "test_cases": "[]" if is_choice else json.dumps(cases(spec.operation, variant), ensure_ascii=False),
-                    "options": options, "correct_option": "A" if is_choice else None,
+                    "test_cases": json.dumps(cases(spec.operation, variant), ensure_ascii=False),
+                    "multiple_choice_prompt": mcq_prompt,
+                    "options": options, "correct_option": correct_option,
                     "hint_text": python_hint(spec),
                     "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[difficulty],
                 })
