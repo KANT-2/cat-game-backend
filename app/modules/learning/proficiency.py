@@ -1,4 +1,5 @@
 import hashlib
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -175,27 +176,44 @@ def _diversify_daily_tasks(
         difficulty_rank,
     )
     selected: list[Task] = []
+    selected_problem_keys: set[str] = set()
     while len(selected) < limit:
         added = False
         for concept_id in concept_order:
             candidates = by_concept[concept_id]
-            if not candidates:
-                continue
-            task = min(
-                candidates,
-                key=lambda item: (
-                    difficulty_rank.get(item.difficulty, 3),
-                    task_positions[item.id],
-                ),
-            )
-            candidates.remove(task)
-            selected.append(task)
-            added = True
+            while candidates:
+                task = min(
+                    candidates,
+                    key=lambda item: (
+                        difficulty_rank.get(item.difficulty, 3),
+                        task_positions[item.id],
+                    ),
+                )
+                candidates.remove(task)
+                problem_key = _task_problem_key(task)
+                if problem_key in selected_problem_keys:
+                    continue
+                selected.append(task)
+                selected_problem_keys.add(problem_key)
+                added = True
+                break
             if len(selected) == limit:
                 return selected
         if not added:
             break
     return selected
+
+
+def _task_problem_key(task: Task) -> str:
+    """Identify one learner-visible problem across seeded story variants."""
+    title = getattr(task, "title", "")
+    description = getattr(task, "description", "")
+    if title.startswith("[SAMPLE:"):
+        match = re.search(r"\[문제\]\s*(.*?)(?:\r?\n\s*\r?\n|\Z)", description, re.DOTALL)
+        if match:
+            prompt = " ".join(match.group(1).split()).casefold()
+            return f"seed:{task.concept_id}:{task.difficulty}:{prompt}"
+    return f"task:{task.id}"
 
 
 def _daily_random_rank(user_id: int, recommendation_date: date, value: str) -> bytes:
