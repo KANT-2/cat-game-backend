@@ -11,10 +11,15 @@ from tests.unit.modules.game.test_game_gacha import _unit_of_work, _user
 def test_pool_covers_all_furniture_and_no_single_purchase_or_consumable_items():
     expected = {item.catalog_key for item in ITEM_DEFINITIONS if item.category == "FURNITURE"}
     assert {r.catalog_key for r in _REWARDS if r.kind == "furniture"} == expected
-    assert len(_REWARDS) == len(expected) + 1
+    assert len(_REWARDS) == len(expected) + 5
     assert sum(r.weight for r in _REWARDS) == pytest.approx(1)
-    assert _REWARDS[0].catalog_key == "ink"
-    assert _REWARDS[0].weight == 0.05
+    assert [(reward.catalog_key, reward.weight) for reward in _REWARDS[:5]] == [
+        ("ink", 0.05),
+        ("silver", 0.01),
+        ("calico", 0.01),
+        ("tuxedo", 0.01),
+        ("fold", 0.01),
+    ]
     for theme in ("forest", "alley", "room", "desk-theme", "ocean"):
         assert any(f"furniture.{theme}." in key for key in expected)
 

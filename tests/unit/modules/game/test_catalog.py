@@ -100,7 +100,7 @@ def test_catalog_contains_multiple_placeable_decorations() -> None:
     assert all(definition.category == "FURNITURE" for definition in decorations)
 
 
-def test_cat_personas_match_the_four_public_characters() -> None:
+def test_cat_personas_match_the_eight_public_characters() -> None:
     cats = {definition.catalog_key: definition for definition in CAT_DEFINITIONS}
 
     assert {key: definition.name for key, definition in cats.items()} == {
@@ -108,5 +108,9 @@ def test_cat_personas_match_the_four_public_characters() -> None:
         "ink": "먹구름",
         "siamese": "모카",
         "tabby": "호박이",
+        "silver": "은별이",
+        "calico": "단추",
+        "tuxedo": "콩이",
+        "fold": "도토리",
     }
     assert all(len(definition.persona) >= 30 for definition in cats.values())

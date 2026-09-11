@@ -44,7 +44,15 @@ def _unit_of_work(user: User):
                 name="먹구름",
                 persona="curious",
                 rarity="RARE",
-            )
+            ),
+            Cat(
+                id=4,
+                public_id=uuid.uuid4(),
+                catalog_key="silver",
+                name="은별이",
+                persona="calm",
+                rarity="RARE",
+            ),
         ]
     )
     unit_of_work.items = FakeItemRepository(
@@ -68,7 +76,7 @@ def test_game_gacha_charges_and_grants_furniture_once() -> None:
     user = _user()
     unit_of_work = _unit_of_work(user)
     source = MagicMock()
-    source.random.return_value = 0.06
+    source.random.return_value = 0.10
     request_id = uuid.uuid4()
 
     first = draw_game_gacha(
@@ -91,6 +99,25 @@ def test_game_gacha_charges_and_grants_furniture_once() -> None:
     assert first["rewards"][0]["shop_item_id"] == "furniture.desk"
     assert unit_of_work.assets.assets[0].quantity == 1
     assert user.balance == 70
+
+
+def test_game_gacha_grants_a_new_named_cat() -> None:
+    user = _user()
+    unit_of_work = _unit_of_work(user)
+    source = MagicMock()
+    source.random.return_value = 0.06
+
+    result = draw_game_gacha(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+        request_id=uuid.uuid4(),
+        draw_count=1,
+        random_source=source,
+    )
+
+    assert result["rewards"][0]["id"] == "cat.silver"
+    assert result["rewards"][0]["cat_variant"] == "silver"
+    assert unit_of_work.assets.get_cat_asset(user.id, 4) is not None
 
 
 def test_game_gacha_does_not_charge_when_balance_is_insufficient() -> None:
