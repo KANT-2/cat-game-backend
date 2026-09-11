@@ -22,6 +22,7 @@ from app.modules.learning.presentation import (
 from app.modules.learning.proficiency import (
     ConceptAssessment,
     _diversify_daily_tasks,
+    _task_problem_key,
     calculate_proficiency,
 )
 from app.modules.learning.router import list_tasks
@@ -238,6 +239,40 @@ def test_daily_recommendation_changes_members_when_one_group_has_more_than_limit
     assert {task.id for task in first} != {task.id for task in next_day}
 
 
+def test_daily_recommendation_deduplicates_seeded_story_variants():
+    tasks = [
+        SimpleNamespace(
+            id=1,
+            concept_id=10,
+            difficulty="BRONZE",
+            type="CODE",
+            title="[SAMPLE:PYTHON:BRONZE:001] 🐾 간식 시간: 두 수의 합",
+            description="[도와주세요!] 첫 이야기\n\n[문제] 두 정수 a, b를 읽고 합을 출력하세요.",
+        ),
+        SimpleNamespace(
+            id=2,
+            concept_id=10,
+            difficulty="BRONZE",
+            type="CODE",
+            title="[SAMPLE:PYTHON:BRONZE:011] 🐾 장난감 정리: 두 수의 합",
+            description="[도와주세요!] 다른 이야기\n\n[문제] 두 정수 a, b를 읽고 합을 출력하세요.",
+        ),
+        SimpleNamespace(
+            id=3,
+            concept_id=10,
+            difficulty="BRONZE",
+            type="CODE",
+            title="[SAMPLE:PYTHON:BRONZE:002] 🐾 간식 시간: 문자열 길이",
+            description="[도와주세요!] 셋째 이야기\n\n[문제] 문자열 한 줄을 읽고 글자 수를 출력하세요.",
+        ),
+    ]
+
+    selected = _diversify_daily_tasks(tasks, 7, date(2026, 9, 11), [], 3)
+
+    assert len(selected) == 2
+    assert len({_task_problem_key(task) for task in selected}) == 2
+
+
 @pytest.mark.parametrize("rows", [build_tasks(), build_sql_tasks()])
 def test_seeded_recommendation_page_contains_varied_concepts(rows):
     concept_ids = {name: index for index, name in enumerate(sorted({row["concept"] for row in rows}), 1)}
@@ -247,6 +282,8 @@ def test_seeded_recommendation_page_contains_varied_concepts(rows):
             concept_id=concept_ids[row["concept"]],
             difficulty=row["difficulty"],
             type=row["type"],
+            title=row["title"],
+            description=row["description"],
         )
         for index, row in enumerate(rows, 1)
     ]
@@ -254,6 +291,7 @@ def test_seeded_recommendation_page_contains_varied_concepts(rows):
     selected = _diversify_daily_tasks(tasks, 17, date(2026, 9, 10), [], 10)
 
     assert len({task.concept_id for task in selected}) >= 7
+    assert len({_task_problem_key(task) for task in selected}) == len(selected)
     assert all(task.type == "CODE" for task in selected)
 
 
