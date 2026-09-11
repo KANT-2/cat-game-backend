@@ -15,6 +15,7 @@ class Task(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     template_code: Mapped[str] = mapped_column(Text, nullable=False)
     test_cases: Mapped[str] = mapped_column(Text, nullable=False)
+    multiple_choice_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     options: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     correct_option: Mapped[str | None] = mapped_column(String, nullable=True)
     hint_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -31,8 +32,9 @@ class Task(Base):
         CheckConstraint("difficulty IN ('BRONZE', 'SILVER', 'GOLD')", name="ck_tasks_difficulty"),
         CheckConstraint("reward_coins >= 0", name="ck_tasks_reward_coins_nonneg"),
         CheckConstraint(
-            "(type = 'CODE' AND options IS NULL AND correct_option IS NULL) OR "
-            "(type = 'MULTIPLE_CHOICE' AND options IS NOT NULL AND correct_option IS NOT NULL)",
+            "(type = 'MULTIPLE_CHOICE' AND options IS NOT NULL AND correct_option IS NOT NULL) OR "
+            "(multiple_choice_prompt IS NULL AND options IS NULL AND correct_option IS NULL) OR "
+            "(multiple_choice_prompt IS NOT NULL AND options IS NOT NULL AND correct_option IS NOT NULL)",
             name="ck_tasks_grading_metadata",
         ),
     )

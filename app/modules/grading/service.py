@@ -22,6 +22,7 @@ from app.models.room_task import RoomTask
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.models.task_completion import TaskCompletion
+from app.models.task_presentation import TaskPresentation
 from app.models.user import User
 from app.modules.battle.service import record_attempt_result
 from app.modules.grading.runners import TaskRunner, dispatcher
@@ -62,12 +63,32 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
     task = _by_public_id(db, Task, payload.task_public_id)
     if task is None or not task.is_active:
         raise SubmissionError("task not found")
-    if task.type == "CODE" and payload.submitted_code is None:
+    if (
+        payload.context_type == "LEARNING"
+        and task.options
+        and payload.presentation_public_id is None
+    ):
+        raise SubmissionError("task presentation is required")
+    presentation = None
+    presentation_type = task.type
+    if payload.presentation_public_id is not None:
+        presentation = _by_public_id(db, TaskPresentation, payload.presentation_public_id)
+        if (
+            presentation is None
+            or presentation.user_id != user.id
+            or presentation.task_id != task.id
+            or presentation.context_type != payload.context_type
+            or presentation.status != "ACTIVE"
+        ):
+            raise SubmissionError("task presentation not found")
+        presentation_type = presentation.presentation_type
+    if presentation_type == "CODE" and payload.submitted_code is None:
         raise SubmissionError("CODE task requires submitted_code")
-    if task.type == "MULTIPLE_CHOICE":
+    if presentation_type == "MULTIPLE_CHOICE":
         if payload.selected_option is None:
             raise SubmissionError("MULTIPLE_CHOICE task requires selected_option")
-        if payload.selected_option not in task.options:
+        options = presentation.options if presentation is not None else task.options
+        if not options or payload.selected_option not in options:
             raise SubmissionError("selected_option is not one of the task options")
     attendance_task = room_task = None
     if payload.context_type == "DAILY":
@@ -109,6 +130,7 @@ def create_attempt(db: Session, payload: TaskAttemptCreate, user: User) -> TaskA
             request_hash=request_hash,
             user_id=user.id,
             task_id=task.id,
+            presentation_id=presentation.id if presentation else None,
             attendance_task_id=attendance_task.id if attendance_task else None,
             room_task_id=room_task.id if room_task else None,
             context_type=payload.context_type,
@@ -214,11 +236,18 @@ def grade_claimed_attempt(lease: AttemptLease, runner: TaskRunner | None = None)
         if attempt is None:
             return False
         task = db.get(Task, attempt.task_id)
+        presentation = (
+            db.get(TaskPresentation, attempt.presentation_id)
+            if attempt.presentation_id is not None
+            else None
+        )
         concept = db.get(Concept, task.concept_id) if task is not None else None
         if task is None or concept is None:
             grade_result = GradeResult(Verdict.SYSTEM_ERROR)
         else:
-            grade_result = _run_safely(lease.public_id, runner, task, concept.domain, attempt)
+            grade_result = _run_safely(
+                lease.public_id, runner, task, concept.domain, attempt, presentation
+            )
         return _persist_result(db, lease, task, grade_result)
     except Exception:  # noqa: BLE001 - an expired lease is retried by a worker
         db.rollback()
@@ -234,8 +263,16 @@ def _run_safely(
     task: Task,
     domain: str,
     attempt: TaskAttempt,
+    presentation: TaskPresentation | None = None,
 ) -> GradeResult:
     try:
+        if presentation is not None and presentation.presentation_type == "MULTIPLE_CHOICE":
+            correct = attempt.submitted_code == presentation.correct_option
+            return GradeResult(
+                Verdict.ACCEPTED if correct else Verdict.WRONG_ANSWER,
+                int(correct),
+                1,
+            )
         return (runner or dispatcher.for_task(task, domain)).grade(task, attempt.submitted_code)
     except TestCaseSpecError:
         return GradeResult(Verdict.SYSTEM_ERROR)
@@ -300,6 +337,10 @@ def _persist_result(
         if completion_id is not None:
             attempt.coins_awarded = task.reward_coins
             locked_user.balance += task.reward_coins
+    if is_correct and attempt.presentation_id is not None:
+        presentation = db.get(TaskPresentation, attempt.presentation_id)
+        if presentation is not None:
+            presentation.status = "COMPLETED"
     if is_correct and attempt.context_type == "DAILY":
         attendance_task = db.get(AttendanceTask, attempt.attendance_task_id)
         if attendance_task is None:

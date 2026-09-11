@@ -25,12 +25,16 @@ def create_task(db: DbSession, data: TaskCreate) -> TaskRead:
         difficulty=data.difficulty,
         description=data.description,
         template_code=data.template_code,
+        multiple_choice_prompt=data.multiple_choice_prompt,
         options=data.options,
         hint_text=data.hint_text,
         test_cases=json.dumps(data.test_cases, ensure_ascii=False),
         correct_option=data.correct_option,
         is_active=True,
     )
+    if task.type == "MULTIPLE_CHOICE" and task.multiple_choice_prompt is None:
+        task.multiple_choice_prompt = task.description
+    _validate_grading_metadata(task)
     db.add(task)
     db.commit()
     db.refresh(task)
@@ -64,6 +68,8 @@ def update_task(db: DbSession, task_public_id: uuid.UUID, data: TaskUpdate) -> T
     task.concept_id = concept.id
     for field, value in changes.items():
         setattr(task, field, value)
+    if task.type == "MULTIPLE_CHOICE" and task.multiple_choice_prompt is None:
+        task.multiple_choice_prompt = task.description
     _validate_grading_metadata(task)
     db.commit()
     db.refresh(task)
@@ -80,7 +86,8 @@ def deactivate_task(db: DbSession, task_public_id: uuid.UUID) -> None:
 
 
 def _validate_grading_metadata(task: Task) -> None:
-    if task.type == "CODE" and (task.options is not None or task.correct_option is not None):
-        raise ValueError("CODE 문제에는 options와 correct_option을 설정할 수 없습니다.")
-    if task.type == "MULTIPLE_CHOICE" and (task.options is None or task.correct_option is None):
-        raise ValueError("MULTIPLE_CHOICE 문제에는 options와 correct_option이 필요합니다.")
+    fields = (getattr(task, "multiple_choice_prompt", None), task.options, task.correct_option)
+    if any(value is not None for value in fields) and not all(value is not None for value in fields):
+        raise ValueError("객관식 prompt, options와 correct_option은 함께 설정해야 합니다.")
+    if task.type == "MULTIPLE_CHOICE" and not all(value is not None for value in fields):
+        raise ValueError("MULTIPLE_CHOICE 문제에는 객관식 데이터가 필요합니다.")

@@ -1,6 +1,6 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-06 기준 ORM 모델과 Alembic head를 반영한 20개 업무 테이블의 현재 구조다.
+2026-09-11 기준 ORM 모델과 Alembic head를 반영한 21개 업무 테이블의 현재 구조다.
 
 팀 기준 문서는 [Notion ERD - 현재 최종본](https://app.notion.com/p/ERD-03fdb49922e58311880781f373402039)이다.
 
@@ -10,7 +10,8 @@
 - Python ORM 모델과 응답 DTO는 `Asset`, `AssetRead`를 사용한다.
 - `CAT_MEMORIES.cat_asset_id`는 `ASSETS.id` 중 고양이 자산 행을 참조한다.
 - `PLACED_OBJECTS.position_data`의 필수 좌표는 `x`, `y`, `z`다. 이전 `rotation` 값은 마이그레이션에서 `z`로 옮긴다.
-- `TASKS`는 `CODE`와 `MULTIPLE_CHOICE`, `PYTHON`과 `SQL`을 함께 지원하며 객관식 메타데이터를 JSONB로 저장한다.
+- `TASKS`는 하나의 논리 문제에 직접 답안 채점 데이터와 선택적인 객관식 prompt·보기를 함께 저장한다.
+- `TASK_PRESENTATIONS`는 난이도 확률로 고른 표시 방식과 섞은 보기 순서를 사용자 세션별로 고정한다.
 - `USERS.homepage_user_id`는 Django Auth Bridge가 반환한 홈페이지 사용자 ID를 `BIGINT UNIQUE`로 연결하며 API에는 노출하지 않는다.
 - `TASK_ATTEMPTS.result_detail`은 외부에 공개 가능한 채점 결과만 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
 - 채점 워커는 `grading_started_at`과 `grading_lease_token`으로 시도를 임대한다. 만료된 `RUNNING` 임대는 회수할 수 있고 이전 워커의 늦은 결과는 토큰으로 거부한다.
@@ -78,10 +79,25 @@ erDiagram
         text description
         text template_code
         text test_cases "채점용 테스트 데이터"
+        text multiple_choice_prompt "nullable"
         jsonb options "객관식 보기, nullable"
         string correct_option "객관식 정답, nullable"
         text hint_text "nullable"
         boolean is_active
+    }
+
+    TASK_PRESENTATIONS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        int task_id FK
+        string context_type
+        string presentation_type "CODE, MULTIPLE_CHOICE"
+        text description
+        jsonb options "섞인 보기, nullable"
+        string correct_option "섞인 정답 위치, nullable"
+        string status "ACTIVE, COMPLETED"
+        datetime created_at
     }
 
     USER_PROFICIENCY {
@@ -97,6 +113,7 @@ erDiagram
         uuid public_id UK "UUIDv4"
         int user_id FK
         int task_id FK
+        int presentation_id FK "nullable"
         int attendance_task_id FK "nullable"
         int room_task_id FK "nullable"
         string context_type
@@ -244,6 +261,9 @@ erDiagram
 
     USERS ||--o{ TASK_ATTEMPTS : submits
     TASKS ||--o{ TASK_ATTEMPTS : attempted_as
+    USERS ||--o{ TASK_PRESENTATIONS : receives
+    TASKS ||--o{ TASK_PRESENTATIONS : presented_as
+    TASK_PRESENTATIONS o|--o{ TASK_ATTEMPTS : grades_with
     USERS ||--o{ TASK_COMPLETIONS : earns
     TASKS ||--o{ TASK_COMPLETIONS : completed_once
     TASK_ATTEMPTS ||--o| TASK_COMPLETIONS : first_reward
@@ -280,5 +300,7 @@ erDiagram
 - `GACHA_EXECUTIONS.request_id`는 전역 UNIQUE이고 다른 사용자나 다른 요청 내용의 재사용은 충돌이다.
 - `USERS.homepage_user_id`는 nullable UNIQUE이며 동일한 홈페이지 사용자를 둘 이상의 게임 사용자 행에 연결할 수 없다.
 - `TASKS.type = CODE`는 연결된 `CONCEPTS.domain`에 따라 Python 또는 격리된 PostgreSQL 채점기로 분기한다.
-- `TASKS.type = MULTIPLE_CHOICE`는 `options`와 `correct_option`을 사용하며 채점 전용 값은 API에 노출하지 않는다.
+- `TASKS.options`가 있는 논리 문제는 직접 작성과 객관식 표현을 모두 지원한다. GOLD seed는 객관식 데이터를 만들지 않는다.
+- 활성 `TASK_PRESENTATIONS`는 사용자·논리 문제·문맥별 하나이며 정답 처리 전까지 유형과 보기 순서를 유지한다.
+- `TASK_COMPLETIONS`의 유일 키는 계속 `(user_id, task_id)`이므로 표시 방식별로 완료나 보상을 중복 집계하지 않는다.
 - `TASK_ATTEMPTS.result_detail`에는 verdict와 공개 가능한 오류 요약만 저장한다.

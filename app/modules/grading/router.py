@@ -7,15 +7,33 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.core.exceptions import IdempotencyConflictError
 from app.models.task import Task
 from app.modules.grading.service import SubmissionError, create_attempt, get_attempt
+from app.modules.learning.presentation import start_task_presentation, to_presented_task
 from app.schemas.task_attempt import (
     GradingResultDetail,
     TaskAttemptAccepted,
     TaskAttemptCreate,
     TaskAttemptRead,
+    TaskPresentationRead,
+    TaskPresentationStart,
     to_task_attempt_read,
 )
 
 router = APIRouter(prefix="/attempts", tags=["grading"])
+
+
+@router.post("/presentations", response_model=TaskPresentationRead)
+def start_presentation(payload: TaskPresentationStart, db: DbSession, user: CurrentUser):
+    try:
+        presentation, task, concept = start_task_presentation(
+            db, payload.task_public_id, user
+        )
+    except LookupError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return TaskPresentationRead(
+        presentation_public_id=presentation.public_id,
+        task=to_presented_task(presentation, task, concept),
+    )
 
 
 @router.post("", response_model=TaskAttemptAccepted, status_code=status.HTTP_202_ACCEPTED)

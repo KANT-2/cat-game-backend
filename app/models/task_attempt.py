@@ -34,6 +34,9 @@ class TaskAttempt(Base):
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), nullable=False)
+    presentation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("task_presentations.id"), nullable=True
+    )
     attendance_task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     room_task_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

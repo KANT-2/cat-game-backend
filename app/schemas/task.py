@@ -1,5 +1,4 @@
 import uuid
-from random import SystemRandom
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,6 +9,8 @@ from app.schemas.base import ReadSchema
 
 
 class TaskRead(ReadSchema):
+    presentation_public_id: uuid.UUID | None = None
+    presentation_required: bool = False
     concept_public_id: uuid.UUID
     concept_name: str
     title: str
@@ -37,6 +38,7 @@ class TaskCreate(BaseModel):
     difficulty: Literal["BRONZE", "SILVER", "GOLD"]
     description: str
     template_code: str = ""
+    multiple_choice_prompt: str | None = None
     options: dict[str, str] | None = None
     hint_text: str | None = None
     test_cases: list[dict] = Field(default_factory=list)
@@ -55,6 +57,7 @@ class TaskUpdate(BaseModel):
     difficulty: Literal["BRONZE", "SILVER", "GOLD"] | None = None
     description: str | None = None
     template_code: str | None = None
+    multiple_choice_prompt: str | None = None
     options: dict[str, str] | None = None
     hint_text: str | None = None
     test_cases: list[dict] | None = None
@@ -62,23 +65,33 @@ class TaskUpdate(BaseModel):
     is_active: bool | None = None
 
 
-def to_task_read(task: Task, concept: Concept, *, completed: bool = False) -> TaskRead:
-    options = task.options
-    if options:
-        shuffled = list(options.items())
-        SystemRandom().shuffle(shuffled)
-        options = dict(shuffled)
+def to_task_read(
+    task: Task,
+    concept: Concept,
+    *,
+    completed: bool = False,
+    presentation_public_id: uuid.UUID | None = None,
+    presentation_type: str | None = None,
+    presentation_description: str | None = None,
+    presentation_options: dict[str, str] | None = None,
+) -> TaskRead:
+    resolved_type = presentation_type or task.type
+    if presentation_type is None and task.type == "MULTIPLE_CHOICE":
+        presentation_description = getattr(task, "multiple_choice_prompt", None) or task.description
+        presentation_options = task.options
     return TaskRead(
         public_id=task.public_id,
         concept_public_id=concept.public_id,
         concept_name=getattr(concept, "name", ""),
         title=task.title,
-        type=task.type,
+        presentation_public_id=presentation_public_id,
+        presentation_required=presentation_public_id is None and bool(task.options),
+        type=resolved_type,
         domain=concept.domain,
         difficulty=task.difficulty,
-        description=task.description,
+        description=presentation_description or task.description,
         template_code=task.template_code,
-        options=options,
+        options=presentation_options,
         hint_text=task.hint_text,
         is_active=task.is_active,
         completed=completed,
