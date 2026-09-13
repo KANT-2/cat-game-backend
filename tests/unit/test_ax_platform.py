@@ -158,6 +158,9 @@ def test_profile_image_url_accepts_only_the_configured_student_system(monkeypatc
     assert _trusted_profile_image_url("/media/avatar.png") == (
         "https://students.example/media/avatar.png"
     )
+    assert _trusted_profile_image_url("profiles/20260909_135050.jpg") == (
+        "https://students.example/media/profiles/20260909_135050.jpg"
+    )
     assert _trusted_profile_image_url("https://students.example/media/avatar.png") == (
         "https://students.example/media/avatar.png"
     )

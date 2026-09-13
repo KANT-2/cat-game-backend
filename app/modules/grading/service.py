@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import uuid
@@ -252,7 +253,13 @@ def grade_claimed_attempt(lease: AttemptLease, runner: TaskRunner | None = None)
             grade_result = GradeResult(Verdict.SYSTEM_ERROR)
         else:
             grade_result = _run_safely(
-                lease.public_id, runner, task, concept.domain, attempt, presentation
+                lease.public_id,
+                runner,
+                task,
+                concept.domain,
+                attempt,
+                presentation,
+                concept.name,
             )
         return _persist_result(db, lease, task, grade_result)
     except Exception:  # noqa: BLE001 - an expired lease is retried by a worker
@@ -270,6 +277,7 @@ def _run_safely(
     domain: str,
     attempt: TaskAttempt,
     presentation: TaskPresentation | None = None,
+    concept_name: str | None = None,
 ) -> GradeResult:
     try:
         if presentation is not None and presentation.presentation_type == "MULTIPLE_CHOICE":
@@ -279,12 +287,45 @@ def _run_safely(
                 int(correct),
                 1,
             )
+        if domain == "PYTHON" and task.type == "CODE":
+            meets_requirement = _meets_python_concept_structure(
+                attempt.submitted_code,
+                concept_name,
+            )
+            if meets_requirement is False:
+                return GradeResult(Verdict.WRONG_ANSWER)
         return (runner or dispatcher.for_task(task, domain)).grade(task, attempt.submitted_code)
     except TestCaseSpecError:
         return GradeResult(Verdict.SYSTEM_ERROR)
     except Exception:  # noqa: BLE001 - worker boundary converts failures to a safe verdict
         logger.error("grading runner failed for attempt %s", attempt_public_id)
         return GradeResult(Verdict.SYSTEM_ERROR)
+
+
+def _meets_python_concept_structure(submission: str, concept_name: str | None) -> bool | None:
+    """Check syntax structures that are themselves the learning objective."""
+    if concept_name not in {"functions", "exceptions"}:
+        return True
+    try:
+        tree = ast.parse(submission)
+    except SyntaxError:
+        return None
+    if concept_name == "exceptions":
+        return any(isinstance(node, ast.Try) and node.handlers for node in ast.walk(tree))
+
+    definitions = {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.args.args
+        and any(isinstance(child, ast.Return) for child in ast.walk(node))
+    }
+    return bool(definitions) and any(
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id in definitions
+        for node in ast.walk(tree)
+    )
 
 
 def _persist_result(

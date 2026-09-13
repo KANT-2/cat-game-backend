@@ -1,0 +1,379 @@
+{"kind":"deck","id":"pr/gqt172","name":"Deck"}
+{"kind":"layout","layoutId":"b7f0210f-6f42-4975-9aa1-dd1cbfcfd6b4","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"f7071e8b-2c6e-4743-9160-82164d6216a1","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/ezr3tc","slide":1,"title":"🐾","textShapes":8}
+{"kind":"textbox","id":"sh/u5o3mhcn","slide":1,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/f6xkvmt8","slide":1,"text":"고양이와 함께하는 프로그래밍 학습 게임","textPreview":"고양이와 함께하는 프로그래밍 학습 게임","textChars":21,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/s3mlk7uh","slide":1,"text":"KANT-2 · 프런트엔드 × 백엔드 통합 발표","textPreview":"KANT-2 · 프런트엔드 × 백엔드 통합 발표","textChars":26,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/t4f2tcb2","slide":1,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/6143ihcr","slide":1,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/72dkr2tc","slide":1,"bbox":[60,156,510,370]}
+{"kind":"textbox","id":"sh/czqlwbu1","slide":1,"text":"LEARN · REWARD · DECORATE","textPreview":"LEARN · REWARD · DECORATE","textChars":25,"textLines":1,"bbox":[92,190,340,38]}
+{"kind":"textbox","id":"sh/d0zm5gbm","slide":1,"text":"공부한 만큼\n내 공간과 고양이가 자랍니다","textPreview":"공부한 만큼 | 내 공간과 고양이가 자랍니다","textChars":22,"textLines":2,"bbox":[88,248,430,112]}
+{"kind":"textbox","id":"sh/tkzetgnq","slide":1,"text":"학습 → 보상 → 수집 → 교감으로 이어지는\n동기부여형 코딩 학습 경험","textPreview":"학습 → 보상 → 수집 → 교감으로 이어지는 | 동기부여형 코딩 학습 경험","textChars":39,"textLines":2,"bbox":[90,382,430,76]}
+{"kind":"textbox","id":"sh/8jqdkvm5","slide":1,"text":"2026. 09","textPreview":"2026. 09","textChars":8,"textLines":1,"bbox":[92,476,220,30]}
+{"kind":"image","id":"im/ormtsbmt","slide":1,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"image","id":"im/8ve5wv2h","slide":1,"name":"","geometry":"roundRect","alt":"고양이 게임 홈 화면","bbox":[610,148,610,390]}
+{"kind":"notes","id":"nt/ezr3tc","slide":1,"text":"첫 문장은 기능 나열보다 게임의 학습 루프를 설명합니다. 발표 전체는 사용자 경험 → 구현 구조 → 안정성 순서입니다.\n\nSources:\n- 기존 48장 통합 발표 자료\n- Notion: cat-game 오류 수정"}
+{"kind":"slide","id":"sl/4cjp8w","slide":2,"title":"Slide 2","textShapes":0}
+{"kind":"image","id":"im/hkjipczi","slide":2,"name":"","alt":"홈 화면 소개","bbox":[0,0,1280,720]}
+{"kind":"notes","id":"nt/4cjp8w","slide":2,"text":"홈 화면은 현재 상태, 대표 고양이와 핵심 기능으로 들어가는 허브입니다. 실제 프로필 버튼의 고양이는 사용자가 선택한 대표 고양이입니다.\n\nSources:\n- C:/dev/cat-game/src/game/scenes/HomeScene.ts"}
+{"kind":"slide","id":"sl/i3ab0i","slide":3,"title":"Slide 3","textShapes":0}
+{"kind":"image","id":"im/7exsval4","slide":3,"name":"","alt":"학습 화면 소개","bbox":[0,0,1280,720]}
+{"kind":"notes","id":"nt/i3ab0i","slide":3,"text":"Python과 SQL 과목을 화면에서 바로 전환합니다. 숙련도와 추천 과제를 한 화면에 배치해 다음 행동이 끊기지 않도록 했습니다.\n\nSources:\n- C:/dev/cat-game/docs/ARCHITECTURE.md\n- C:/dev/cat-game-backend/docs/features/part2-learning-system.md"}
+{"kind":"slide","id":"sl/zaq76i","slide":4,"title":"Slide 4","textShapes":0}
+{"kind":"image","id":"im/3qlwzqhw","slide":4,"name":"","alt":"정답 입력 화면 소개","bbox":[0,0,1280,720]}
+{"kind":"notes","id":"nt/zaq76i","slide":4,"text":"코드 작성은 CodeMirror DOM 오버레이를 사용하고, 나머지 화면은 PixiJS Canvas에 유지했습니다. 제출 뒤에는 공개 가능한 판정 결과만 사용자에게 보여 줍니다.\n\nSources:\n- C:/dev/cat-game/docs/CODE_GUIDE.md\n- C:/dev/cat-game-backend/docs/features/part2-learning-system.md"}
+{"kind":"slide","id":"sl/bs2og2","slide":5,"title":"🐾","textShapes":13}
+{"kind":"textbox","id":"sh/mlc7e58v","slide":5,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/nm5o7apg","slide":5,"text":"매일 돌아오게 만드는 루프","textPreview":"매일 돌아오게 만드는 루프","textChars":14,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/wrepkfqx","slide":5,"text":"학습 기록이 퀘스트와 출석 보상으로 자연스럽게 이어집니다.","textPreview":"학습 기록이 퀘스트와 출석 보상으로 자연스럽게 이어집니다.","textChars":32,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/hsn6dk7i","slide":5,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/upw7i587","slide":5,"bbox":[108,116,250,0]}
+{"kind":"textbox","id":"sh/dw3610re","slide":5,"text":"1  문제 완료","textPreview":"1  문제 완료","textChars":8,"textLines":1,"bbox":[128,512,210,38]}
+{"kind":"textbox","id":"sh/1sfqdcra","slide":5,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[353,510,52,46]}
+{"kind":"textbox","id":"sh/0r6p47qp","slide":5,"text":"2  퀘스트 보상","textPreview":"2  퀘스트 보상","textChars":9,"textLines":1,"bbox":[414,512,220,38]}
+{"kind":"textbox","id":"sh/zqx8b294","slide":5,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[646,510,52,46]}
+{"kind":"textbox","id":"sh/epo72x8j","slide":5,"text":"3  출석 스트릭","textPreview":"3  출석 스트릭","textChars":9,"textLines":1,"bbox":[710,512,220,38]}
+{"kind":"textbox","id":"sh/9gzqhc76","slide":5,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[941,510,52,46]}
+{"kind":"textbox","id":"sh/ofqp87ql","slide":5,"text":"4  다음 학습","textPreview":"4  다음 학습","textChars":8,"textLines":1,"bbox":[1002,512,190,38]}
+{"kind":"textbox","id":"sh/nex8fmp0","slide":5,"text":"현재 퀘스트 보상은 코인만 제공","textPreview":"현재 퀘스트 보상은 코인만 제공","textChars":17,"textLines":1,"bbox":[206,566,870,28]}
+{"kind":"textbox","id":"sh/mto76h8f","slide":5,"text":"오늘 문제를 풀지 않았다면 연속 학습 문구를 표시하지 않습니다.","textPreview":"오늘 문제를 풀지 않았다면 연속 학습 문구를 표시하지 않습니다.","textChars":35,"textLines":1,"bbox":[206,592,870,26]}
+{"kind":"image","id":"im/0bu9k7e5","slide":5,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"image","id":"im/mdcrmhwb","slide":5,"name":"","geometry":"roundRect","alt":"데일리 퀘스트 화면","bbox":[64,152,548,330]}
+{"kind":"image","id":"im/pkjqlsfi","slide":5,"name":"","geometry":"roundRect","alt":"출석 현황 화면","bbox":[668,152,548,330]}
+{"kind":"notes","id":"nt/bs2og2","slide":5,"text":"데일리 퀘스트는 오늘 실제 완료 기록을 기준으로 활성화됩니다. 출석은 서버 날짜와 원장을 기준으로 중복 수령을 막고, 스트릭은 전날 출석이 있어야 이어집니다.\n\nSources:\n- C:/dev/cat-game/docs/CODE_GUIDE.md\n- C:/dev/cat-game-backend/docs/architecture/current-erd.md"}
+{"kind":"slide","id":"sl/kmfegw","slide":6,"title":"🐾","textShapes":14}
+{"kind":"textbox","id":"sh/8n6lwfi5","slide":6,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/tof25kzq","slide":6,"text":"보상이 공간으로 바뀌는 경제·하우징","textPreview":"보상이 공간으로 바뀌는 경제·하우징","textChars":19,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/u9o3yp0v","slide":6,"text":"코인 하나로 구매하고, 보유 자산을 배치해 나만의 방을 완성합니다.","textPreview":"코인 하나로 구매하고, 보유 자산을 배치해 나만의 방을 완성합니다.","textChars":37,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/vaxk7uhg","slide":6,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/gb6l0zi1","slide":6,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/hcf294zm","slide":6,"bbox":[56,150,350,386]}
+{"kind":"textbox","id":"sh/3ehkbuhs","slide":6,"text":"상점","textPreview":"상점","textChars":2,"textLines":1,"bbox":[80,410,302,34]}
+{"kind":"textbox","id":"sh/ratovudw","slide":6,"text":"서버 가격·잔액 검증","textPreview":"서버 가격·잔액 검증","textChars":11,"textLines":1,"bbox":[80,452,302,32]}
+{"kind":"textbox","id":"sh/q9k72pwb","slide":6,"text":"Purchase","textPreview":"Purchase","textChars":8,"textLines":1,"bbox":[156,493,150,38]}
+{"kind":"shape","id":"sh/dcb6xkv2","slide":6,"bbox":[438,150,350,386]}
+{"kind":"textbox","id":"sh/3m9oradk","slide":6,"text":"보유","textPreview":"보유","textChars":2,"textLines":1,"bbox":[462,410,302,34]}
+{"kind":"textbox","id":"sh/2l07y5wf","slide":6,"text":"통합 assets 조회","textPreview":"통합 assets 조회","textChars":12,"textLines":1,"bbox":[462,452,302,32]}
+{"kind":"textbox","id":"sh/p8b6tkvq","slide":6,"text":"Asset","textPreview":"Asset","textChars":5,"textLines":1,"bbox":[538,493,150,38]}
+{"kind":"shape","id":"sh/472p0fe5","slide":6,"bbox":[820,150,350,386]}
+{"kind":"textbox","id":"sh/mh47a9cj","slide":6,"text":"배치","textPreview":"배치","textChars":2,"textLines":1,"bbox":[844,410,302,34]}
+{"kind":"textbox","id":"sh/yxor2dgr","slide":6,"text":"소유권·좌표 검증","textPreview":"소유권·좌표 검증","textChars":9,"textLines":1,"bbox":[844,452,302,32]}
+{"kind":"textbox","id":"sh/jyhsvixc","slide":6,"text":"Placement","textPreview":"Placement","textChars":9,"textLines":1,"bbox":[920,493,150,38]}
+{"kind":"textbox","id":"sh/kzq943ex","slide":6,"text":"구매 · 자산 지급 · 잔액 변경은 한 트랜잭션으로 처리","textPreview":"구매 · 자산 지급 · 잔액 변경은 한 트랜잭션으로 처리","textChars":31,"textLines":1,"bbox":[315,570,650,32]}
+{"kind":"image","id":"im/m50zmh0z","slide":6,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"image","id":"im/jyt0361s","slide":6,"name":"","geometry":"roundRect","alt":"상점 화면","bbox":[72,168,318,220]}
+{"kind":"image","id":"im/7mpkvyps","slide":6,"name":"","geometry":"roundRect","alt":"보유 화면","bbox":[454,168,318,220]}
+{"kind":"image","id":"im/cvy1wj65","slide":6,"name":"","geometry":"roundRect","alt":"배치 화면","bbox":[836,168,318,220]}
+{"kind":"notes","id":"nt/kmfegw","slide":6,"text":"프런트는 구매 성공 여부를 자체 판정하지 않고 GameClient의 명령 결과와 서버 스냅샷만 반영합니다. 백엔드는 잔액 차감과 자산 지급을 원자적으로 처리합니다.\n\nSources:\n- C:/dev/cat-game/docs/ARCHITECTURE.md\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md"}
+{"kind":"slide","id":"sl/n5keaz","slide":7,"title":"🐾","textShapes":9}
+{"kind":"textbox","id":"sh/nu58j6pk","slide":7,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/mtw7a18z","slide":7,"text":"뽑기의 재미와 도감의 목표","textPreview":"뽑기의 재미와 도감의 목표","textChars":14,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/1snqhw7e","slide":7,"text":"중복 보상과 전체 카탈로그를 서버 데이터로 일관되게 관리합니다.","textPreview":"중복 보상과 전체 카탈로그를 서버 데이터로 일관되게 관리합니다.","textChars":35,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/0rep8rq9","slide":7,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/zq58fmpo","slide":7,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/epw76h83","slide":7,"bbox":[56,150,560,390]}
+{"kind":"shape","id":"sh/lorqtg7y","slide":7,"bbox":[664,150,560,390]}
+{"kind":"textbox","id":"sh/32l0zqtc","slide":7,"text":"GACHA","textPreview":"GACHA","textChars":5,"textLines":1,"bbox":[90,470,170,34]}
+{"kind":"textbox","id":"sh/43uhsvax","slide":7,"text":"request_id 멱등성 · 중복 고양이 보상","textPreview":"request_id 멱등성 · 중복 고양이 보상","textChars":26,"textLines":1,"bbox":[218,470,360,34]}
+{"kind":"textbox","id":"sh/p43i10bi","slide":7,"text":"CATALOG","textPreview":"CATALOG","textChars":7,"textLines":1,"bbox":[698,470,170,34]}
+{"kind":"textbox","id":"sh/uxsz2lsv","slide":7,"text":"미보유 포함 전체 종류 · 보유 상태 표시","textPreview":"미보유 포함 전체 종류 · 보유 상태 표시","textChars":23,"textLines":1,"bbox":[844,470,340,34]}
+{"kind":"textbox","id":"sh/fy10vqtg","slide":7,"text":"뽑기 결과 → assets 반영 → 도감 즉시 갱신","textPreview":"뽑기 결과 → assets 반영 → 도감 즉시 갱신","textChars":28,"textLines":1,"bbox":[323,564,634,38]}
+{"kind":"image","id":"im/l832hgjq","slide":7,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"image","id":"im/h0nmp0jy","slide":7,"name":"","geometry":"roundRect","alt":"고양이 뽑기 화면","bbox":[76,170,520,276]}
+{"kind":"image","id":"im/lczu14be","slide":7,"name":"","geometry":"roundRect","alt":"고양이 도감 화면","bbox":[684,170,520,276]}
+{"kind":"notes","id":"nt/n5keaz","slide":7,"text":"고양이 종류는 코드의 카탈로그 키와 DB 카탈로그 행을 기준으로 합니다. 뽑기 결과는 실행 원장과 assets를 같은 트랜잭션에서 갱신하고 도감은 전체 카탈로그를 조회합니다.\n\nSources:\n- C:/dev/cat-game-backend/docs/architecture/current-erd.md\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md"}
+{"kind":"slide","id":"sl/ekmqkk","slide":8,"title":"Slide 8","textShapes":0}
+{"kind":"image","id":"im/ryhovyd4","slide":8,"name":"","alt":"고양이 대화 화면 소개","bbox":[0,0,1280,720]}
+{"kind":"notes","id":"nt/ekmqkk","slide":8,"text":"대화는 고양이별 페르소나를 사용하고 사용자 원문은 저장하지 않습니다. 허용된 대화에서 서버가 만든 요약만 고양이 자산별 기억으로 누적하며, 현재 대화창의 ‘기억 초기화’로 해당 고양이의 기억만 삭제할 수 있습니다.\n\nSources:\n- C:/dev/cat-game/docs/CODE_GUIDE.md\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md"}
+{"kind":"slide","id":"sl/fwk2ub","slide":9,"title":"Slide 9","textShapes":0}
+{"kind":"image","id":"im/wz6xgnal","slide":9,"name":"","alt":"프로필 화면 내부 동작 구조","bbox":[0,0,1280,720]}
+{"kind":"notes","id":"nt/fwk2ub","slide":9,"text":"학생관리시스템의 프로필 경로는 게임 백엔드가 프록시해 같은 출처에서 제공합니다. 연결되면 사용자 사진과 연동 완료, 실패하거나 이미지가 없으면 포근이와 연동 미완료를 보여 줍니다. 로그아웃은 서버 세션을 폐기합니다.\n\nSources:\n- C:/dev/cat-game/src/services/BackendApiClient.ts\n- C:/dev/cat-game/src/game/presentation/profileImage.ts\n- Notion: cat-game 오류 수정"}
+{"kind":"slide","id":"sl/swi1xb","slide":10,"title":"🐾","textShapes":25}
+{"kind":"textbox","id":"sh/z2dwry98","slide":10,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/y1kfitsn","slide":10,"text":"프런트엔드: 화면과 규칙의 경계","textPreview":"프런트엔드: 화면과 규칙의 경계","textChars":17,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/9svyx8ra","slide":10,"text":"PixiJS 장면은 네트워크·저장소 구현을 모르고 GameClient 계약만 사용합니다.","textPreview":"PixiJS 장면은 네트워크·저장소 구현을 모르고 GameClient 계약만 사용합니다.","textChars":49,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/8rmxo3a5","slide":10,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/n6dgvi9k","slide":10,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/m54fmdsz","slide":10,"bbox":[54,166,246,94]}
+{"kind":"textbox","id":"sh/xwfy1srm","slide":10,"text":"PixiJS Scene","textPreview":"PixiJS Scene","textChars":12,"textLines":1,"bbox":[70,180,214,30]}
+{"kind":"textbox","id":"sh/wv6xsna1","slide":10,"text":"화면·입력·애니메이션","textPreview":"화면·입력·애니메이션","textChars":11,"textLines":1,"bbox":[68,217,218,30]}
+{"kind":"shape","id":"sh/u9cz2l83","slide":10,"bbox":[354,166,246,94]}
+{"kind":"textbox","id":"sh/val0vq9o","slide":10,"text":"GameClient","textPreview":"GameClient","textChars":10,"textLines":1,"bbox":[370,180,214,30]}
+{"kind":"textbox","id":"sh/wbuh4vq9","slide":10,"text":"UI가 의존하는 단일 계약","textPreview":"UI가 의존하는 단일 계약","textChars":14,"textLines":1,"bbox":[368,217,218,30]}
+{"kind":"shape","id":"sh/hc3ix0ru","slide":10,"bbox":[654,166,246,94]}
+{"kind":"textbox","id":"sh/idcz658f","slide":10,"text":"BackendLearning\nGameClient","textPreview":"BackendLearning | GameClient","textChars":26,"textLines":2,"bbox":[670,180,214,30]}
+{"kind":"textbox","id":"sh/je50za9k","slide":10,"text":"서버 상태를 게임 상태로 변환","textPreview":"서버 상태를 게임 상태로 변환","textChars":16,"textLines":1,"bbox":[668,217,218,30]}
+{"kind":"shape","id":"sh/4feh8fq5","slide":10,"bbox":[954,166,246,94]}
+{"kind":"textbox","id":"sh/5gni1krq","slide":10,"text":"BackendApiClient","textPreview":"BackendApiClient","textChars":16,"textLines":1,"bbox":[970,180,214,30]}
+{"kind":"textbox","id":"sh/yhszu18v","slide":10,"text":"HTTP·JSON·Cookie·CSRF","textPreview":"HTTP·JSON·Cookie·CSRF","textChars":21,"textLines":1,"bbox":[968,217,218,30]}
+{"kind":"textbox","id":"sh/zi1gn69g","slide":10,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[304,190,46,46]}
+{"kind":"textbox","id":"sh/3axofilw","slide":10,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[604,190,46,46]}
+{"kind":"textbox","id":"sh/294n6dkr","slide":10,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[904,190,46,46]}
+{"kind":"shape","id":"sh/pcf6hs32","slide":10,"bbox":[72,316,536,216]}
+{"kind":"textbox","id":"sh/ob658n2h","slide":10,"text":"화면 계층","textPreview":"화면 계층","textChars":5,"textLines":1,"bbox":[94,338,150,38]}
+{"kind":"textbox","id":"sh/fmdobyl0","slide":10,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[96,396,24,24]}
+{"kind":"textbox","id":"sh/el4n2tkf","slide":10,"text":"문구는 ko.json의 MessageId로 관리","textPreview":"문구는 ko.json의 MessageId로 관리","textChars":26,"textLines":1,"bbox":[124,394,458,38]}
+{"kind":"textbox","id":"sh/18v6d836","slide":10,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[96,436,24,24]}
+{"kind":"textbox","id":"sh/gnm5432l","slide":10,"text":"CodeMirror·IME 입력은 브리지로 격리","textPreview":"CodeMirror·IME 입력은 브리지로 격리","textChars":26,"textLines":1,"bbox":[124,434,458,38]}
+{"kind":"textbox","id":"sh/zihon2l4","slide":10,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[96,476,24,24]}
+{"kind":"textbox","id":"sh/yh8nexkj","slide":10,"text":"실패를 임의의 로컬 성공으로 대체하지 않음","textPreview":"실패를 임의의 로컬 성공으로 대체하지 않음","textChars":23,"textLines":1,"bbox":[124,474,458,38]}
+{"kind":"shape","id":"sh/wnil8zi1","slide":10,"bbox":[672,316,536,216]}
+{"kind":"textbox","id":"sh/xor2h4jm","slide":10,"text":"서버 상태 보호","textPreview":"서버 상태 보호","textChars":8,"textLines":1,"bbox":[694,338,170,38]}
+{"kind":"textbox","id":"sh/al036p0b","slide":10,"text":"stateVersion","textPreview":"stateVersion","textChars":12,"textLines":1,"bbox":[706,402,210,40]}
+{"kind":"textbox","id":"sh/vm9kfu1g","slide":10,"text":"현재 버전보다 작은 늦은 응답은 적용하지 않아\n동시 명령·재동기화의 화면 되돌림을 방지","textPreview":"현재 버전보다 작은 늦은 응답은 적용하지 않아 | 동시 명령·재동기화의 화면 되돌림을 방지","textChars":48,"textLines":2,"bbox":[706,450,462,58]}
+{"kind":"image","id":"im/pgri94ri","slide":10,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/swi1xb","slide":10,"text":"프런트 아키텍처의 핵심은 화면과 구현을 분리한 GameClient입니다. 원격 모드에서는 모든 권위 상태를 서버 스냅샷으로 받아오고 stateVersion으로 응답 순서 역전을 방어합니다.\n\nSources:\n- C:/dev/cat-game/docs/ARCHITECTURE.md\n- C:/dev/cat-game/src/services/BackendLearningGameClient.ts"}
+{"kind":"slide","id":"sl/upgynn","slide":11,"title":"🐾","textShapes":28}
+{"kind":"textbox","id":"sh/690jyhkb","slide":11,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/7a907m1g","slide":11,"text":"백엔드: 기능 중심 모듈형 모놀리스","textPreview":"백엔드: 기능 중심 모듈형 모놀리스","textChars":19,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/gf214rid","slide":11,"text":"하나의 배포 단위 안에서 기능 경계와 트랜잭션 책임을 명확히 나눴습니다.","textPreview":"하나의 배포 단위 안에서 기능 경계와 트랜잭션 책임을 명확히 나눴습니다.","textChars":40,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/hgbidwjy","slide":11,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/udkj2h07","slide":11,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/fet0bm1s","slide":11,"bbox":[70,168,230,94]}
+{"kind":"textbox","id":"sh/wjyhsn2t","slide":11,"text":"FastAPI Router","textPreview":"FastAPI Router","textChars":14,"textLines":1,"bbox":[86,182,198,30]}
+{"kind":"textbox","id":"sh/xk7i1sje","slide":11,"text":"HTTP · 인증 · DTO","textPreview":"HTTP · 인증 · DTO","textChars":15,"textLines":1,"bbox":[84,219,202,30]}
+{"kind":"shape","id":"sh/xcnu9gne","slide":11,"bbox":[350,168,230,94]}
+{"kind":"textbox","id":"sh/wbedgb69","slide":11,"text":"Service / UoW","textPreview":"Service / UoW","textChars":13,"textLines":1,"bbox":[366,182,198,30]}
+{"kind":"textbox","id":"sh/ba5c765o","slide":11,"text":"업무 규칙 · 트랜잭션","textPreview":"업무 규칙 · 트랜잭션","textChars":12,"textLines":1,"bbox":[364,219,202,30]}
+{"kind":"shape","id":"sh/a9wve1o3","slide":11,"bbox":[630,168,230,94]}
+{"kind":"textbox","id":"sh/l0nedgnq","slide":11,"text":"Repository","textPreview":"Repository","textChars":10,"textLines":1,"bbox":[646,182,198,30]}
+{"kind":"textbox","id":"sh/kzedkb65","slide":11,"text":"조회 · 저장 · 행 잠금","textPreview":"조회 · 저장 · 행 잠금","textChars":14,"textLines":1,"bbox":[644,219,202,30]}
+{"kind":"shape","id":"sh/jy5wb65k","slide":11,"bbox":[910,168,230,94]}
+{"kind":"textbox","id":"sh/ydwvi1oz","slide":11,"text":"PostgreSQL","textPreview":"PostgreSQL","textChars":10,"textLines":1,"bbox":[926,182,198,30]}
+{"kind":"textbox","id":"sh/t47eh0nm","slide":11,"text":"22개 업무 테이블","textPreview":"22개 업무 테이블","textChars":10,"textLines":1,"bbox":[924,219,202,30]}
+{"kind":"textbox","id":"sh/83ydov61","slide":11,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[302,190,42,46]}
+{"kind":"textbox","id":"sh/sjqp0jip","slide":11,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[582,190,42,46]}
+{"kind":"textbox","id":"sh/dkz6toza","slide":11,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[862,190,42,46]}
+{"kind":"textbox","id":"sh/qho7yt0j","slide":11,"text":"기능 모듈","textPreview":"기능 모듈","textChars":5,"textLines":1,"bbox":[78,322,160,34]}
+{"kind":"textbox","id":"sh/rihoryh4","slide":11,"text":"identity","textPreview":"identity","textChars":8,"textLines":1,"bbox":[76,368,226,38]}
+{"kind":"textbox","id":"sh/0nqp43il","slide":11,"text":"learning","textPreview":"learning","textChars":8,"textLines":1,"bbox":[350,368,226,38]}
+{"kind":"textbox","id":"sh/1oz6x8z6","slide":11,"text":"grading","textPreview":"grading","textChars":7,"textLines":1,"bbox":[624,368,226,38]}
+{"kind":"textbox","id":"sh/el872t0v","slide":11,"text":"daily","textPreview":"daily","textChars":5,"textLines":1,"bbox":[76,426,226,38]}
+{"kind":"textbox","id":"sh/fmhovyhg","slide":11,"text":"shop","textPreview":"shop","textChars":4,"textLines":1,"bbox":[350,426,226,38]}
+{"kind":"textbox","id":"sh/gr65szih","slide":11,"text":"gacha","textPreview":"gacha","textChars":5,"textLines":1,"bbox":[624,426,226,38]}
+{"kind":"textbox","id":"sh/hsf6l4z2","slide":11,"text":"housing","textPreview":"housing","textChars":7,"textLines":1,"bbox":[76,484,226,38]}
+{"kind":"textbox","id":"sh/j6ls7m1k","slide":11,"text":"cats","textPreview":"cats","textChars":4,"textLines":1,"bbox":[350,484,226,38]}
+{"kind":"textbox","id":"sh/ylcryhkz","slide":11,"text":"battle","textPreview":"battle","textChars":6,"textLines":1,"bbox":[624,484,226,38]}
+{"kind":"shape","id":"sh/l8na9cjq","slide":11,"bbox":[936,394,242,126]}
+{"kind":"textbox","id":"sh/k7u907i5","slide":11,"text":"내부 FK","textPreview":"내부 FK","textChars":5,"textLines":1,"bbox":[964,410,186,30]}
+{"kind":"textbox","id":"sh/bil8321o","slide":11,"text":"INTEGER","textPreview":"INTEGER","textChars":7,"textLines":1,"bbox":[964,454,186,36]}
+{"kind":"textbox","id":"sh/ahcruxk3","slide":11,"text":"Repository는 commit하지 않고 서비스가 한 번만 커밋","textPreview":"Repository는 commit하지 않고 서비스가 한 번만 커밋","textChars":36,"textLines":1,"bbox":[267,556,744,34]}
+{"kind":"image","id":"im/kja5gr29","slide":11,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/upgynn","slide":11,"text":"백엔드는 기능 중심 모듈형 모놀리스입니다. Repository는 조회·저장·잠금만 하고, 업무 서비스와 Unit of Work가 트랜잭션의 시작과 종료를 소유합니다.\n\nSources:\n- C:/dev/cat-game-backend/docs/architecture/overview.md\n- C:/dev/cat-game-backend/docs/architecture/current-erd.md\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md"}
+{"kind":"slide","id":"sl/iilqg4","slide":12,"title":"🐾","textShapes":20}
+{"kind":"textbox","id":"sh/n6dwvy9c","slide":12,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/m54fmt87","slide":12,"text":"API 경계: 내부 ID를 UUID로 변환","textPreview":"API 경계: 내부 ID를 UUID로 변환","textChars":23,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/xwfy187u","slide":12,"text":"DB 성능과 외부 안전성을 동시에 얻기 위해 식별자를 이중화했습니다.","textPreview":"DB 성능과 외부 안전성을 동시에 얻기 위해 식별자를 이중화했습니다.","textChars":38,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/wvmxsnq9","slide":12,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/vudgzipo","slide":12,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/at4fqd83","slide":12,"bbox":[60,154,352,354]}
+{"kind":"textbox","id":"sh/d0bepora","slide":12,"text":"DATABASE","textPreview":"DATABASE","textChars":8,"textLines":1,"bbox":[88,180,160,38]}
+{"kind":"textbox","id":"sh/cz2xgjqp","slide":12,"text":"id","textPreview":"id","textChars":2,"textLines":1,"bbox":[88,246,98,34]}
+{"kind":"textbox","id":"sh/qx4fmp8n","slide":12,"text":"42","textPreview":"42","textChars":2,"textLines":1,"bbox":[230,240,130,42]}
+{"kind":"textbox","id":"sh/rydwfup8","slide":12,"text":"cat_id","textPreview":"cat_id","textChars":6,"textLines":1,"bbox":[88,304,118,34]}
+{"kind":"textbox","id":"sh/czmxozqt","slide":12,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[230,298,130,42]}
+{"kind":"textbox","id":"sh/dkvehk7e","slide":12,"text":"관계·잠금·조인은\nINTEGER PK/FK 사용","textPreview":"관계·잠금·조인은 | INTEGER PK/FK 사용","textChars":26,"textLines":2,"bbox":[88,376,270,74]}
+{"kind":"shape","id":"sh/el4fqp8j","slide":12,"bbox":[464,216,340,224]}
+{"kind":"textbox","id":"sh/zmdwjup4","slide":12,"text":"명시적 DTO 변환","textPreview":"명시적 DTO 변환","textChars":10,"textLines":1,"bbox":[504,244,260,40]}
+{"kind":"textbox","id":"sh/0nmxszqp","slide":12,"text":"cat.id → cat_public_id\nasset.id → cat_asset_public_id","textPreview":"cat.id → cat_public_id | asset.id → cat_asset_public_id","textChars":53,"textLines":2,"bbox":[500,308,270,72]}
+{"kind":"textbox","id":"sh/1ofel47a","slide":12,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[810,293,60,70]}
+{"kind":"shape","id":"sh/mpofu98v","slide":12,"bbox":[874,154,346,354]}
+{"kind":"textbox","id":"sh/nqxgnepg","slide":12,"text":"PUBLIC API","textPreview":"PUBLIC API","textChars":10,"textLines":1,"bbox":[902,180,176,38]}
+{"kind":"textbox","id":"sh/juxwbe58","slide":12,"text":"public_id","textPreview":"public_id","textChars":9,"textLines":1,"bbox":[904,246,120,34]}
+{"kind":"textbox","id":"sh/ytov29o3","slide":12,"text":"a17169ab-…","textPreview":"a17169ab-…","textChars":10,"textLines":1,"bbox":[904,282,270,38]}
+{"kind":"textbox","id":"sh/lwzedone","slide":12,"text":"cat_public_id","textPreview":"cat_public_id","textChars":13,"textLines":1,"bbox":[904,342,160,34]}
+{"kind":"textbox","id":"sh/kvqd4jmt","slide":12,"text":"fb8821d9-…","textPreview":"fb8821d9-…","textChars":10,"textLines":1,"bbox":[904,378,270,38]}
+{"kind":"textbox","id":"sh/bqxw7u5c","slide":12,"text":"내부 INTEGER id는\n요청·응답에 노출하지 않음","textPreview":"내부 INTEGER id는 | 요청·응답에 노출하지 않음","textChars":29,"textLines":2,"bbox":[904,432,270,62]}
+{"kind":"textbox","id":"sh/apovypor","slide":12,"text":"추측 가능한 순번 노출 방지 · 테이블 구조 변경 영향 축소 · 소유권 검사는 별도 수행","textPreview":"추측 가능한 순번 노출 방지 · 테이블 구조 변경 영향 축소 · 소유권 검사는 별도 수행","textChars":49,"textLines":1,"bbox":[146,548,988,38]}
+{"kind":"image","id":"im/t43epw76","slide":12,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/iilqg4","slide":12,"text":"DB 안에서는 효율적인 정수 PK/FK를 사용하지만 API에는 UUID만 노출합니다. ORM 필드명과 응답 필드명이 다르므로 자동 변환에 기대지 않고 to_*_read 같은 명시적 DTO 변환 함수에서 관계를 공개 UUID로 치환합니다. UUID는 소유권 검사를 대신하지 않습니다.\n\nSources:\n- C:/dev/cat-game-backend/docs/architecture/current-erd.md\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md\n- C:/dev/cat-game-backend/app/schemas/task.py\n- C:/dev/cat-game-backend/app/modules/cats/service.py"}
+{"kind":"slide","id":"sl/qromx6","slide":13,"title":"🐾","textShapes":29}
+{"kind":"textbox","id":"sh/m907elw7","slide":13,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/nu9876ds","slide":13,"text":"학습 설계: 같은 문제를 다른 방식으로","textPreview":"학습 설계: 같은 문제를 다른 방식으로","textChars":21,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/wz2p4ve9","slide":13,"text":"문제 수를 늘리는 것보다 난이도·표현·추천의 다양성을 함께 설계했습니다.","textPreview":"문제 수를 늘리는 것보다 난이도·표현·추천의 다양성을 함께 설계했습니다.","textChars":40,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/x0bqd0vu","slide":13,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/ax07ilw3","slide":13,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/vy98bqdo","slide":13,"bbox":[56,154,326,360]}
+{"kind":"textbox","id":"sh/k32p8ve5","slide":13,"text":"300","textPreview":"300","textChars":3,"textLines":1,"bbox":[84,184,150,66]}
+{"kind":"textbox","id":"sh/54bqh0vq","slide":13,"text":"총 학습 문제","textPreview":"총 학습 문제","textChars":7,"textLines":1,"bbox":[84,250,230,32]}
+{"kind":"textbox","id":"sh/907i1wva","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[84,314,24,24]}
+{"kind":"textbox","id":"sh/8zy1srep","slide":13,"text":"Python 150","textPreview":"Python 150","textChars":10,"textLines":1,"bbox":[112,312,222,46]}
+{"kind":"textbox","id":"sh/7yp0zmd4","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[84,362,24,24]}
+{"kind":"textbox","id":"sh/mxgzqhwj","slide":13,"text":"SQL 150","textPreview":"SQL 150","textChars":7,"textLines":1,"bbox":[112,360,222,46]}
+{"kind":"textbox","id":"sh/h4ri5wv6","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[84,410,24,24]}
+{"kind":"textbox","id":"sh/w3y1wrel","slide":13,"text":"난이도별 50문제","textPreview":"난이도별 50문제","textChars":9,"textLines":1,"bbox":[112,408,222,46]}
+{"kind":"shape","id":"sh/v2p03md0","slide":13,"bbox":[410,154,396,360]}
+{"kind":"textbox","id":"sh/u1gjuhwf","slide":13,"text":"객관식 표시 확률","textPreview":"객관식 표시 확률","textChars":9,"textLines":1,"bbox":[438,184,330,36]}
+{"kind":"textbox","id":"sh/x8nitcv2","slide":13,"text":"BRONZE","textPreview":"BRONZE","textChars":6,"textLines":1,"bbox":[438,252,142,32]}
+{"kind":"shape","id":"sh/c7ehk7eh","slide":13,"bbox":[584,250,178,30]}
+{"kind":"shape","id":"sh/obi1g7md","slide":13,"bbox":[584,250,89,30]}
+{"kind":"textbox","id":"sh/pcri9c3y","slide":13,"text":"50%","textPreview":"50%","textChars":3,"textLines":1,"bbox":[690,246,70,34]}
+{"kind":"textbox","id":"sh/2pgjex47","slide":13,"text":"SILVER","textPreview":"SILVER","textChars":6,"textLines":1,"bbox":[438,326,142,32]}
+{"kind":"shape","id":"sh/3q9072ls","slide":13,"bbox":[584,324,178,30]}
+{"kind":"shape","id":"sh/cfi1k7m9","slide":13,"bbox":[584,324,36,30]}
+{"kind":"textbox","id":"sh/dgridc3u","slide":13,"text":"20%","textPreview":"20%","textChars":3,"textLines":1,"bbox":[690,320,70,34]}
+{"kind":"textbox","id":"sh/qd0jih43","slide":13,"text":"GOLD","textPreview":"GOLD","textChars":4,"textLines":1,"bbox":[438,400,142,32]}
+{"kind":"shape","id":"sh/be90b2lo","slide":13,"bbox":[584,398,178,30]}
+{"kind":"shape","id":"sh/0j218rml","slide":13,"bbox":[584,398,4,30]}
+{"kind":"textbox","id":"sh/lkbihw3q","slide":13,"text":"0%","textPreview":"0%","textChars":2,"textLines":1,"bbox":[690,394,70,34]}
+{"kind":"shape","id":"sh/ved47q58","slide":13,"bbox":[834,154,390,360]}
+{"kind":"textbox","id":"sh/ad43elon","slide":13,"text":"Presentation 세션","textPreview":"Presentation 세션","textChars":15,"textLines":1,"bbox":[862,184,330,36]}
+{"kind":"textbox","id":"sh/x0vm90ny","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[862,248,24,24]}
+{"kind":"textbox","id":"sh/wfmlgv6t","slide":13,"text":"유형·보기 순서를 서버가 결정","textPreview":"유형·보기 순서를 서버가 결정","textChars":16,"textLines":1,"bbox":[890,246,296,50]}
+{"kind":"textbox","id":"sh/nadk365w","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[862,300,24,24]}
+{"kind":"textbox","id":"sh/m943a1ob","slide":13,"text":"A~D 정답 위치를 매번 섞음","textPreview":"A~D 정답 위치를 매번 섞음","textChars":16,"textLines":1,"bbox":[890,298,296,50]}
+{"kind":"textbox","id":"sh/9cv25gn2","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[862,352,24,24]}
+{"kind":"textbox","id":"sh/8bmlcb6h","slide":13,"text":"새로고침·재시도에는 고정","textPreview":"새로고침·재시도에는 고정","textChars":13,"textLines":1,"bbox":[890,350,296,50]}
+{"kind":"textbox","id":"sh/76x4fa5g","slide":13,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[862,404,24,24]}
+{"kind":"textbox","id":"sh/65o3m5ov","slide":13,"text":"추천 부족 시 범위를 단계적으로 확장","textPreview":"추천 부족 시 범위를 단계적으로 확장","textChars":20,"textLines":1,"bbox":[890,402,296,50]}
+{"kind":"textbox","id":"sh/ed47a9kz","slide":13,"text":"한 논리 문제 → 직접 작성형 + 객관식 경험","textPreview":"한 논리 문제 → 직접 작성형 + 객관식 경험","textChars":25,"textLines":1,"bbox":[326,552,628,38]}
+{"kind":"image","id":"im/0vypkfah","slide":13,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/qromx6","slide":13,"text":"Python과 SQL 각각 150문제입니다. BRONZE 50%, SILVER 20%, GOLD 0%로 객관식을 표시하고 나머지는 직접 작성형입니다. 표시 세션에서 보기와 정답 위치를 섞되 같은 세션에서는 새로고침해도 유지합니다.\n\nSources:\n- C:/dev/cat-game-backend/docs/features/part2-learning-system.md\n- C:/dev/cat-game-backend/app/modules/learning/presentation.py\n- C:/dev/cat-game-backend/app/modules/learning/proficiency.py"}
+{"kind":"slide","id":"sl/bqo8y6","slide":14,"title":"🐾","textShapes":33}
+{"kind":"textbox","id":"sh/e5c3y9wj","slide":14,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/z6lkrex4","slide":14,"text":"채점 파이프라인: API와 실행 환경 분리","textPreview":"채점 파이프라인: API와 실행 환경 분리","textChars":23,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/obul43el","slide":14,"text":"제출 코드는 API 프로세스가 직접 실행하지 않습니다.","textPreview":"제출 코드는 API 프로세스가 직접 실행하지 않습니다.","textChars":30,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/9cnmxof6","slide":14,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/m9c32twv","slide":14,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/nal4vyx0","slide":14,"bbox":[42,166,214,94]}
+{"kind":"textbox","id":"sh/wzel83ex","slide":14,"text":"1  제출","textPreview":"1  제출","textChars":5,"textLines":1,"bbox":[58,180,182,30]}
+{"kind":"textbox","id":"sh/x0nm18fi","slide":14,"text":"request_id 저장","textPreview":"request_id 저장","textChars":13,"textLines":1,"bbox":[56,217,186,30]}
+{"kind":"shape","id":"sh/1o7y18r6","slide":14,"bbox":[286,166,214,94]}
+{"kind":"textbox","id":"sh/gnyh83ql","slide":14,"text":"2  PENDING","textPreview":"2  PENDING","textChars":10,"textLines":1,"bbox":[302,180,182,30]}
+{"kind":"textbox","id":"sh/fmpgzy90","slide":14,"text":"DB에 시도 생성","textPreview":"DB에 시도 생성","textChars":9,"textLines":1,"bbox":[300,217,186,30]}
+{"kind":"shape","id":"sh/elwz6t8v","slide":14,"bbox":[530,166,214,94]}
+{"kind":"textbox","id":"sh/ps7i58ri","slide":14,"text":"3  Worker 임대","textPreview":"3  Worker 임대","textChars":12,"textLines":1,"bbox":[546,180,182,30]}
+{"kind":"textbox","id":"sh/oryhc3qx","slide":14,"text":"SKIP LOCKED","textPreview":"SKIP LOCKED","textChars":11,"textLines":1,"bbox":[544,217,186,30]}
+{"kind":"shape","id":"sh/3qpg3y9c","slide":14,"bbox":[774,166,214,94]}
+{"kind":"textbox","id":"sh/2pgzat8r","slide":14,"text":"4  격리 채점","textPreview":"4  격리 채점","textChars":8,"textLines":1,"bbox":[790,180,182,30]}
+{"kind":"textbox","id":"sh/5wnytory","slide":14,"text":"Python / SQL","textPreview":"Python / SQL","textChars":12,"textLines":1,"bbox":[788,217,186,30]}
+{"kind":"shape","id":"sh/kveh0jqd","slide":14,"bbox":[1018,166,214,94]}
+{"kind":"textbox","id":"sh/wfyhgjy9","slide":14,"text":"5  결과·보상","textPreview":"5  결과·보상","textChars":8,"textLines":1,"bbox":[1034,180,182,30]}
+{"kind":"textbox","id":"sh/x0rypozu","slide":14,"text":"한 번만 커밋","textPreview":"한 번만 커밋","textChars":7,"textLines":1,"bbox":[1032,217,186,30]}
+{"kind":"textbox","id":"sh/adgze90j","slide":14,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[250,190,34,46]}
+{"kind":"textbox","id":"sh/bepgneho","slide":14,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[494,190,34,46]}
+{"kind":"textbox","id":"sh/k3ihkjyl","slide":14,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[738,190,34,46]}
+{"kind":"textbox","id":"sh/l4ritoz6","slide":14,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[982,190,34,46]}
+{"kind":"shape","id":"sh/y10zitgf","slide":14,"bbox":[76,324,542,210]}
+{"kind":"textbox","id":"sh/j29gryh0","slide":14,"text":"격리","textPreview":"격리","textChars":2,"textLines":1,"bbox":[100,348,116,38]}
+{"kind":"textbox","id":"sh/872ho3yh","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[104,402,24,24]}
+{"kind":"textbox","id":"sh/t8bix8z2","slide":14,"text":"Python: 제한된 채점 컨테이너","textPreview":"Python: 제한된 채점 컨테이너","textChars":19,"textLines":1,"bbox":[132,400,450,38]}
+{"kind":"textbox","id":"sh/32dkn214","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[104,442,24,24]}
+{"kind":"textbox","id":"sh/214jex0j","slide":14,"text":"SQL: 운영 DB와 분리한 전용 PostgreSQL","textPreview":"SQL: 운영 DB와 분리한 전용 PostgreSQL","textChars":29,"textLines":1,"bbox":[132,440,450,38]}
+{"kind":"textbox","id":"sh/p4v2pcja","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[104,482,24,24]}
+{"kind":"textbox","id":"sh/43m1g7ip","slide":14,"text":"시간·출력·메모리 제한","textPreview":"시간·출력·메모리 제한","textChars":12,"textLines":1,"bbox":[132,480,450,38]}
+{"kind":"shape","id":"sh/fytkji18","slide":14,"bbox":[660,324,542,210]}
+{"kind":"textbox","id":"sh/uxkjax0n","slide":14,"text":"공개 결과","textPreview":"공개 결과","textChars":5,"textLines":1,"bbox":[684,348,150,38]}
+{"kind":"textbox","id":"sh/h0v2lsje","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[688,402,24,24]}
+{"kind":"textbox","id":"sh/gzm1cnit","slide":14,"text":"ACCEPTED / WRONG_ANSWER 등 판정","textPreview":"ACCEPTED / WRONG_ANSWER 등 판정","textChars":28,"textLines":1,"bbox":[716,400,450,38]}
+{"kind":"textbox","id":"sh/zuxkvm1c","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[688,442,24,24]}
+{"kind":"textbox","id":"sh/eto3mh0r","slide":14,"text":"passed / total만 응답","textPreview":"passed / total만 응답","textChars":18,"textLines":1,"bbox":[716,440,450,38]}
+{"kind":"textbox","id":"sh/mh4nqlgb","slide":14,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[688,482,24,24]}
+{"kind":"textbox","id":"sh/n2dojqxg","slide":14,"text":"테스트 케이스·표준 오류·제출 코드는 비공개","textPreview":"테스트 케이스·표준 오류·제출 코드는 비공개","textChars":24,"textLines":1,"bbox":[716,480,450,38]}
+{"kind":"textbox","id":"sh/83m5sby1","slide":14,"text":"만료된 RUNNING 임대는 회수하고, lease token으로 늦은 워커 결과를 거부","textPreview":"만료된 RUNNING 임대는 회수하고, lease token으로 늦은 워커 결과를 거부","textChars":48,"textLines":1,"bbox":[176,566,930,30]}
+{"kind":"image","id":"im/cn21gzyt","slide":14,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/bqo8y6","slide":14,"text":"답안 제출 API는 PENDING 시도만 저장합니다. 워커가 FOR UPDATE SKIP LOCKED로 시도를 임대해 격리 실행하고, 임대 토큰으로 중복·지연 결과를 차단합니다. 결과와 최초 보상은 같은 트랜잭션에서 커밋합니다.\n\nSources:\n- C:/dev/cat-game-backend/docs/architecture/overview.md\n- C:/dev/cat-game-backend/docs/features/part2-learning-system.md\n- C:/dev/cat-game-backend/app/modules/grading/service.py"}
+{"kind":"slide","id":"sl/5z1hsy","slide":15,"title":"🐾","textShapes":21}
+{"kind":"textbox","id":"sh/vixcbatw","slide":15,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/uhobi5cb","slide":15,"text":"중복 요청에도 한 번만: 멱등성 트랜잭션","textPreview":"중복 요청에도 한 번만: 멱등성 트랜잭션","textChars":22,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/9gfa9kbq","slide":15,"text":"네트워크 재시도와 더블 클릭이 잔액·자산을 두 번 바꾸지 않게 합니다.","textPreview":"네트워크 재시도와 더블 클릭이 잔액·자산을 두 번 바꾸지 않게 합니다.","textChars":39,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/8f6tgfu5","slide":15,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/7eds7atk","slide":15,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/md4be5cz","slide":15,"bbox":[56,154,500,382]}
+{"kind":"textbox","id":"sh/dczul4bu","slide":15,"text":"요청 지문","textPreview":"요청 지문","textChars":5,"textLines":1,"bbox":[86,184,200,36]}
+{"kind":"textbox","id":"sh/sbqtszu9","slide":15,"text":"request_id","textPreview":"request_id","textChars":10,"textLines":1,"bbox":[88,248,170,32]}
+{"kind":"textbox","id":"sh/upg3ulgz","slide":15,"text":"UUID","textPreview":"UUID","textChars":4,"textLines":1,"bbox":[306,244,126,38]}
+{"kind":"textbox","id":"sh/vq94nqxk","slide":15,"text":"canonical JSON","textPreview":"canonical JSON","textChars":14,"textLines":1,"bbox":[88,312,190,32]}
+{"kind":"textbox","id":"sh/gbilwvy5","slide":15,"text":"정렬 + 공백 규칙","textPreview":"정렬 + 공백 규칙","textChars":10,"textLines":1,"bbox":[306,308,174,38]}
+{"kind":"textbox","id":"sh/hcrmp0fq","slide":15,"text":"request_hash","textPreview":"request_hash","textChars":12,"textLines":1,"bbox":[88,376,180,32]}
+{"kind":"textbox","id":"sh/6lg3qlg3","slide":15,"text":"SHA-256","textPreview":"SHA-256","textChars":7,"textLines":1,"bbox":[306,372,144,38]}
+{"kind":"textbox","id":"sh/7mpkjqx8","slide":15,"text":"같은 request_id + 같은 hash = 저장된 결과 재사용","textPreview":"같은 request_id + 같은 hash = 저장된 결과 재사용","textChars":36,"textLines":1,"bbox":[88,452,410,44]}
+{"kind":"shape","id":"sh/8nylsbyt","slide":15,"bbox":[602,154,622,382]}
+{"kind":"textbox","id":"sh/to72lgfe","slide":15,"text":"claim 결과","textPreview":"claim 결과","textChars":8,"textLines":1,"bbox":[632,184,200,36]}
+{"kind":"textbox","id":"sh/qhk325g7","slide":15,"text":"ACQUIRED","textPreview":"ACQUIRED","textChars":8,"textLines":1,"bbox":[636,246,188,38]}
+{"kind":"textbox","id":"sh/rit4vaxs","slide":15,"text":"신규 요청 → 업무 처리","textPreview":"신규 요청 → 업무 처리","textChars":13,"textLines":1,"bbox":[848,249,322,36]}
+{"kind":"textbox","id":"sh/nml0n2d4","slide":15,"text":"COMPLETED","textPreview":"COMPLETED","textChars":9,"textLines":1,"bbox":[636,322,188,38]}
+{"kind":"textbox","id":"sh/mlczuxwj","slide":15,"text":"기존 성공 → 같은 결과 반환","textPreview":"기존 성공 → 같은 결과 반환","textChars":16,"textLines":1,"bbox":[848,325,322,36]}
+{"kind":"textbox","id":"sh/9o3ipcva","slide":15,"text":"HASH_CONFLICT","textPreview":"HASH_CONFLICT","textChars":13,"textLines":1,"bbox":[636,398,188,38]}
+{"kind":"textbox","id":"sh/onu1w7ep","slide":15,"text":"사용자·내용 다름 → 409","textPreview":"사용자·내용 다름 → 409","textChars":15,"textLines":1,"bbox":[848,401,322,36]}
+{"kind":"textbox","id":"sh/bql0rmd0","slide":15,"text":"잔액 차감 · 자산 지급 · 실행 결과 · stateVersion","textPreview":"잔액 차감 · 자산 지급 · 실행 결과 · stateVersion","textChars":36,"textLines":1,"bbox":[640,470,520,30]}
+{"kind":"textbox","id":"sh/apcjyhwv","slide":15,"text":"ALL OR NOTHING — 한 번 커밋, 실패 시 전부 롤백","textPreview":"ALL OR NOTHING — 한 번 커밋, 실패 시 전부 롤백","textChars":35,"textLines":1,"bbox":[238,562,804,38]}
+{"kind":"image","id":"im/5wv2psza","slide":15,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/5z1hsy","slide":15,"text":"구매·뽑기·학습 제출은 request_id와 정규 JSON의 SHA-256 해시를 사용합니다. 동일한 요청 재전송은 저장된 결과를 반환하고, 같은 request_id에 다른 사용자나 내용이 오면 409로 거절합니다. 상태 변경 전체는 한 트랜잭션입니다.\n\nSources:\n- C:/dev/cat-game-backend/app/core/request_hash.py\n- C:/dev/cat-game-backend/docs/architecture/part3-integration-contract.md"}
+{"kind":"slide","id":"sl/npoh4s","slide":16,"title":"🐾","textShapes":33}
+{"kind":"textbox","id":"sh/1gjadwnm","slide":16,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/0fat4b61","slide":16,"text":"통합 실행: 한 주소에서 세션과 상태 연결","textPreview":"통합 실행: 한 주소에서 세션과 상태 연결","textChars":23,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/rahs7m5k","slide":16,"text":"PWA·FastAPI·PostgreSQL·채점 워커를 역할별로 분리합니다.","textPreview":"PWA·FastAPI·PostgreSQL·채점 워커를 역할별로 분리합니다.","textChars":41,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/q98ryhoz","slide":16,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/dcza9wnq","slide":16,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/cbq90r65","slide":16,"bbox":[48,162,220,94]}
+{"kind":"textbox","id":"sh/36xs3m5o","slide":16,"text":"Browser / PWA","textPreview":"Browser / PWA","textChars":13,"textLines":1,"bbox":[64,176,188,30]}
+{"kind":"textbox","id":"sh/2loruho3","slide":16,"text":"PixiJS Canvas","textPreview":"PixiJS Canvas","textChars":13,"textLines":1,"bbox":[62,213,192,30]}
+{"kind":"shape","id":"sh/4zq9wzud","slide":16,"bbox":[300,162,200,94]}
+{"kind":"textbox","id":"sh/50zq54by","slide":16,"text":"Nginx","textPreview":"Nginx","textChars":5,"textLines":1,"bbox":[316,176,168,30]}
+{"kind":"textbox","id":"sh/ixoru9c7","slide":16,"text":"동일 출처 · CSP","textPreview":"동일 출처 · CSP","textChars":11,"textLines":1,"bbox":[314,213,172,30]}
+{"kind":"shape","id":"sh/jyh83ets","slide":16,"bbox":[532,162,220,94]}
+{"kind":"textbox","id":"sh/wb69szuh","slide":16,"text":"FastAPI","textPreview":"FastAPI","textChars":7,"textLines":1,"bbox":[548,176,188,30]}
+{"kind":"textbox","id":"sh/hwfq14b2","slide":16,"text":"세션 · 게임 API","textPreview":"세션 · 게임 API","textChars":11,"textLines":1,"bbox":[546,213,192,30]}
+{"kind":"shape","id":"sh/u9orqpcb","slide":16,"bbox":[784,162,220,94]}
+{"kind":"textbox","id":"sh/vax8zutw","slide":16,"text":"PostgreSQL","textPreview":"PostgreSQL","textChars":10,"textLines":1,"bbox":[800,176,188,30]}
+{"kind":"textbox","id":"sh/gra94jal","slide":16,"text":"권위 상태 · 원장","textPreview":"권위 상태 · 원장","textChars":10,"textLines":1,"bbox":[798,213,192,30]}
+{"kind":"shape","id":"sh/1sjadob6","slide":16,"bbox":[1036,162,200,94]}
+{"kind":"textbox","id":"sh/pofqho3a","slide":16,"text":"Grading Worker","textPreview":"Grading Worker","textChars":14,"textLines":1,"bbox":[1052,176,168,30]}
+{"kind":"textbox","id":"sh/on69oj2p","slide":16,"text":"격리 실행 조율","textPreview":"격리 실행 조율","textChars":8,"textLines":1,"bbox":[1050,213,172,30]}
+{"kind":"textbox","id":"sh/nmx8fel4","slide":16,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[266,186,34,46]}
+{"kind":"textbox","id":"sh/2lorm9kj","slide":16,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[498,186,34,46]}
+{"kind":"textbox","id":"sh/1kvqdo3e","slide":16,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[750,186,34,46]}
+{"kind":"textbox","id":"sh/0jm9kj2t","slide":16,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[1002,186,34,46]}
+{"kind":"shape","id":"sh/fid8bel8","slide":16,"bbox":[64,318,538,220]}
+{"kind":"textbox","id":"sh/eh4ri9kn","slide":16,"text":"인증","textPreview":"인증","textChars":2,"textLines":1,"bbox":[88,342,112,38]}
+{"kind":"textbox","id":"sh/dgvq9432","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[92,402,24,24]}
+{"kind":"textbox","id":"sh/svm9gz2h","slide":16,"text":"HttpOnly 세션 쿠키","textPreview":"HttpOnly 세션 쿠키","textChars":14,"textLines":1,"bbox":[120,400,448,40]}
+{"kind":"textbox","id":"sh/i1knq50f","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[92,444,24,24]}
+{"kind":"textbox","id":"sh/3mtoja10","slide":16,"text":"상태 변경 요청은 CSRF 토큰 검증","textPreview":"상태 변경 요청은 CSRF 토큰 검증","textChars":20,"textLines":1,"bbox":[120,442,448,40]}
+{"kind":"textbox","id":"sh/4n25sfil","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[92,486,24,24]}
+{"kind":"textbox","id":"sh/5ob6lkj6","slide":16,"text":"401이면 인증 화면으로 복귀","textPreview":"401이면 인증 화면으로 복귀","textChars":16,"textLines":1,"bbox":[120,484,448,40]}
+{"kind":"shape","id":"sh/ux0nm50j","slide":16,"bbox":[678,318,538,220]}
+{"kind":"textbox","id":"sh/vy9ofq1o","slide":16,"text":"프로필 연동","textPreview":"프로필 연동","textChars":6,"textLines":1,"bbox":[702,342,162,38]}
+{"kind":"textbox","id":"sh/gzi5ovi9","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[706,402,24,24]}
+{"kind":"textbox","id":"sh/h0r6h0ju","slide":16,"text":"학생관리시스템 경로를 백엔드가 프록시","textPreview":"학생관리시스템 경로를 백엔드가 프록시","textChars":20,"textLines":1,"bbox":[734,400,448,40]}
+{"kind":"textbox","id":"sh/6tgnilk7","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[706,444,24,24]}
+{"kind":"textbox","id":"sh/7u9obq1s","slide":16,"text":"연동 성공: 사용자 이미지","textPreview":"연동 성공: 사용자 이미지","textChars":14,"textLines":1,"bbox":[734,442,448,40]}
+{"kind":"textbox","id":"sh/zm9knm5o","slide":16,"text":"●","textPreview":"●","textChars":1,"textLines":1,"bbox":[706,486,24,24]}
+{"kind":"textbox","id":"sh/yl03uh43","slide":16,"text":"미연동: 포근이 이미지 + 상태 문구","textPreview":"미연동: 포근이 이미지 + 상태 문구","textChars":20,"textLines":1,"bbox":[734,484,448,40]}
+{"kind":"textbox","id":"sh/lob2pwne","slide":16,"text":"Docker Compose로 로컬 통합 실행 · 운영에서는 HTTPS와 동일 호스트 구성","textPreview":"Docker Compose로 로컬 통합 실행 · 운영에서는 HTTPS와 동일 호스트 구성","textChars":49,"textLines":1,"bbox":[192,570,896,30]}
+{"kind":"image","id":"im/7qt07ux0","slide":16,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/npoh4s","slide":16,"text":"브라우저는 Nginx를 통해 프런트와 API를 같은 출처로 사용합니다. 세션 쿠키와 CSRF를 안전하게 적용하고, 게임 상태는 PostgreSQL이 권위를 갖습니다. 프로필 이미지는 백엔드 프록시를 거쳐 브라우저의 교차 출처 세션 문제를 제거합니다.\n\nSources:\n- C:/dev/cat-game/docs/CODE_GUIDE.md\n- C:/dev/cat-game/docs/DOCKER_INTEGRATION.md\n- C:/dev/cat-game/src/services/BackendApiClient.ts\n- Notion: cat-game 오류 수정"}
+{"kind":"slide","id":"sl/sygsc3","slide":17,"title":"🐾","textShapes":22}
+{"kind":"textbox","id":"sh/5k7qdo36","slide":17,"text":"🐾","textPreview":"🐾","textChars":2,"textLines":1,"bbox":[56,36,50,50]}
+{"kind":"textbox","id":"sh/4jypkjml","slide":17,"text":"결론: 학습 경험과 데이터 신뢰성을 함께 설계","textPreview":"결론: 학습 경험과 데이터 신뢰성을 함께 설계","textChars":25,"textLines":1,"bbox":[106,30,940,60]}
+{"kind":"textbox","id":"sh/r6p8felc","slide":17,"text":"사용자에게는 즐거운 루프를, 팀에게는 확장 가능한 경계를 남겼습니다.","textPreview":"사용자에게는 즐거운 루프를, 팀에게는 확장 가능한 경계를 남겼습니다.","textChars":38,"textLines":1,"bbox":[108,86,1010,36]}
+{"kind":"textbox","id":"sh/65g7mt4r","slide":17,"text":"고양이와 함께 배우는 즐거운 하루","textPreview":"고양이와 함께 배우는 즐거운 하루","textChars":18,"textLines":1,"bbox":[1005,38,220,50]}
+{"kind":"shape","id":"sh/t87qho3i","slide":17,"bbox":[108,116,250,0]}
+{"kind":"shape","id":"sh/s7ypojmx","slide":17,"bbox":[78,168,230,170]}
+{"kind":"textbox","id":"sh/fa98jyl8","slide":17,"text":"학습","textPreview":"학습","textChars":2,"textLines":1,"bbox":[100,200,186,46]}
+{"kind":"textbox","id":"sh/e907qt4n","slide":17,"text":"추천·코드·객관식","textPreview":"추천·코드·객관식","textChars":9,"textLines":1,"bbox":[98,262,190,42]}
+{"kind":"textbox","id":"sh/s7uhwji5","slide":17,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[308,225,40,46]}
+{"kind":"shape","id":"sh/d83i5ozq","slide":17,"bbox":[348,168,230,170]}
+{"kind":"textbox","id":"sh/qlszu90f","slide":17,"text":"보상","textPreview":"보상","textChars":2,"textLines":1,"bbox":[370,200,186,46]}
+{"kind":"textbox","id":"sh/rml03ehk","slide":17,"text":"퀘스트·출석·코인","textPreview":"퀘스트·출석·코인","textChars":9,"textLines":1,"bbox":[368,262,190,42]}
+{"kind":"textbox","id":"sh/0buh03ih","slide":17,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[578,225,40,46]}
+{"kind":"shape","id":"sh/1c3i98z2","slide":17,"bbox":[618,168,230,170]}
+{"kind":"textbox","id":"sh/e9czyt0b","slide":17,"text":"성장","textPreview":"성장","textChars":2,"textLines":1,"bbox":[640,200,186,46]}
+{"kind":"textbox","id":"sh/zal07yhw","slide":17,"text":"수집·상점·하우징","textPreview":"수집·상점·하우징","textChars":9,"textLines":1,"bbox":[638,262,190,42]}
+{"kind":"textbox","id":"sh/ofe143id","slide":17,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[848,225,40,46]}
+{"kind":"shape","id":"sh/9gnid8zy","slide":17,"bbox":[888,168,230,170]}
+{"kind":"textbox","id":"sh/xkzq14nq","slide":17,"text":"교감","textPreview":"교감","textChars":2,"textLines":1,"bbox":[910,200,186,46]}
+{"kind":"textbox","id":"sh/wjq98j6l","slide":17,"text":"대화·고양이별 기억","textPreview":"대화·고양이별 기억","textChars":10,"textLines":1,"bbox":[908,262,190,42]}
+{"kind":"shape","id":"sh/bih8ze50","slide":17,"bbox":[118,386,1044,148]}
+{"kind":"textbox","id":"sh/ah8r69of","slide":17,"text":"프런트","textPreview":"프런트","textChars":3,"textLines":1,"bbox":[154,414,118,30]}
+{"kind":"textbox","id":"sh/lojq5on2","slide":17,"text":"GameClient 경계 + stateVersion","textPreview":"GameClient 경계 + stateVersion","textChars":28,"textLines":1,"bbox":[154,456,290,40]}
+{"kind":"textbox","id":"sh/kna9cj6h","slide":17,"text":"백엔드","textPreview":"백엔드","textChars":3,"textLines":1,"bbox":[484,414,118,30]}
+{"kind":"textbox","id":"sh/jm183e5w","slide":17,"text":"UUID DTO + 원자적 트랜잭션","textPreview":"UUID DTO + 원자적 트랜잭션","textChars":19,"textLines":1,"bbox":[484,456,290,40]}
+{"kind":"textbox","id":"sh/yl8ra9ob","slide":17,"text":"운영","textPreview":"운영","textChars":2,"textLines":1,"bbox":[814,414,118,30]}
+{"kind":"textbox","id":"sh/1sfqtkny","slide":17,"text":"세션·격리 채점 + 관측 가능성","textPreview":"세션·격리 채점 + 관측 가능성","textChars":17,"textLines":1,"bbox":[814,456,290,40]}
+{"kind":"textbox","id":"sh/0r6p0z6d","slide":17,"text":"DEMO  홈 → 학습 → 정답 제출 → 보상 → 배치 → 고양이 대화","textPreview":"DEMO  홈 → 학습 → 정답 제출 → 보상 → 배치 → 고양이 대화","textChars":39,"textLines":1,"bbox":[236,562,808,38]}
+{"kind":"image","id":"im/vat0zux8","slide":17,"name":"","alt":"기존 발표 자료의 고양이와 언덕 장식","bbox":[0,620,1280,100]}
+{"kind":"notes","id":"nt/sygsc3","slide":17,"text":"마지막에는 기능이 아니라 연결된 경험을 다시 강조합니다. 시연 순서는 홈, 학습, 제출, 보상, 배치, 고양이 대화이며 마지막에 프로필과 로그아웃을 짧게 확인합니다.\n\nSources:\n- C:/dev/cat-game/docs/ARCHITECTURE.md\n- C:/dev/cat-game-backend/docs/architecture/current-erd.md"}

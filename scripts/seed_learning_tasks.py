@@ -124,7 +124,7 @@ SILVER = [
     Spec("collections", "최빈 문자", "소문자 단어에서 가장 자주 나온 문자를 출력하세요. 동률이면 알파벳순입니다.", "빈도와 정렬 기준을 함께 생각하세요.", "mode_char"),
     Spec("loops", "약수 개수", "양의 정수 N의 약수 개수를 출력하세요.", "1부터 N까지 나누어 보세요.", "divisor_count"),
     Spec("functions", "안전한 평균", "정수 목록의 평균을 소수 둘째 자리까지 출력하세요.", "합계와 길이를 함수로 분리하세요.", "average"),
-    Spec("exceptions", "안전한 나눗셈", "a와 b를 읽고 몫을 출력하되 b가 0이면 ZERO를 출력하세요.", "0인 경우를 먼저 처리하세요.", "safe_div"),
+    Spec("exceptions", "안전한 나눗셈", "a와 b를 읽고 try/except로 몫을 출력하되 0으로 나누면 ZERO를 출력하세요.", "ZeroDivisionError를 처리하세요.", "safe_div"),
     Spec("collections", "교집합 정렬", "두 줄의 정수 목록에 공통인 수를 오름차순으로 출력하세요.", "집합 교집합 뒤 정렬하세요.", "intersection"),
     Spec("loops", "연속 증가 길이", "정수 목록에서 처음부터 연속으로 증가하는 구간 길이를 출력하세요.", "이전 값과 비교하세요.", "increasing_prefix"),
     Spec("strings", "키-값 합계", "공백으로 구분된 key:value 항목들의 value 합을 출력하세요.", "':'로 한 번 분리하세요.", "kv_sum"),
@@ -160,7 +160,7 @@ DIRECT_HINTS = {
     "mode_char": "문자별 횟수를 센 뒤 `(-횟수, 문자)` 기준으로 정렬하면 동률은 알파벳순이 됩니다.",
     "divisor_count": "1부터 N까지 순회하며 `n % i == 0`일 때만 개수를 1씩 늘리세요.",
     "average": "정수 목록의 `sum(values) / len(values)`를 계산하고 `:.2f` 형식으로 출력하세요.",
-    "safe_div": "b가 0인지 먼저 검사하고, 0이 아닐 때만 `a // b`를 계산하세요.",
+    "safe_div": "`try`에서 `a // b`를 계산하고 `except ZeroDivisionError`에서 ZERO를 출력하세요.",
     "intersection": "두 줄을 각각 집합으로 바꿔 `&`로 교집합을 구하고 정렬해 출력하세요.",
     "increasing_prefix": "두 번째 값부터 이전 값과 비교하고, 증가하지 않는 순간 반복을 멈추세요.",
     "kv_sum": "각 항목을 `split(':', 1)`로 나누고 오른쪽 값을 정수로 바꿔 합치세요.",
@@ -182,8 +182,8 @@ CONCEPT_START_HINTS = {
     "loops": "작은 입력을 손으로 써 본 뒤 반복할 범위와 반복 중 갱신할 값을 정하세요.",
     "strings": "입력 문자열의 공백과 대소문자를 어떻게 다룰지 먼저 정하세요.",
     "collections": "입력 목록에서 유지할 값과 빠르게 찾거나 셀 값을 구분해 알맞은 컬렉션을 고르세요.",
-    "functions": "함수의 입력과 반환값을 먼저 정한 뒤 작은 예시 한 개로 동작을 확인하세요.",
-    "exceptions": "계산할 수 없는 입력을 먼저 검사해 정상 계산과 분리하세요.",
+    "functions": "`def 함수명(매개변수):`로 함수를 정의하고 `return`한 값을 함수 호출로 사용하세요.",
+    "exceptions": "오류가 날 수 있는 계산은 `try`에 두고 해당 예외를 `except`에서 처리하세요.",
 }
 
 

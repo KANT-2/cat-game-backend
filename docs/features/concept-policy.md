@@ -16,6 +16,8 @@ exceptions
 
 알고리즘·그래프·동적 계획법은 별도 Concept로 만들지 않는다. 문제의 핵심 학습 영역에 따라 `collections`, `functions` 등에 포함하고 실제 복잡도는 Bronze, Silver, Gold 난이도로 표현한다.
 
+`CODE`는 답안 입력 형식이며 화면에서는 `코드 작성`으로 표시한다. `functions`는 입력 형식이 아니라 Python 함수 정의·매개변수·`return`·호출을 학습하는 Concept다. 따라서 `functions` 코드 제출은 매개변수가 있는 함수를 정의하고 값을 반환하며 그 함수를 호출해야 한다. `exceptions` 코드 제출은 `try`와 `except`를 사용해 예외를 처리해야 한다. 객관식 표시는 코드 구조 검사를 적용하지 않는다.
+
 ## SQL Concept 9개
 
 ```text

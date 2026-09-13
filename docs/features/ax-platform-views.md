@@ -44,7 +44,9 @@ API에서 누락된 이미지 경로를 보강하며 게임 DB에 복제하지 �
 
 `available` 이외에는 `profile: null`이며 기존 인증/기본 프로필의 200 응답은 유지한다.
 VIEW의 대표 팀 선정 규칙은 플랫폼이 소유한다. 게임에서 최신 Round를 임의로 선택하지 않는다.
-`profile_image`는 인증 API 또는 플랫폼 VIEW의 원본 경로 문자열이다. 두 값이 모두 있으면
+`profile_image`는 인증 API 또는 플랫폼 VIEW의 원본 경로 문자열이다. VIEW가
+`profiles/20260909_135050.jpg`처럼 미디어 루트 기준 상대 경로를 반환하면 게임 백엔드는 이를
+`/media/profiles/20260909_135050.jpg`로 정규화한다. 두 값이 모두 있으면
 인증 API 값을 우선한다. 브라우저는 이 값을 직접 요청하지 않고
 `GET /api/v1/session/me/profile-image`를 사용한다. 이 엔드포인트는 로그인 세션을 확인한 뒤
 `AX_AUTH_BASE_URL`과 같은 origin의 이미지만 대신 조회한다. 허용 형식은 JPEG, PNG, WebP,

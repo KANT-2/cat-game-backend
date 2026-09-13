@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.modules.game.schemas import SettingsCommand
 from app.modules.grading.runners import (
+    GradeResult,
     MultipleChoiceRunner,
     PythonSandboxRunner,
     RunnerDispatcher,
@@ -24,6 +25,7 @@ from app.modules.learning.proficiency import (
     _diversify_daily_tasks,
     _task_problem_key,
     calculate_proficiency,
+    recommended_tasks,
 )
 from app.modules.learning.router import list_tasks
 from app.modules.learning.tier import (
@@ -83,6 +85,47 @@ def test_persisted_multiple_choice_presentation_uses_its_stored_answer():
     )
 
     assert result.verdict is Verdict.ACCEPTED
+
+
+@pytest.mark.parametrize(
+    ("concept_name", "invalid_submission", "valid_submission"),
+    [
+        (
+            "functions",
+            "values = [2, 4]\nprint(sum(values) / len(values))",
+            "def average(values):\n    return sum(values) / len(values)\n\nprint(average([2, 4]))",
+        ),
+        (
+            "exceptions",
+            "a, b = 8, 0\nprint('ZERO' if b == 0 else a // b)",
+            "try:\n    print(8 // 0)\nexcept ZeroDivisionError:\n    print('ZERO')",
+        ),
+    ],
+)
+def test_python_concept_structure_is_required_before_sandbox(
+    concept_name, invalid_submission, valid_submission
+):
+    class AcceptedRunner:
+        def __init__(self):
+            self.calls = 0
+
+        def grade(self, _task, _submission):
+            self.calls += 1
+            return GradeResult(Verdict.ACCEPTED, 1, 1)
+
+    runner = AcceptedRunner()
+    task = SimpleNamespace(type="CODE")
+
+    rejected = _run_safely(
+        uuid.uuid4(), runner, task, "PYTHON", SimpleNamespace(submitted_code=invalid_submission), None, concept_name
+    )
+    accepted = _run_safely(
+        uuid.uuid4(), runner, task, "PYTHON", SimpleNamespace(submitted_code=valid_submission), None, concept_name
+    )
+
+    assert rejected.verdict is Verdict.WRONG_ANSWER
+    assert accepted.verdict is Verdict.ACCEPTED
+    assert runner.calls == 1
 
 
 @pytest.mark.parametrize(
@@ -197,6 +240,61 @@ def test_proficiency_and_weakness_policy():
     assert ConceptAssessment(1, 2, 0).is_weak is False
     assert ConceptAssessment(1, 3, 33).is_weak is True
     assert ConceptAssessment(1, 3, 67).is_weak is False
+
+
+class _CandidateRows:
+    def __init__(self, values):
+        self.values = values
+
+    def all(self):
+        return self.values
+
+
+class _RecommendationSession:
+    def __init__(self, batches):
+        self.batches = list(batches)
+
+    def scalars(self, _statement):
+        return _CandidateRows(self.batches.pop(0))
+
+
+def test_recommendations_fill_limit_after_small_weak_candidate_group(monkeypatch):
+    weak_tasks = [
+        SimpleNamespace(
+            id=index,
+            concept_id=10,
+            difficulty="BRONZE",
+            title=f"weak {index}",
+            description=f"weak problem {index}",
+        )
+        for index in range(1, 4)
+    ]
+    other_tasks = [
+        SimpleNamespace(
+            id=index,
+            concept_id=20,
+            difficulty="BRONZE",
+            title=f"other {index}",
+            description=f"other problem {index}",
+        )
+        for index in range(4, 14)
+    ]
+    db = _RecommendationSession([weak_tasks, weak_tasks + other_tasks])
+    monkeypatch.setattr(
+        "app.modules.learning.proficiency.weak_concepts",
+        lambda *_: [ConceptAssessment(10, 3, 0)],
+    )
+
+    selected = recommended_tasks(
+        db,
+        user_id=7,
+        limit=10,
+        recommendation_date=date(2026, 9, 13),
+    )
+
+    assert len(selected) == 10
+    assert {task.id for task in weak_tasks}.issubset({task.id for task in selected})
+    assert len({task.id for task in selected}) == 10
 
 
 def test_learning_domain_setting_accepts_only_supported_task_domains():
