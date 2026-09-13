@@ -262,10 +262,9 @@ def python_multiple_choice(spec: Spec, variant: int) -> tuple[str, dict[str, str
         correct, distractors, f"{spec.operation}:{variant}"
     )
     prompt = (
-        f"[오늘의 냥이 임무] {spec.title}\n\n"
         f"[도와주세요!] {VARIANTS[variant - 1][1]} {STORIES[spec.operation]}\n\n"
-        f"[문제] {spec.prompt}\n\n"
-        f"[질문] 예시 입력 `{sample_input}`을 올바르게 처리했을 때 출력은 무엇인가요?"
+        f"[객관식 문제] 예시 입력 `{sample_input}`을 {spec.prompt.removesuffix('하세요.')}했을 때 "
+        "출력은 무엇인가요?"
     )
     return prompt, options, correct_option
 

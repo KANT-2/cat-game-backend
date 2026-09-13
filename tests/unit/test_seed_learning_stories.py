@@ -93,6 +93,20 @@ def test_python_hints_give_operation_specific_next_steps() -> None:
     assert "prefix[r + 1] - prefix[l]" in next(row["hint_text"] for row in tasks if "구간 합 질의" in row["title"])
 
 
+def test_python_multiple_choice_prompt_has_one_clear_question() -> None:
+    task = next(
+        row
+        for row in python_seed.build_tasks()
+        if "두 수의 합" in row["title"] and "`2 4`" in row["multiple_choice_prompt"]
+    )
+
+    assert "[객관식 문제]" in task["multiple_choice_prompt"]
+    assert "[문제]" not in task["multiple_choice_prompt"]
+    assert "[질문]" not in task["multiple_choice_prompt"]
+    assert "`2 4`" in task["multiple_choice_prompt"]
+    assert task["options"][task["correct_option"]] == "6"
+
+
 def test_sql_hints_name_the_clauses_needed_for_each_problem_family() -> None:
     tasks = sql_seed.build_tasks()
     assert len({row["hint_text"] for row in tasks}) >= 12
