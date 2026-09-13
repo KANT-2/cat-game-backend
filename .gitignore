@@ -10,3 +10,8 @@ work/
 alembic.ini
 *.egg-info/
 *.db
+
+# Local Codex presentation build artifacts
+.codex-finalizer/
+.codex-ppt-build/
+output/
