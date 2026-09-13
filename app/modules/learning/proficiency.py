@@ -110,7 +110,7 @@ def recommended_tasks(
     domain: Literal["PYTHON", "SQL"] | None = None,
     allowed_difficulties: tuple[str, ...] | None = None,
 ) -> list[Task]:
-    """Return recent-safe, concept-diverse tasks in a user-specific daily order."""
+    """Fill the requested page while preserving recommendation priority."""
     weak = sorted(weak_concepts(db, user_id, since), key=lambda item: item.proficiency_level)
     weak_ids = [item.concept_id for item in weak]
     selected_date = recommendation_date or game_today()
@@ -140,15 +140,24 @@ def recommended_tasks(
         else:
             query = query.order_by(difficulty_rank, Task.id)
         rows = list(db.scalars(query).all())
-        return _diversify_daily_tasks(rows, user_id, selected_date, weak_ids, limit)
+        return _diversify_daily_tasks(rows, user_id, selected_date, weak_ids, len(rows))
 
+    selected: list[Task] = []
+    selected_ids: set[int] = set()
+    selected_problem_keys: set[str] = set()
     for exclude_recent, weak_only in ((True, True), (True, False), (False, True), (False, False)):
         if weak_only and not weak_ids:
             continue
-        rows = candidates(exclude_recent, weak_only)
-        if rows:
-            return rows
-    return []
+        for task in candidates(exclude_recent, weak_only):
+            problem_key = _task_problem_key(task)
+            if task.id in selected_ids or problem_key in selected_problem_keys:
+                continue
+            selected.append(task)
+            selected_ids.add(task.id)
+            selected_problem_keys.add(problem_key)
+            if len(selected) == limit:
+                return selected
+    return selected
 
 
 def _diversify_daily_tasks(

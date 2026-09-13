@@ -260,7 +260,13 @@ def _trusted_profile_image_url(image_path: str | None) -> str | None:
     if not image_path or not base_url:
         return None
     base = urlsplit(base_url)
-    candidate = urlsplit(urljoin(base_url.rstrip("/") + "/", image_path))
+    normalized_path = image_path.strip()
+    if not normalized_path:
+        return None
+    parsed_path = urlsplit(normalized_path)
+    if not parsed_path.scheme and not parsed_path.netloc and not normalized_path.startswith("/"):
+        normalized_path = "/media/" + normalized_path.lstrip("/")
+    candidate = urlsplit(urljoin(base_url.rstrip("/") + "/", normalized_path))
     if (
         base.scheme not in {"http", "https"}
         or candidate.scheme != base.scheme

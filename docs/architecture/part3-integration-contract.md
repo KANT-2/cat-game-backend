@@ -329,6 +329,8 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 
 - PWA 호환 `POST /api/v1/game/gacha`의 확정 비용은 1회 30코인, 10+1회 300코인이다.
 - 10+1회는 요청 전에 300코인을 보유해야 하며, 300코인을 차감한 뒤 정확히 11개 결과를 만든다.
+- 이 경로의 고양이 당첨 확률 합계는 10%다. `먹구름(ink)`은 5%, `호박이(tabby)`·
+  `은별이(silver)`·`단추(calico)`·`콩이(tuxedo)`·`도토리(fold)`는 각각 1%다.
 - 이 PWA 호환 경로에서 중복 고양이는 한 마리당 15코인으로 환산한다. 환산 코인은 300코인
   이용료와 별도 보상이므로 실행 기록의 `balance_cost`는 항상 300을 유지한다.
 
