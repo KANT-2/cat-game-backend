@@ -33,10 +33,11 @@ def _build_rewards() -> tuple[RewardDefinition, ...]:
         (0.10, {"desk", "hideout"}),
         (0.25, {"catTree", "scratcher"}),
         (0.30, {"plant"}),
-        (0.26, {"sofa", "bed", "rug", "litterBox"}),
+        (0.25, {"sofa", "bed", "rug", "litterBox"}),
     )
     rewards = [
         RewardDefinition("ink", "cat", 0.05),
+        RewardDefinition("tabby", "cat", 0.01),
         RewardDefinition("silver", "cat", 0.01),
         RewardDefinition("calico", "cat", 0.01),
         RewardDefinition("tuxedo", "cat", 0.01),

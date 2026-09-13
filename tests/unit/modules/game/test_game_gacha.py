@@ -8,7 +8,7 @@ from app.models.asset import Asset
 from app.models.cat import Cat
 from app.models.item import Item
 from app.models.user import User
-from app.modules.game.gacha import draw_game_gacha
+from app.modules.game.gacha import _REWARDS, draw_game_gacha
 from tests.fakes.repositories import (
     FakeAssetRepository,
     FakeCatRepository,
@@ -53,6 +53,14 @@ def _unit_of_work(user: User):
                 persona="calm",
                 rarity="RARE",
             ),
+            Cat(
+                id=5,
+                public_id=uuid.uuid4(),
+                catalog_key="tabby",
+                name="호박이",
+                persona="playful",
+                rarity="RARE",
+            ),
         ]
     )
     unit_of_work.items = FakeItemRepository(
@@ -76,7 +84,9 @@ def test_game_gacha_charges_and_grants_furniture_once() -> None:
     user = _user()
     unit_of_work = _unit_of_work(user)
     source = MagicMock()
-    source.random.return_value = 0.10
+    definition = next(reward for reward in _REWARDS if reward.catalog_key == "furniture.desk")
+    boundary = sum(reward.weight for reward in _REWARDS[: _REWARDS.index(definition)])
+    source.random.return_value = boundary + definition.weight / 2
     request_id = uuid.uuid4()
 
     first = draw_game_gacha(
@@ -105,7 +115,7 @@ def test_game_gacha_grants_a_new_named_cat() -> None:
     user = _user()
     unit_of_work = _unit_of_work(user)
     source = MagicMock()
-    source.random.return_value = 0.06
+    source.random.return_value = 0.065
 
     result = draw_game_gacha(
         unit_of_work=unit_of_work,
@@ -118,6 +128,34 @@ def test_game_gacha_grants_a_new_named_cat() -> None:
     assert result["rewards"][0]["id"] == "cat.silver"
     assert result["rewards"][0]["cat_variant"] == "silver"
     assert unit_of_work.assets.get_cat_asset(user.id, 4) is not None
+
+
+def test_game_gacha_can_draw_tabby() -> None:
+    user = _user()
+    unit_of_work = _unit_of_work(user)
+    source = MagicMock()
+    source.random.return_value = 0.055
+
+    result = draw_game_gacha(
+        unit_of_work=unit_of_work,
+        user_public_id=user.public_id,
+        request_id=uuid.uuid4(),
+        draw_count=1,
+        random_source=source,
+    )
+
+    assert result["rewards"] == [
+        {
+            "id": "cat.tabby",
+            "kind": "cat",
+            "cat_variant": "tabby",
+            "shop_item_id": None,
+            "duplicate": False,
+            "exchange_coins": 0,
+        }
+    ]
+    assert unit_of_work.assets.assets[0].cat_id == 5
+    assert user.balance == 70
 
 
 def test_game_gacha_does_not_charge_when_balance_is_insufficient() -> None:

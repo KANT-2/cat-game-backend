@@ -1,6 +1,6 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-11 기준 ORM 모델과 Alembic head를 반영한 22개 업무 테이블의 현재 구조다.
+2026-09-13 기준 ORM 모델과 Alembic 단일 head `f2a3b4c5d6e7`을 반영한 22개 업무 테이블의 현재 구조다.
 
 팀 기준 문서는 [Notion ERD - 현재 최종본](https://app.notion.com/p/ERD-03fdb49922e58311880781f373402039)이다.
 
@@ -20,6 +20,10 @@
 - 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
 - 브라우저 인증은 `AUTH_SESSIONS`의 폐기 가능한 토큰 해시와 `AUTH_RATE_LIMITS`의 HMAC 버킷을 사용한다.
 - `USERS.state_version`은 권위 있는 게임 상태 변경과 같은 트랜잭션에서 증가해 늦게 도착한 응답을 구별한다.
+- `USERS.starter_pack_version`은 시작 자산 지급 버전을 기록해 중복 지급을 막는다.
+- `CATS.catalog_key`와 `ITEMS.catalog_key`는 배포 환경에 독립적인 카탈로그 식별자다.
+- 대표 고양이는 `USERS.active_cat_id`로 선택하며, 해당 고양이 자산은 `ASSETS.is_home`으로 홈 배치를 표시한다.
+- 학습 제출은 `TASK_ATTEMPTS.request_id`와 `request_hash`로 멱등성을 보장하고, `TASKS.reward_coins`와 `TASK_ATTEMPTS.coins_awarded`로 보상 기준과 실제 지급액을 기록한다.
 
 ## Mermaid ERD
 
@@ -36,6 +40,7 @@ erDiagram
         int balance
         int mileage
         int house_level
+        int starter_pack_version "0 이상"
         int state_version "1 이상, 단조 증가"
         int wallpaper_item_id FK "nullable"
         int floor_item_id FK "nullable"
@@ -85,6 +90,7 @@ erDiagram
         string correct_option "객관식 정답, nullable"
         text hint_text "nullable"
         boolean is_active
+        int reward_coins "0 이상"
     }
 
     TASK_PRESENTATIONS {
@@ -123,6 +129,8 @@ erDiagram
     TASK_ATTEMPTS {
         int id PK
         uuid public_id UK "UUIDv4"
+        uuid request_id UK "멱등 요청 ID"
+        string request_hash "SHA-256"
         int user_id FK
         int task_id FK
         int presentation_id FK "nullable"
@@ -137,6 +145,7 @@ erDiagram
         datetime grading_started_at "nullable"
         uuid grading_lease_token "nullable"
         text result_detail "공개 가능한 채점 결과, nullable"
+        int coins_awarded "0 이상"
     }
 
     ROOMS {
@@ -169,6 +178,7 @@ erDiagram
     ITEMS {
         int id PK
         uuid public_id UK "UUIDv4"
+        string catalog_key UK
         string category
         string name
         int price
@@ -185,6 +195,7 @@ erDiagram
     CATS {
         int id PK
         uuid public_id UK "UUIDv4"
+        string catalog_key UK
         string name
         string persona
         string rarity
@@ -197,6 +208,7 @@ erDiagram
         int cat_id FK "nullable"
         int item_id FK "nullable"
         int quantity
+        boolean is_home "고양이 홈 배치 여부"
     }
 
     GACHA_EXECUTIONS {
@@ -249,6 +261,7 @@ erDiagram
         int user_id FK
         string token_hash UK "SHA-256"
         string csrf_token_hash "SHA-256"
+        datetime created_at
         datetime expires_at
         datetime revoked_at "nullable"
     }
@@ -297,6 +310,7 @@ erDiagram
     ITEMS ||--o{ PLACED_OBJECTS : placed_as
     ITEMS o|--o{ USERS : selected_wallpaper
     ITEMS o|--o{ USERS : selected_floor
+    CATS o|--o{ USERS : selected_active_cat
 
     USERS ||--o{ GACHA_EXECUTIONS : executes
     USERS ||--o{ DAILY_REWARD_CLAIMS : claims
@@ -307,13 +321,16 @@ erDiagram
 ## 주요 제약
 
 - `ASSETS`는 `cat_id`와 `item_id` 중 정확히 하나만 가진다.
-- 고양이 자산은 `quantity = 1`이며 중복 획득은 마일리지로 전환한다.
+- 고양이 자산은 `quantity = 1`이며 중복 획득은 마일리지로 전환한다. `is_home = true`는 고양이 자산에만 허용한다.
 - `CAT_MEMORIES.cat_asset_id`는 `ASSETS` 중 `cat_id`가 있는 행만 참조할 수 있다.
 - 가구 배치 수는 사용자가 보유한 해당 아이템의 `ASSETS.quantity`를 초과할 수 없다.
 - `GACHA_EXECUTIONS.request_id`는 전역 UNIQUE이고 다른 사용자나 다른 요청 내용의 재사용은 충돌이다.
+- `TASK_ATTEMPTS.request_id`도 전역 UNIQUE이며, 같은 ID의 사용자·과제·컨텍스트·제출 내용이 달라지면 `request_hash` 비교로 충돌 처리한다.
 - `USERS.homepage_user_id`는 nullable UNIQUE이며 동일한 홈페이지 사용자를 둘 이상의 게임 사용자 행에 연결할 수 없다.
+- `USERS.starter_pack_version`은 0 이상이며 시작 자산 지급 시 현재 버전으로 갱신한다.
 - `TASKS.type = CODE`는 연결된 `CONCEPTS.domain`에 따라 Python 또는 격리된 PostgreSQL 채점기로 분기한다.
 - `TASKS.options`가 있는 논리 문제는 직접 작성과 객관식 표현을 모두 지원한다. GOLD seed는 객관식 데이터를 만들지 않는다.
 - 활성 `TASK_PRESENTATIONS`는 사용자·논리 문제·문맥별 하나이며 정답 처리 전까지 유형과 보기 순서를 유지한다.
 - `TASK_COMPLETIONS`의 유일 키는 계속 `(user_id, task_id)`이므로 표시 방식별로 완료나 보상을 중복 집계하지 않는다.
+- `TASKS.reward_coins`, `TASK_ATTEMPTS.coins_awarded`, `TASK_COMPLETIONS.coins_awarded`, `DAILY_REWARD_CLAIMS.coins_awarded`는 모두 0 이상이다.
 - `TASK_ATTEMPTS.result_detail`에는 verdict와 공개 가능한 오류 요약만 저장한다.
