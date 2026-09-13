@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.exceptions import IdempotencyConflictError
 from app.models.task import Task
-from app.modules.grading.service import SubmissionError, create_attempt, get_attempt
+from app.modules.grading.service import SubmissionError, create_attempt, get_attempt, grade_attempt
 from app.modules.learning.presentation import start_task_presentation, to_presented_task
 from app.schemas.task_attempt import (
     GradingResultDetail,
@@ -46,6 +46,10 @@ def submit(payload: TaskAttemptCreate, db: DbSession, user: CurrentUser):
     except SubmissionError as exc:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # Learning MCQs need no sandbox. Grade them immediately so a worker delay or
+    # outage cannot turn a simple option selection into a client-side timeout.
+    if payload.context_type == "LEARNING" and payload.selected_option is not None:
+        grade_attempt(attempt.public_id)
     return TaskAttemptAccepted(public_id=attempt.public_id, status="PENDING")
 
 
