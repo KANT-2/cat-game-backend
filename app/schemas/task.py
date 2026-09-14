@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Literal
 
@@ -24,8 +25,10 @@ class TaskRead(ReadSchema):
     is_active: bool
     completed: bool = False
     reward_coins: int
+    public_example: dict[str, str] | None = None
 
-    # test_cases and correct_option are grading-only fields, intentionally excluded.
+    # correct_option and the remaining test_cases stay grading-only and excluded;
+    # public_example discloses only the first case so the player has something concrete to check against.
 
 
 class TaskCreate(BaseModel):
@@ -65,6 +68,42 @@ class TaskUpdate(BaseModel):
     is_active: bool | None = None
 
 
+def _public_example(task: Task) -> dict[str, str] | None:
+    """Surface the task's first test case so the player has a concrete input/output to check.
+
+    @remarks Only index 0 is ever disclosed; the remaining grading cases stay private.
+    @remarks SQL tasks (see scripts/seed_sql_tasks.py) store structured grading metadata in
+        ``expected_output`` -- a JSON object with a "mode" key ("QUERY"/"MUTATION"/"SCHEMA") that
+        can embed the reference SQL answer itself. That is never literal stdout, so any case whose
+        expected_output parses as such an object is skipped entirely rather than disclosed.
+    """
+    test_cases = getattr(task, "test_cases", None)
+    if task.type != "CODE" or not test_cases:
+        return None
+    try:
+        parsed = json.loads(test_cases)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, list) or not parsed:
+        return None
+    first = parsed[0]
+    if not isinstance(first, dict):
+        return None
+    expected_output = first.get("expected_output", "")
+    try:
+        structured = json.loads(expected_output)
+    except (TypeError, ValueError):
+        structured = None
+    if isinstance(structured, dict) and "mode" in structured:
+        # Structured grading metadata (currently: SQL tasks) -- would either show unreadable
+        # JSON or leak the reference query as the "answer". Hide the example entirely instead.
+        return None
+    return {
+        "input": str(first.get("input", "")).rstrip("\n"),
+        "output": str(expected_output).rstrip("\n"),
+    }
+
+
 def to_task_read(
     task: Task,
     concept: Concept,
@@ -96,4 +135,5 @@ def to_task_read(
         is_active=task.is_active,
         completed=completed,
         reward_coins=task.reward_coins,
+        public_example=_public_example(task),
     )
