@@ -13,5 +13,7 @@ alembic.ini
 
 # Local Codex presentation build artifacts
 .codex-finalizer/
+.codex-build/
 .codex-ppt-build/
+.codex-ppt-fix/
 output/

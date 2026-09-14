@@ -118,6 +118,7 @@ def create_cat_chat(
             cat_asset_public_id=cat_asset_public_id,
             message=payload.message,
             recent_messages=[entry.model_dump() for entry in payload.recent_messages],
+            memory_limit=settings.gemini_max_memory_count,
         )
     except ResourceNotFoundError as exc:
         raise HTTPException(
@@ -173,6 +174,7 @@ def create_cat_memory(
             user_public_id=current_user.public_id,
             cat_asset_public_id=cat_asset_public_id,
             context_summary=payload.context_summary,
+            memory_limit=settings.gemini_max_memory_count,
         )
     except ResourceNotFoundError as exc:
         raise HTTPException(
