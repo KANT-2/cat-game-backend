@@ -33,6 +33,12 @@ class Settings(BaseSettings):
         """Return normalized browser origins accepted by the API."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
+    def resolve_migration_database_url(self, configured_url: str | None) -> str:
+        """Prefer an explicit runtime URL, otherwise preserve Alembic's selected ini URL."""
+        if "database_url" in self.model_fields_set or not configured_url:
+            return self.database_url
+        return configured_url
+
     sql_grading_database_url: SecretStr | None = None
     sql_grading_connect_timeout_seconds: int = 3
     sql_grading_statement_timeout_ms: int = 1000

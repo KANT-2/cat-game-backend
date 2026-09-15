@@ -10,6 +10,8 @@ python -m venv .venv
 
 Windows PowerShell에서 가상환경을 만든 뒤 다음을 실행한다. `.env`가 없으면 `.env.example`을
 복사하고, 실행 중인 PostgreSQL의 `DATABASE_URL`을 설정한다. 기존 `.env`는 덮어쓰지 않는다.
+Alembic은 명시적으로 설정된 `DATABASE_URL`을 우선하며, 값이 없으면 `-c`로 선택한 ini의
+`sqlalchemy.url`을 사용한다.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"

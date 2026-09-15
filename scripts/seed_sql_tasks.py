@@ -158,7 +158,7 @@ def bronze_definitions() -> list[tuple[str, str, str, str]]:
         rows.extend([
             ("basics", f"숫자 {i} 출력", f"정수 {i}를 한 행으로 조회하세요.", f"SELECT {i}"),
             ("filtering", f"학번 {i} 학생", f"students에서 id가 {i}인 이름을 조회하세요.", f"SELECT name FROM students WHERE id={i}"),
-            ("filtering", f"점수 {60 + i * 5} 이상", "해당 점수 이상 학생 이름을 id순 조회하세요.", f"SELECT name FROM students WHERE score>={60 + i * 5} ORDER BY id"),
+            ("filtering", f"점수 {60 + i * 5} 이상", f"점수가 {60 + i * 5} 이상인 학생 이름을 id순으로 조회하세요.", f"SELECT name FROM students WHERE score>={60 + i * 5} ORDER BY id"),
             ("basics", f"점수에 {i} 더하기", f"모든 학생의 id와 score+{i}를 id순 조회하세요.", f"SELECT id,score+{i} FROM students ORDER BY id"),
             ("filtering", f"앞에서 {i}명", f"학생 이름을 id순으로 앞에서 {i}명 조회하세요.", f"SELECT name FROM students ORDER BY id LIMIT {i}"),
             ("basics", f"별칭 score_{i}", f"id와 score를 score_{i} 별칭으로 조회하세요.", f'SELECT id,score AS score_{i} FROM students ORDER BY id'),
@@ -174,16 +174,16 @@ def silver_definitions() -> list[tuple[str, str, str, str]]:
     rows = []
     for i in range(1, 6):
         rows.extend([
-            ("aggregation", f"팀별 인원 {i}", f"id가 {i} 이상인 학생을 팀별 집계하세요.", f"SELECT team,count(*) FROM students WHERE id>={i} GROUP BY team ORDER BY team"),
-            ("aggregation", f"팀별 최고점 {i}", f"id가 {i} 이상인 학생의 팀별 최고점을 조회하세요.", f"SELECT team,max(score) FROM students WHERE id>={i} GROUP BY team ORDER BY team"),
-            ("joins", f"학생 주문 {i}", f"주문 id가 {i} 이상인 주문의 학생명과 금액을 조회하세요.", f"SELECT s.name,o.amount FROM students s JOIN orders o ON o.student_id=s.id WHERE o.id>={i} ORDER BY o.id"),
-            ("joins", f"주문 없는 학생 기준 {i}", f"금액이 {i * 300} 이상인 주문과 학생을 LEFT JOIN 결과로 조회하세요.", f"SELECT s.name,o.amount FROM students s LEFT JOIN orders o ON o.student_id=s.id AND o.amount>={i * 300} ORDER BY s.id,o.id"),
-            ("subqueries", f"평균 초과 점수 {i}", f"id가 {i} 이상인 학생 평균보다 점수가 높은 학생을 조회하세요.", f"SELECT name FROM students WHERE id>={i} AND score>(SELECT avg(score) FROM students WHERE id>={i}) ORDER BY id"),
-            ("aggregation", f"결제 합계 {i}", f"student_id가 {i} 이상인 PAID 주문 합계를 학생별 조회하세요.", f"SELECT student_id,sum(amount) FROM orders WHERE status='PAID' AND student_id>={i} GROUP BY student_id ORDER BY student_id"),
-            ("filtering", f"이름 패턴 위치 {i}", f"이름의 {i}번째 문자와 학생 id를 조회하세요.", f"SELECT id,substring(name FROM {i} FOR 1) FROM students ORDER BY id"),
-            ("subqueries", f"주문 보유 학생 {i}", f"{i * 400} 이상 주문이 있는 학생을 조회하세요.", f"SELECT name FROM students s WHERE EXISTS (SELECT 1 FROM orders o WHERE o.student_id=s.id AND o.amount>={i * 400}) ORDER BY id"),
-            ("aggregation", f"HAVING 주문수 {i}", f"주문이 {i}개 이상인 학생별 주문 수를 조회하세요.", f"SELECT student_id,count(*) FROM orders GROUP BY student_id HAVING count(*)>={i} ORDER BY student_id"),
-            ("joins", f"결제 주문 순위값 {i}", f"PAID 주문 중 id가 {i} 이상인 학생명·금액을 금액 내림차순 조회하세요.", f"SELECT s.name,o.amount FROM orders o JOIN students s ON s.id=o.student_id WHERE o.status='PAID' AND o.id>={i} ORDER BY o.amount DESC,o.id"),
+            ("aggregation", f"팀별 인원 {i}", f"id가 {i} 이상인 학생들을 팀별로 묶어, 각 팀에 학생이 몇 명 있는지(team과 인원수를 순서대로) 조회하세요.", f"SELECT team,count(*) FROM students WHERE id>={i} GROUP BY team ORDER BY team"),
+            ("aggregation", f"팀별 최고점 {i}", f"id가 {i} 이상인 학생들을 팀별로 묶어, 각 팀에서 가장 높은 점수(team과 최고 점수를 순서대로)를 조회하세요.", f"SELECT team,max(score) FROM students WHERE id>={i} GROUP BY team ORDER BY team"),
+            ("joins", f"학생 주문 {i}", f"주문 id가 {i} 이상인 주문들에 대해, students와 orders를 연결해서 주문한 학생의 이름과 주문 금액을 순서대로 조회하세요.", f"SELECT s.name,o.amount FROM students s JOIN orders o ON o.student_id=s.id WHERE o.id>={i} ORDER BY o.id"),
+            ("joins", f"주문 없는 학생 기준 {i}", f"모든 학생 이름과, 그 학생의 주문 중 금액이 {i * 300} 이상인 주문 금액을 순서대로 조회하세요. 조건에 맞는 주문이 없는 학생도 이름은 그대로 나오고 금액 자리는 비어 있어야 합니다.", f"SELECT s.name,o.amount FROM students s LEFT JOIN orders o ON o.student_id=s.id AND o.amount>={i * 300} ORDER BY s.id,o.id"),
+            ("subqueries", f"평균 초과 점수 {i}", f"id가 {i} 이상인 학생들의 평균 점수를 구한 뒤, 그 평균보다 점수가 높은 학생(역시 id가 {i} 이상인 학생 중에서) 이름을 조회하세요.", f"SELECT name FROM students WHERE id>={i} AND score>(SELECT avg(score) FROM students WHERE id>={i}) ORDER BY id"),
+            ("aggregation", f"결제 합계 {i}", f"student_id가 {i} 이상이면서 상태(status)가 'PAID'인 주문들을 학생별로 묶어, 그 금액 합계(student_id와 합계를 순서대로)를 조회하세요.", f"SELECT student_id,sum(amount) FROM orders WHERE status='PAID' AND student_id>={i} GROUP BY student_id ORDER BY student_id"),
+            ("filtering", f"이름 패턴 위치 {i}", f"학생 id와, 그 학생 이름의 {i}번째 글자를 순서대로 조회하세요.", f"SELECT id,substring(name FROM {i} FOR 1) FROM students ORDER BY id"),
+            ("subqueries", f"주문 보유 학생 {i}", f"금액이 {i * 400} 이상인 주문을 한 번이라도 한 적 있는 학생 이름을 조회하세요.", f"SELECT name FROM students s WHERE EXISTS (SELECT 1 FROM orders o WHERE o.student_id=s.id AND o.amount>={i * 400}) ORDER BY id"),
+            ("aggregation", f"HAVING 주문수 {i}", f"학생별로 주문 개수를 센 뒤, 그 개수가 {i}개 이상인 경우만 골라 student_id와 주문 개수를 순서대로 조회하세요.", f"SELECT student_id,count(*) FROM orders GROUP BY student_id HAVING count(*)>={i} ORDER BY student_id"),
+            ("joins", f"결제 주문 순위값 {i}", f"상태(status)가 'PAID'이면서 주문 id가 {i} 이상인 주문에 대해, students와 orders를 연결해서 학생 이름과 금액을 순서대로, 금액이 큰 순서(내림차순)로 조회하세요.", f"SELECT s.name,o.amount FROM orders o JOIN students s ON s.id=o.student_id WHERE o.status='PAID' AND o.id>={i} ORDER BY o.amount DESC,o.id"),
         ])
     return rows
 
@@ -192,13 +192,13 @@ def gold_definitions() -> list[tuple[str, str, str, str]]:
     rows = []
     for i in range(1, 6):
         rows.extend([
-            ("advanced_queries", f"점수 순위 {i}", f"id가 {i} 이상인 학생의 점수 순위를 구하세요.", f"SELECT name,dense_rank() OVER(ORDER BY score DESC) FROM students WHERE id>={i} ORDER BY id"),
-            ("advanced_queries", f"누적 주문액 {i}", f"주문 id {i} 이상에서 학생별 누적 주문액을 구하세요.", f"SELECT id,student_id,sum(amount) OVER(PARTITION BY student_id ORDER BY id) FROM orders WHERE id>={i} ORDER BY id"),
-            ("advanced_queries", f"직전 점수 차 {i}", f"id {i} 이상 학생을 id순으로 직전 점수와 비교하세요.", f"SELECT id,score-lag(score) OVER(ORDER BY id) FROM students WHERE id>={i} ORDER BY id"),
-            ("subqueries", f"팀 최고점 학생 {i}", f"id {i} 이상 범위에서 각 팀 최고점 학생을 조회하세요.", f"SELECT name,team,score FROM students s WHERE id>={i} AND score=(SELECT max(score) FROM students x WHERE x.team=s.team AND x.id>={i}) ORDER BY id"),
-            ("advanced_queries", f"재귀 합계 {i}", f"재귀 CTE로 1부터 {i + 5}까지 합을 조회하세요.", f"WITH RECURSIVE r(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM r WHERE n<{i + 5}) SELECT sum(n) FROM r"),
-            ("joins", f"팀별 결제 최고액 {i}", f"id {i} 이상 학생의 팀별 PAID 주문 최고액을 조회하세요.", f"SELECT s.team,max(o.amount) FROM students s JOIN orders o ON o.student_id=s.id WHERE s.id>={i} AND o.status='PAID' GROUP BY s.team ORDER BY s.team"),
-            ("advanced_queries", f"이동 평균 {i}", f"id {i} 이상 학생 점수의 현재·직전 행 평균을 구하세요.", f"SELECT id,avg(score) OVER(ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) FROM students WHERE id>={i} ORDER BY id"),
+            ("advanced_queries", f"점수 순위 {i}", f"id가 {i} 이상인 학생을 점수가 높은 순으로 순위를 매기세요(동점이면 같은 순위). 학생 이름과 순위를 순서대로, id 순으로 정렬해 조회하세요.", f"SELECT name,dense_rank() OVER(ORDER BY score DESC) FROM students WHERE id>={i} ORDER BY id"),
+            ("advanced_queries", f"누적 주문액 {i}", f"주문 id가 {i} 이상인 주문들을 학생별로 묶어, 각 학생의 주문을 id가 작은 순서대로 하나씩 더해나간 누적 금액을 구하세요. 주문 id, student_id, 누적 금액을 순서대로, 주문 id 순으로 조회하세요.", f"SELECT id,student_id,sum(amount) OVER(PARTITION BY student_id ORDER BY id) FROM orders WHERE id>={i} ORDER BY id"),
+            ("advanced_queries", f"직전 점수 차 {i}", f"id가 {i} 이상인 학생을 id 순으로 나열하면서, 각 학생의 점수에서 바로 이전 학생의 점수를 뺀 값을 구하세요(첫 학생은 비교할 이전 값이 없어 비어 있습니다). id와 그 값을 순서대로, id 순으로 조회하세요.", f"SELECT id,score-lag(score) OVER(ORDER BY id) FROM students WHERE id>={i} ORDER BY id"),
+            ("subqueries", f"팀 최고점 학생 {i}", f"id가 {i} 이상인 학생들 중에서, 같은 조건(id가 {i} 이상)의 학생들만 놓고 봤을 때 자기 팀에서 가장 높은 점수와 점수가 같은 학생을 찾으세요. 이름, 팀, 점수를 순서대로, id 순으로 조회하세요.", f"SELECT name,team,score FROM students s WHERE id>={i} AND score=(SELECT max(score) FROM students x WHERE x.team=s.team AND x.id>={i}) ORDER BY id"),
+            ("advanced_queries", f"재귀 합계 {i}", f"1부터 {i + 5}까지의 정수를 하나씩 만들어 가며(재귀적으로, WITH RECURSIVE 사용) 그 합을 구해, 합계 값 하나만 조회하세요.", f"WITH RECURSIVE r(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM r WHERE n<{i + 5}) SELECT sum(n) FROM r"),
+            ("joins", f"팀별 결제 최고액 {i}", f"id가 {i} 이상인 학생 중 상태(status)가 'PAID'인 주문이 있는 학생을 students와 orders를 연결해서 팀별로 묶어, 각 팀의 최고 주문 금액(team과 최고 금액을 순서대로)을 조회하세요.", f"SELECT s.team,max(o.amount) FROM students s JOIN orders o ON o.student_id=s.id WHERE s.id>={i} AND o.status='PAID' GROUP BY s.team ORDER BY s.team"),
+            ("advanced_queries", f"이동 평균 {i}", f"id가 {i} 이상인 학생을 id 순으로 나열하면서, 각 학생의 점수와 바로 이전 학생의 점수 두 개의 평균(첫 학생은 자기 점수만으로 평균)을 구하세요. id와 그 평균을 순서대로, id 순으로 조회하세요.", f"SELECT id,avg(score) OVER(ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) FROM students WHERE id>={i} ORDER BY id"),
         ])
     return rows
 
@@ -210,15 +210,15 @@ def build_tasks() -> list[dict]:
     scores = [75, 92, 84, 68, 92]
     for i in range(1, 6):
         spec = json.dumps({"mode": "MUTATION", "verification_query": f"SELECT score FROM students WHERE id={i}", "expected_rows": [[scores[i - 1] + i]]})
-        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id {i}의 점수를 {i} 올리세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": staged_sql_hint("data_manipulation", f"학생 {i} 점수 수정")})
+        gold.append({**task("GOLD", 35 + i, "data_manipulation", f"학생 {i} 점수 수정", f"id가 {i}인 학생의 score 값을 {i}만큼 올리는 UPDATE문을 작성하세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": spec}], ensure_ascii=False), "hint_text": staged_sql_hint("data_manipulation", f"학생 {i} 점수 수정")})
         ddl_spec = json.dumps({"mode": "SCHEMA", "verification_query": f"SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='badges_{i}' ORDER BY ordinal_position", "expected_rows": [["id"], ["label"]]})
-        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}(id int, label text) 테이블을 만드세요.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": staged_sql_hint("schema", f"배지 테이블 {i}")})
+        gold.append({**task("GOLD", 40 + i, "schema", f"배지 테이블 {i}", f"badges_{i}라는 이름의 테이블을 만드세요. 열은 id(정수형 int)와 label(문자열형 text) 두 개입니다.", "SELECT 1"), "test_cases": json.dumps([{"input": SEED_SQL, "expected_output": ddl_spec}], ensure_ascii=False), "hint_text": staged_sql_hint("schema", f"배지 테이블 {i}")})
         gold.append(task(
             "GOLD",
             45 + i,
             "transactions",
             f"트랜잭션 전 결제 확인 {i}",
-            f"트랜잭션을 시작하기 전에 id가 {i} 이상인 PAID 주문의 id와 amount를 id순으로 조회하세요.",
+            f"주문 목록에서 결제가 확정된 내역만 확인하려고 해요. 상태(status)가 'PAID'이고 id가 {i} 이상인 주문의 id와 amount를 id 순으로 조회하세요.",
             f"SELECT id,amount FROM orders WHERE status='PAID' AND id>={i} ORDER BY id",
         ))
     rows += gold
