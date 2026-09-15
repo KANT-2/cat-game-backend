@@ -197,7 +197,9 @@
 `test_cases`와 `correct_option`은 채점 전용이므로 응답하지 않는다.
 
 BRONZE와 SILVER의 dual-mode 문제는 `presentation_required=true`다. 클라이언트는 문제를 열기 전에
-`POST /api/v1/attempts/presentations`에 `task_public_id`를 보낸다. 서버는 Python과 SQL 모두
+`POST /api/v1/attempts/presentations`에 `task_public_id`를 보낸다. 완료한 문제를 바로 다시 풀 때는
+`preferred_presentation_type`에 직전의 `CODE` 또는 `MULTIPLE_CHOICE`를 함께 보내 같은 풀이 화면을
+유지할 수 있다. 서버는 Python과 SQL 모두
 BRONZE 50%, SILVER 20%, GOLD 0% 정책으로 표시 방식을 한 번 결정한다. 활성 표시 세션이 있으면
 새로 뽑지 않고 같은 유형과 보기 순서를 반환한다. 응답의 `task`는 선택된 `type`, 설명과 `options`,
 `presentation_public_id`를 포함하며 `correct_option`은 제외한다. 오답 뒤에는 같은 표시 세션을 재사용하고,

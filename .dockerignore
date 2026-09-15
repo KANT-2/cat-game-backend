@@ -7,3 +7,6 @@ __pycache__
 .ruff_cache
 cat_game.db
 htmlcov
+.codex-*
+output
+work

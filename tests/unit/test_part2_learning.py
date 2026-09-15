@@ -165,6 +165,20 @@ def test_presentation_choice_has_no_task_number_coupling():
     assert tasks[0].id % 2 != tasks[1].id % 2
 
 
+def test_replay_can_preserve_supported_presentation_type():
+    task = SimpleNamespace(
+        difficulty="BRONZE",
+        options={"A": "correct", "B": "wrong"},
+        correct_option="A",
+    )
+
+    assert choose_presentation_type(task, _RngMustNotRun(), "CODE") == "CODE"
+    assert (
+        choose_presentation_type(task, _RngMustNotRun(), "MULTIPLE_CHOICE")
+        == "MULTIPLE_CHOICE"
+    )
+
+
 def test_attempt_option_shuffle_varies_answer_position_and_is_stable_per_rng():
     options = {"A": "correct", "B": "near miss", "C": "boundary error", "D": "wrong order"}
     positions = {

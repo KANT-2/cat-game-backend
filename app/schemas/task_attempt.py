@@ -15,6 +15,7 @@ class TaskPresentationStart(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     task_public_id: uuid.UUID
+    preferred_presentation_type: Literal["CODE", "MULTIPLE_CHOICE"] | None = None
 
 
 class TaskPresentationRead(BaseModel):
