@@ -102,9 +102,10 @@ def test_python_multiple_choice_prompt_has_one_clear_question() -> None:
         if "두 수의 합" in row["title"] and "`2 4`" in row["multiple_choice_prompt"]
     )
 
-    assert "[객관식 문제]" in task["multiple_choice_prompt"]
-    assert "[문제]" not in task["multiple_choice_prompt"]
-    assert "[질문]" not in task["multiple_choice_prompt"]
+    # The CODE challenge and the quiz share the same [문제]/[질문]-style labeling, so switching
+    # between the two presentation types never feels like a different format.
+    assert "[문제]" in task["multiple_choice_prompt"]
+    assert "[질문]" in task["multiple_choice_prompt"]
     assert "`2 4`" in task["multiple_choice_prompt"]
     # The quiz asks which code solves the problem, never what a sample input would print, so a
     # player has to read Python instead of doing the arithmetic in their head.

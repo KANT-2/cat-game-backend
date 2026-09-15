@@ -737,8 +737,8 @@ def python_multiple_choice(spec: Spec, variant: int) -> tuple[str, dict[str, str
     )
     prompt = (
         f"[도와주세요!] {VARIANTS[variant - 1][1]} {STORIES[spec.operation]}\n\n"
-        f"[객관식 문제] {spec.prompt}\n"
-        f"예시 입력은 `{sample_input}`이에요. "
+        f"[문제] {spec.prompt}\n\n"
+        f"[질문] 예시 입력은 `{sample_input}`이에요. "
         "다음 중 이 문제를 올바르게 해결하는 코드는 무엇인가요?"
     )
     return prompt, options, correct_option
