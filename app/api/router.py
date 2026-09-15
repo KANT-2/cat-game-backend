@@ -10,6 +10,7 @@ from app.modules.housing.router import router as housing_router
 from app.modules.identity.router import router as identity_router
 from app.modules.learning.router import router as learning_router
 from app.modules.shop.router import router as shop_router
+from app.modules.statistics.router import router as statistics_router
 from app.modules.tasks.router import router as tasks_router
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(daily_router)
 api_router.include_router(battle_router)
 api_router.include_router(game_router)
 api_router.include_router(tasks_router)
+api_router.include_router(statistics_router)

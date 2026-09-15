@@ -56,6 +56,7 @@ from app.modules.housing.service import (
 )
 from app.modules.shop.consumables import use_consumable
 from app.modules.shop.service import purchase_item
+from app.modules.statistics.service import record_game_entry
 from app.schemas.placed_object import PositionData
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -65,7 +66,9 @@ router = APIRouter(prefix="/game", tags=["game"])
 def game_snapshot(db: DbSession, user: CurrentUser) -> GameSnapshotRead:
     """Return the authenticated player's authoritative game state and catalog."""
     try:
-        return get_game_snapshot(db, user)
+        snapshot = get_game_snapshot(db, user)
+        record_game_entry(db, user)
+        return snapshot
     except GameCatalogNotSeededError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

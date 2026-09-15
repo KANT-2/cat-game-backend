@@ -11,6 +11,7 @@ EXPECTED_TABLES = {
     "concepts",
     "daily_reward_claims",
     "gacha_executions",
+    "game_activity_events",
     "items",
     "placed_objects",
     "room_participants",
