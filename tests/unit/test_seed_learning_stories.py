@@ -16,10 +16,11 @@ from scripts import seed_sql_tasks as sql_seed
 @pytest.mark.parametrize(
     ("seed", "digest"),
     [
-        # Python options/correct_option moved from computed outputs to code snippets, so this
-        # digest was recomputed on purpose; the SQL one below must stay untouched.
+        # Python options/correct_option moved from computed outputs to code snippets, and SQL
+        # reward_coins moved from the missing-field DB default (0) to 30/60/100 by difficulty,
+        # so both digests were recomputed on purpose.
         (python_seed, "189996973a4514ba42d9e9dc18af45016690a07fa37a7dbc07dda0680b2ce310"),
-        (sql_seed, "652bbc94c7361fc50f559d61f1a02cba9e7555226359c0c484deb4bf28dc6560"),
+        (sql_seed, "290dc2a8473db4da375b6667b271764a9cb8a314a39ab6d1dfbff3593741d520"),
     ],
 )
 def test_story_refresh_preserves_main_grading_contract(seed, digest):

@@ -145,6 +145,7 @@ def task(level: str, number: int, concept: str, title: str, prompt: str, query: 
         "options": options,
         "correct_option": correct_option,
         "hint_text": staged_sql_hint(concept, title),
+        "reward_coins": {"BRONZE": 30, "SILVER": 60, "GOLD": 100}[level],
     }
 
 
