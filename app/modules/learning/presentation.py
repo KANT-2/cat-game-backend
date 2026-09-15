@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from random import SystemRandom
-from typing import Protocol
+from typing import Literal, Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -25,10 +25,18 @@ class RandomSource(Protocol):
     def shuffle(self, values: list) -> None: ...
 
 
-def choose_presentation_type(task: Task, rng: RandomSource) -> str:
-    """Choose once from the difficulty policy when a maintained MCQ form exists."""
+def choose_presentation_type(
+    task: Task,
+    rng: RandomSource,
+    preferred_presentation_type: Literal["CODE", "MULTIPLE_CHOICE"] | None = None,
+) -> str:
+    """Choose a supported mode, preserving an explicitly requested replay mode."""
     probability = MULTIPLE_CHOICE_PROBABILITY[task.difficulty]
     has_multiple_choice = bool(task.options and task.correct_option in task.options)
+    if preferred_presentation_type == "CODE":
+        return "CODE"
+    if preferred_presentation_type == "MULTIPLE_CHOICE" and has_multiple_choice:
+        return "MULTIPLE_CHOICE"
     return "MULTIPLE_CHOICE" if has_multiple_choice and rng.random() < probability else "CODE"
 
 
@@ -56,6 +64,7 @@ def start_task_presentation(
     user: User,
     *,
     rng: RandomSource | None = None,
+    preferred_presentation_type: Literal["CODE", "MULTIPLE_CHOICE"] | None = None,
 ) -> tuple[TaskPresentation, Task, Concept]:
     """Create or reuse the learner's active presentation for one logical task."""
     task = db.scalar(select(Task).where(Task.public_id == task_public_id, Task.is_active.is_(True)))
@@ -82,7 +91,11 @@ def start_task_presentation(
         return active, task, concept
 
     source = rng or SystemRandom()
-    presentation_type = choose_presentation_type(task, source)
+    presentation_type = choose_presentation_type(
+        task,
+        source,
+        preferred_presentation_type,
+    )
     options = correct_option = None
     description = task.description
     if presentation_type == "MULTIPLE_CHOICE":

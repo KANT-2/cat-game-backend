@@ -25,7 +25,10 @@ router = APIRouter(prefix="/attempts", tags=["grading"])
 def start_presentation(payload: TaskPresentationStart, db: DbSession, user: CurrentUser):
     try:
         presentation, task, concept = start_task_presentation(
-            db, payload.task_public_id, user
+            db,
+            payload.task_public_id,
+            user,
+            preferred_presentation_type=payload.preferred_presentation_type,
         )
     except LookupError as exc:
         db.rollback()
