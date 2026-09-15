@@ -104,6 +104,7 @@ def list_tasks(
     concept_public_id: uuid.UUID | None = None,
     difficulty: Literal["BRONZE", "SILVER", "GOLD"] | None = Query(None),
     limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
 ) -> list[TaskRead]:
     statement = select(Task).join(Concept, Concept.id == Task.concept_id).where(Task.is_active.is_(True))
 
@@ -137,7 +138,7 @@ def list_tasks(
             return []
         statement = statement.where(Task.concept_id == concept.id)
 
-    tasks = list(db.scalars(statement.order_by(Task.id).limit(limit)).all())
+    tasks = list(db.scalars(statement.order_by(Task.id).offset(offset).limit(limit)).all())
     completed_ids = _completed_task_ids(
         db,
         user.id,

@@ -533,6 +533,7 @@ def test_learning_task_selection_applies_filters_and_completed_state(monkeypatch
         concept_public_id=concept_public_id,
         difficulty="SILVER",
         limit=5,
+        offset=0,
     )
 
     assert len(response) == 1
@@ -546,6 +547,7 @@ def test_learning_task_selection_applies_filters_and_completed_state(monkeypatch
     assert "tasks.difficulty =" in sql
     assert "tasks.concept_id =" in sql
     assert "ORDER BY tasks.id" in sql
+    assert "OFFSET" in sql
     assert "LIMIT" in sql
 
 
@@ -562,6 +564,7 @@ def test_multiple_choice_filter_selects_capable_non_gold_tasks(monkeypatch):
         user=SimpleNamespace(id=7, learning_reset_at=None),
         task_type="MULTIPLE_CHOICE",
         limit=5,
+        offset=0,
     )
 
     sql = str(db.scalar_statements[0])
@@ -582,6 +585,7 @@ def test_learning_task_selection_returns_empty_for_unknown_concept(monkeypatch):
         user=SimpleNamespace(id=7),
         concept_public_id=uuid.uuid4(),
         limit=20,
+        offset=0,
     )
 
     assert response == []

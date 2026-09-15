@@ -80,7 +80,7 @@ def test_learning_tasks_openapi_exposes_selection_filters():
     operation = app.openapi()["paths"]["/api/v1/learning/tasks"]["get"]
     parameters = {parameter["name"]: parameter for parameter in operation["parameters"]}
 
-    assert {"type", "domain", "concept_public_id", "difficulty", "limit"} <= set(parameters)
+    assert {"type", "domain", "concept_public_id", "difficulty", "limit", "offset"} <= set(parameters)
     assert parameters["type"]["schema"]["anyOf"][0]["enum"] == ["CODE", "MULTIPLE_CHOICE"]
     assert parameters["domain"]["schema"]["anyOf"][0]["enum"] == ["PYTHON", "SQL"]
     assert parameters["difficulty"]["schema"]["anyOf"][0]["enum"] == [
@@ -90,6 +90,8 @@ def test_learning_tasks_openapi_exposes_selection_filters():
     ]
     assert parameters["limit"]["schema"]["minimum"] == 1
     assert parameters["limit"]["schema"]["maximum"] == 50
+    assert parameters["offset"]["schema"]["minimum"] == 0
+    assert parameters["offset"]["schema"]["default"] == 0
 
 
 def test_recommendations_exposes_local_test_date_override():

@@ -159,7 +159,9 @@
 | `concept_public_id` | UUID | 전체 |
 | `difficulty` | `BRONZE`, `SILVER`, `GOLD` | 전체 |
 | `limit` | `1..50` | `20` |
+| `offset` | `0` 이상의 정수 | `0` |
 
+응답은 문제 ID 순으로 안정적으로 정렬되므로 `limit`과 `offset`으로 전체 목록을 페이지 조회할 수 있다.
 개념 UUID가 존재하지 않으면 `404`가 아니라 빈 배열을 반환한다.
 
 #### `GET /api/v1/learning/recommendations`

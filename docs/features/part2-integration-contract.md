@@ -484,10 +484,10 @@ proficiency_level <= 50
 직접 문제 조회:
 
 ```http
-GET /api/v1/learning/tasks?type=CODE&domain=PYTHON&difficulty=SILVER&limit=20
+GET /api/v1/learning/tasks?type=CODE&domain=PYTHON&difficulty=SILVER&limit=20&offset=0
 ```
 
-선택 필터는 `type`, `domain`, `concept_public_id`, `difficulty`, `limit(1~50)`이다. 조건에 맞는 활성 문제만 반환하고, 존재하지 않는 `concept_public_id`는 오류 대신 빈 목록 `[]`을 반환한다. 이미 정답 처리한 문제는 `completed=true`다. 잘못된 enum, UUID 형식, limit 범위는 `422`다.
+선택 필터는 `type`, `domain`, `concept_public_id`, `difficulty`, `limit(1~50)`, `offset(0 이상)`이다. 문제 ID 순으로 안정적으로 정렬해 페이지 조회하며, 조건에 맞는 활성 문제만 반환한다. 존재하지 않는 `concept_public_id`는 오류 대신 빈 목록 `[]`을 반환한다. 이미 정답 처리한 문제는 `completed=true`다. 잘못된 enum, UUID 형식, limit 또는 offset 범위는 `422`다.
 
 추천/취약 개념 조회:
 
