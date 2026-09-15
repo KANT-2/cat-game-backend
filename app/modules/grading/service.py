@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import IdempotencyConflictError
 from app.core.request_hash import build_request_hash
+from app.core.time import game_date_at
 from app.db.session import SessionLocal
 from app.models.attendance import Attendance
 from app.models.attendance_task import AttendanceTask
@@ -377,8 +378,15 @@ def _persist_result(
                 task_id=task.id,
                 first_attempt_id=attempt.id,
                 coins_awarded=task.reward_coins,
+                completion_date=game_date_at(attempt.attempted_at),
             )
-            .on_conflict_do_nothing(index_elements=[TaskCompletion.user_id, TaskCompletion.task_id])
+            .on_conflict_do_nothing(
+                index_elements=[
+                    TaskCompletion.user_id,
+                    TaskCompletion.task_id,
+                    TaskCompletion.completion_date,
+                ]
+            )
             .returning(TaskCompletion.id)
         )
         if completion_id is not None:

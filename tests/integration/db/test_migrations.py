@@ -77,6 +77,33 @@ def test_task_attempts_have_durable_grading_lease_columns(engine):
     assert "ix_task_attempts_grading_queue" in indexes
 
 
+def test_task_completion_rewards_are_unique_per_game_date(engine):
+    """같은 문제의 보상 원장은 사용자·문제·게임 날짜마다 하나만 허용한다."""
+    with engine.connect() as conn:
+        columns = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'task_completions'"
+                )
+            )
+        }
+        constraints = {
+            row[0]
+            for row in conn.execute(
+                text(
+                    "SELECT constraint_name FROM information_schema.table_constraints "
+                    "WHERE table_schema = 'public' AND table_name = 'task_completions' "
+                    "AND constraint_type = 'UNIQUE'"
+                )
+            )
+        }
+
+    assert "completion_date" in columns
+    assert "uq_task_completions_user_task_date" in constraints
+
+
 def test_task_presentations_persist_mode_and_option_order(engine):
     with engine.connect() as conn:
         columns = {

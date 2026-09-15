@@ -11,6 +11,13 @@ def game_today() -> date:
     return datetime.now(ZoneInfo(settings.game_timezone)).date()
 
 
+def game_date_at(moment: datetime) -> date:
+    """Return the game-local calendar date for one persisted timestamp."""
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=UTC)
+    return moment.astimezone(ZoneInfo(settings.game_timezone)).date()
+
+
 def game_day_bounds(day: date) -> tuple[datetime, datetime]:
     """Return one game-local calendar day's half-open UTC timestamp range."""
     timezone = ZoneInfo(settings.game_timezone)

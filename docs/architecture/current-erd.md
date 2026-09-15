@@ -17,7 +17,7 @@
 - `TASK_ATTEMPTS.result_detail`은 외부에 공개 가능한 채점 결과만 저장하고 상태는 `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` 흐름을 사용한다.
 - 채점 워커는 `grading_started_at`과 `grading_lease_token`으로 시도를 임대한다. 만료된 `RUNNING` 임대는 회수할 수 있고 이전 워커의 늦은 결과는 토큰으로 거부한다.
 - API에는 내부 INTEGER PK/FK를 노출하지 않고 UUID `public_id`와 `*_public_id`만 사용한다.
-- 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
+- 날짜별 최초 학습 보상과 데일리 보상은 각각 `TASK_COMPLETIONS`, `DAILY_REWARD_CLAIMS` 원장으로 중복을 막는다.
 - 브라우저 인증은 `AUTH_SESSIONS`의 폐기 가능한 토큰 해시와 `AUTH_RATE_LIMITS`의 HMAC 버킷을 사용한다.
 - `USERS.state_version`은 권위 있는 게임 상태 변경과 같은 트랜잭션에서 증가해 늦게 도착한 응답을 구별한다.
 - `USERS.starter_pack_version`은 시작 자산 지급 버전을 기록해 중복 지급을 막는다.
@@ -242,6 +242,7 @@ erDiagram
         int task_id FK
         int first_attempt_id FK
         int coins_awarded
+        date completion_date
         datetime completed_at
     }
 
@@ -291,8 +292,8 @@ erDiagram
     TASKS ||--o{ TASK_PRESENTATIONS : presented_as
     TASK_PRESENTATIONS o|--o{ TASK_ATTEMPTS : grades_with
     USERS ||--o{ TASK_COMPLETIONS : earns
-    TASKS ||--o{ TASK_COMPLETIONS : completed_once
-    TASK_ATTEMPTS ||--o| TASK_COMPLETIONS : first_reward
+    TASKS ||--o{ TASK_COMPLETIONS : rewarded_daily
+    TASK_ATTEMPTS ||--o| TASK_COMPLETIONS : daily_first_reward
     ATTENDANCE_TASKS o|--o{ TASK_ATTEMPTS : daily_context
     ROOM_TASKS o|--o{ TASK_ATTEMPTS : battle_context
 
@@ -331,6 +332,6 @@ erDiagram
 - `TASKS.type = CODE`는 연결된 `CONCEPTS.domain`에 따라 Python 또는 격리된 PostgreSQL 채점기로 분기한다.
 - `TASKS.options`가 있는 논리 문제는 직접 작성과 객관식 표현을 모두 지원한다. GOLD seed는 객관식 데이터를 만들지 않는다.
 - 활성 `TASK_PRESENTATIONS`는 사용자·논리 문제·문맥별 하나이며 정답 처리 전까지 유형과 보기 순서를 유지한다.
-- `TASK_COMPLETIONS`의 유일 키는 계속 `(user_id, task_id)`이므로 표시 방식별로 완료나 보상을 중복 집계하지 않는다.
+- `TASK_COMPLETIONS`의 유일 키는 `(user_id, task_id, completion_date)`이므로 표시 방식과 관계없이 같은 게임 날짜에는 한 번만 보상하고 다음 날짜에는 다시 지급할 수 있다.
 - `TASKS.reward_coins`, `TASK_ATTEMPTS.coins_awarded`, `TASK_COMPLETIONS.coins_awarded`, `DAILY_REWARD_CLAIMS.coins_awarded`는 모두 0 이상이다.
 - `TASK_ATTEMPTS.result_detail`에는 verdict와 공개 가능한 오류 요약만 저장한다.
