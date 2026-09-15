@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import get_current_user
+from app.core.config import settings
 from app.core.exceptions import (
     InvalidMemorySummaryError,
     ResourceNotFoundError,
@@ -170,6 +171,7 @@ def test_free_cat_chat_returns_guarded_public_response(monkeypatch) -> None:
         cat_asset_public_id=cat_asset_public_id,
         message="파이썬 함수가 어려워",
         recent_messages=[],
+        memory_limit=settings.gemini_max_memory_count,
     )
 
 
@@ -334,6 +336,7 @@ def test_create_cat_memory_returns_public_response(
         user_public_id=user.public_id,
         cat_asset_public_id=cat_asset_public_id,
         context_summary=context_summary,
+        memory_limit=settings.gemini_max_memory_count,
     )
 
     body = response.json()

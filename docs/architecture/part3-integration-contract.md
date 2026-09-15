@@ -298,6 +298,8 @@ request_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
 - 대화 요약은 새 `CAT_MEMORIES` 행으로 누적 기록한다.
 - 공백뿐인 대화 요약은 저장하지 않는다.
 - 기억 목록은 `created_at`, `id` 오름차순으로 반환한다.
+- 고양이별 기억은 `GEMINI_MAX_MEMORY_COUNT`개까지만 유지하고 동일한 요약을 중복 저장하지 않는다.
+- 저장 한도를 넘으면 가장 오래된 기억부터 새 기억 저장과 같은 트랜잭션에서 삭제한다.
 - 선택 삭제는 `memory_public_id`로 대상 기억을 잠금 조회하고, 요청한 고양이 자산의 기억인지 다시 확인한다.
 - 전체 삭제는 지정한 `cat_asset_id`에 연결된 `CAT_MEMORIES` 행만 삭제한다.
 - 선택 삭제와 전체 삭제는 `CATS.persona`, `CATS` 행과 `ASSETS` 행을 삭제하거나 변경하지 않는다.

@@ -11,7 +11,7 @@
 | 데이터 | 보관 위치 | 수명 | 역할 |
 | --- | --- | --- | --- |
 | 고양이 persona | `CATS.persona` | 고정 | 고양이 종류의 말투와 성격 |
-| 장기 기억 | `CAT_MEMORIES.context_summary` | 사용자가 삭제할 때까지 | 사용자 선호·목표·학습 진도 요약 |
+| 장기 기억 | `CAT_MEMORIES.context_summary` | 고양이별 최근 20개 또는 사용자가 삭제할 때까지 | 사용자 선호·목표·학습 진도 요약 |
 | 최근 대화 원문 | 프런트엔드 임시 상태 | 화면 세션 동안 | 직전 문맥 유지 |
 
 persona는 프런트가 보내는 값이 아니다. 백엔드가 `cat_asset_public_id`의 소유권을 검사하고 `ASSETS.cat_id → CATS.persona`로 직접 조회한다. 기억 전체 삭제도 `CAT_MEMORIES`만 지우며 persona와 보유 자산은 유지한다.
@@ -61,6 +61,8 @@ system instruction에는 다음 항목이 들어간다.
 
 - 한 대화에서 답변과 기억 후보를 한 번의 Gemini 호출로 함께 생성한다.
 - 최근 대화는 10개, 장기 기억은 최신 20개, 출력은 512 token으로 제한한다.
+- 고양이별 장기 기억은 `GEMINI_MAX_MEMORY_COUNT`개까지만 보관한다. 동일한 요약은 중복 저장하지 않고,
+  한도를 넘으면 가장 오래된 기억부터 같은 트랜잭션에서 삭제한다.
 - 기본 timeout은 30초다.
 - Gemini API 키는 `.env`에만 두고 Git에 커밋하지 않는다.
 - 키 미설정, timeout, 무료 할당량 초과, 공급자 장애와 잘못된 구조화 출력은 `503 Service Unavailable`이다.

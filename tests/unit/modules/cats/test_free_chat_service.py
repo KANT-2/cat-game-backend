@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from app.core.exceptions import InvalidAIResponseError
 from app.models.asset import Asset
 from app.models.cat import Cat
+from app.models.cat_memory import CatMemory
 from app.models.user import User
 from app.modules.cats.service import chat_with_cat
 from tests.fakes.repositories import (
@@ -92,13 +94,79 @@ def test_coding_chat_calls_provider_and_stores_only_server_summary() -> None:
     assert unit_of_work.cat_memories.memories[0].context_summary == (
         "사용자와 코딩 학습에 관해 대화했다."
     )
-    assert "파이썬 반복문을 어떻게 고쳐?" not in unit_of_work.cat_memories.memories[0].context_summary
+    assert (
+        "파이썬 반복문을 어떻게 고쳐?" not in unit_of_work.cat_memories.memories[0].context_summary
+    )
     provider.reply.assert_called_once_with(
         persona="느긋하고 다정한 고양이.",
         message="파이썬 반복문을 어떻게 고쳐?",
         memories=[],
         recent_messages=[{"role": "assistant", "text": "앞에서 함수 이야기를 했어."}],
     )
+    unit_of_work.commit.assert_called_once_with()
+
+
+def test_repeated_summary_is_not_stored_twice() -> None:
+    unit_of_work, user, asset = make_context()
+    existing_memory = CatMemory(
+        id=40,
+        public_id=uuid.uuid4(),
+        cat_asset_id=asset.id,
+        context_summary="사용자와 코딩 학습에 관해 대화했다.",
+        created_at=datetime(2026, 9, 14, 12, 0, tzinfo=UTC),
+    )
+    unit_of_work.cat_memories = FakeCatMemoryRepository([existing_memory])
+    provider = MagicMock()
+    provider.reply.return_value = "이번에도 작은 예제부터 살펴보자, 냐옹."
+
+    result = chat_with_cat(
+        unit_of_work=unit_of_work,
+        provider=provider,
+        user_public_id=user.public_id,
+        cat_asset_public_id=asset.public_id,
+        message="파이썬 함수 예제를 다시 보고 싶어",
+    )
+
+    assert result.remembered is False
+    assert result.memory_count == 1
+    assert unit_of_work.cat_memories.memories == [existing_memory]
+    unit_of_work.commit.assert_not_called()
+
+
+def test_new_summary_removes_oldest_memories_beyond_limit() -> None:
+    unit_of_work, user, asset = make_context()
+    created_at = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
+    existing_memories = [
+        CatMemory(
+            id=40 + index,
+            public_id=uuid.uuid4(),
+            cat_asset_id=asset.id,
+            context_summary=f"기존 기억 {index}",
+            created_at=created_at + timedelta(minutes=index),
+        )
+        for index in range(4)
+    ]
+    unit_of_work.cat_memories = FakeCatMemoryRepository(existing_memories)
+    provider = MagicMock()
+    provider.reply.return_value = "오늘도 수고했어. 천천히 쉬어도 좋아, 냐옹."
+
+    result = chat_with_cat(
+        unit_of_work=unit_of_work,
+        provider=provider,
+        user_public_id=user.public_id,
+        cat_asset_public_id=asset.public_id,
+        message="오늘 공부가 힘들었어",
+        memory_limit=3,
+    )
+
+    summaries = [memory.context_summary for memory in unit_of_work.cat_memories.memories]
+    assert result.remembered is True
+    assert result.memory_count == 3
+    assert summaries == [
+        "기존 기억 2",
+        "기존 기억 3",
+        "사용자와 일상과 기분에 관해 대화했다.",
+    ]
     unit_of_work.commit.assert_called_once_with()
 
 

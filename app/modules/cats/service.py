@@ -7,6 +7,7 @@ from app.core.exceptions import (
 )
 from app.core.unit_of_work import UnitOfWork
 from app.integrations.ai.cat_chat import CatChatProvider
+from app.models.cat_memory import CatMemory
 from app.modules.cats.chat_policy import (
     cat_chat_memory_summary,
     classify_cat_chat,
@@ -103,6 +104,7 @@ def chat_with_cat(
     cat_asset_public_id: UUID,
     message: str,
     recent_messages: list[dict[str, str]] | None = None,
+    memory_limit: int = 20,
 ) -> CatChatRead:
     """Reply as an owned cat without storing raw user input.
 
@@ -165,17 +167,22 @@ def chat_with_cat(
         cat_asset = uow.assets.get_by_public_id(cat_asset_public_id)
         if cat_asset is None or cat_asset.user_id != user.id or cat_asset.cat_id is None:
             raise ResourceNotFoundError("cat asset not found")
-        uow.cat_memories.add(cat_asset.id, summary)
-        locked_user.advance_state_version()
-        uow.commit()
-        memory_count = len(uow.cat_memories.list_by_cat_asset_id(cat_asset.id))
+        _, remembered, changed, memory_count = _store_bounded_cat_memory(
+            unit_of_work=uow,
+            cat_asset_id=cat_asset.id,
+            context_summary=summary,
+            memory_limit=memory_limit,
+        )
+        if changed:
+            locked_user.advance_state_version()
+            uow.commit()
 
     return CatChatRead(
         cat_asset_public_id=cat_asset_public_id,
         reply=reply,
         category=decision.category,
         memory_count=memory_count,
-        remembered=True,
+        remembered=remembered,
     )
 
 
@@ -185,6 +192,7 @@ def add_cat_memory(
     user_public_id: UUID,
     cat_asset_public_id: UUID,
     context_summary: str,
+    memory_limit: int = 20,
 ) -> CatMemoryRead:
     if not context_summary.strip():
         raise InvalidMemorySummaryError("context summary must not be blank")
@@ -201,18 +209,72 @@ def add_cat_memory(
         if cat_asset is None or cat_asset.user_id != user.id or cat_asset.cat_id is None:
             raise ResourceNotFoundError("cat asset not found")
 
-        memory = uow.cat_memories.add(
-            cat_asset.id,
-            context_summary,
+        memory, _, changed, _ = _store_bounded_cat_memory(
+            unit_of_work=uow,
+            cat_asset_id=cat_asset.id,
+            context_summary=context_summary.strip(),
+            memory_limit=memory_limit,
         )
 
-        locked_user.advance_state_version()
-        uow.commit()
+        if changed:
+            locked_user.advance_state_version()
+            uow.commit()
 
         return to_cat_memory_read(
             memory,
             cat_asset_public_id=cat_asset.public_id,
         )
+
+
+def _store_bounded_cat_memory(
+    *,
+    unit_of_work: UnitOfWork,
+    cat_asset_id: int,
+    context_summary: str,
+    memory_limit: int,
+) -> tuple[CatMemory, bool, bool, int]:
+    """Keep only the newest distinct summaries and optionally append one memory."""
+    if memory_limit < 1:
+        raise ValueError("memory limit must be positive")
+
+    memories = unit_of_work.cat_memories.list_by_cat_asset_id(cat_asset_id)
+    seen_summaries: set[str] = set()
+    retained_newest_first: list[CatMemory] = []
+    removed: list[CatMemory] = []
+
+    for memory in reversed(memories):
+        normalized_summary = memory.context_summary.strip()
+        if normalized_summary in seen_summaries:
+            removed.append(memory)
+            continue
+        seen_summaries.add(normalized_summary)
+        retained_newest_first.append(memory)
+
+    retained = list(reversed(retained_newest_first))
+    while len(retained) > memory_limit:
+        removed.append(retained.pop(0))
+
+    for memory in removed:
+        unit_of_work.cat_memories.remove(memory)
+
+    normalized_new_summary = context_summary.strip()
+    duplicate = next(
+        (
+            memory
+            for memory in reversed(retained)
+            if memory.context_summary.strip() == normalized_new_summary
+        ),
+        None,
+    )
+    if duplicate is not None:
+        return duplicate, False, bool(removed), len(retained)
+
+    if len(retained) == memory_limit:
+        oldest = retained.pop(0)
+        unit_of_work.cat_memories.remove(oldest)
+
+    memory = unit_of_work.cat_memories.add(cat_asset_id, normalized_new_summary)
+    return memory, True, True, len(retained) + 1
 
 
 def delete_cat_memory(
