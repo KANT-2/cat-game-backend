@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import textwrap
 from dataclasses import dataclass
 
 from sqlalchemy import delete, or_, select
@@ -176,6 +177,503 @@ DIRECT_HINTS = {
     "run_length": "현재 문자와 연속 개수를 유지하다 문자가 바뀔 때 `문자+개수`를 결과에 추가하세요.",
 }
 
+# Multiple-choice options are short programs, not computed outputs: the player has to read Python
+# and recognise the working solution. Each distractor models one concrete beginner mistake for that
+# operation (wrong operator, missing int(), off-by-one, swapped branches, ...) and several of them
+# would raise at runtime - that is intentional, the player reasons about the code instead of running
+# it. Options describe the operation's logic, so they do not depend on the story variant.
+_RAW_CODE_OPTIONS: dict[str, tuple[str, list[str]]] = {
+    "sum": (
+        """
+        a, b = map(int, input().split())
+        print(a + b)
+        """,
+        [
+            # subtracts instead of adding
+            """
+            a, b = map(int, input().split())
+            print(a - b)
+            """,
+            # no int(), so + joins the two pieces of text
+            """
+            a, b = input().split()
+            print(a + b)
+            """,
+            # off-by-one
+            """
+            a, b = map(int, input().split())
+            print(a + b + 1)
+            """,
+        ],
+    ),
+    "length": (
+        """
+        text = input()
+        print(len(text))
+        """,
+        [
+            # counts words instead of letters
+            """
+            text = input()
+            print(len(text.split()))
+            """,
+            # off-by-one
+            """
+            text = input()
+            print(len(text) - 1)
+            """,
+            # len is a built-in function, not a string method
+            """
+            text = input()
+            print(text.len())
+            """,
+        ],
+    ),
+    "even": (
+        """
+        n = int(input())
+        print("야옹~" if n % 2 == 0 else "갸우뚱...")
+        """,
+        [
+            # even and odd branches swapped
+            """
+            n = int(input())
+            print("야옹~" if n % 2 == 1 else "갸우뚱...")
+            """,
+            # // instead of %
+            """
+            n = int(input())
+            print("야옹~" if n // 2 == 0 else "갸우뚱...")
+            """,
+            # no int(), so % on text raises TypeError
+            """
+            n = input()
+            print("야옹~" if n % 2 == 0 else "갸우뚱...")
+            """,
+        ],
+    ),
+    "range_sum": (
+        """
+        n = int(input())
+        print(sum(range(1, n + 1)))
+        """,
+        [
+            # range stops before n, so N itself is left out
+            """
+            n = int(input())
+            print(sum(range(1, n)))
+            """,
+            # no int(), so range gets a string
+            """
+            n = input()
+            print(sum(range(1, n + 1)))
+            """,
+            # / makes the formula a float, printing 15.0 instead of 15
+            """
+            n = int(input())
+            print(n * (n + 1) / 2)
+            """,
+        ],
+    ),
+    "max": (
+        """
+        nums = list(map(int, input().split()))
+        print(max(nums))
+        """,
+        [
+            # smallest instead of largest
+            """
+            nums = list(map(int, input().split()))
+            print(min(nums))
+            """,
+            # adds the values instead of picking the largest
+            """
+            nums = list(map(int, input().split()))
+            print(sum(nums))
+            """,
+            # forgot to index, so the whole sorted list is printed
+            """
+            nums = list(map(int, input().split()))
+            print(sorted(nums, reverse=True))
+            """,
+        ],
+    ),
+    "manhattan": (
+        """
+        x, y = map(int, input().split())
+        print(abs(x) + abs(y))
+        """,
+        [
+            # forgot abs, so a negative coordinate shrinks the distance
+            """
+            x, y = map(int, input().split())
+            print(x + y)
+            """,
+            # abs applied to the sum instead of to each coordinate
+            """
+            x, y = map(int, input().split())
+            print(abs(x + y))
+            """,
+            # straight-line distance instead of grid distance
+            """
+            x, y = map(int, input().split())
+            print((x ** 2 + y ** 2) ** 0.5)
+            """,
+        ],
+    ),
+    "unique": (
+        """
+        values = input().split()
+        print(len(set(values)))
+        """,
+        [
+            # counts every value, duplicates included
+            """
+            values = input().split()
+            print(len(values))
+            """,
+            # forgot split, so it counts distinct characters
+            """
+            values = input()
+            print(len(set(values)))
+            """,
+            # prints the set itself instead of how many items it holds
+            """
+            values = input().split()
+            print(set(values))
+            """,
+        ],
+    ),
+    "frequency": (
+        """
+        words = input().split()
+        print(words.count(words[0]))
+        """,
+        [
+            # counts how many words there are in total
+            """
+            words = input().split()
+            print(len(words))
+            """,
+            # counts the second word, reading index 1 as "the first one"
+            """
+            words = input().split()
+            print(words.count(words[1]))
+            """,
+            # the comparison is inverted, so it counts every other word
+            """
+            words = input().split()
+            print(sum(1 for w in words if w != words[0]))
+            """,
+        ],
+    ),
+    "truncate": (
+        """
+        value = float(input())
+        print(int(value))
+        """,
+        [
+            # rounds instead of dropping the decimals
+            """
+            value = float(input())
+            print(round(value))
+            """,
+            # int() cannot parse "21.75" directly
+            """
+            print(int(input()))
+            """,
+            # prints the number unchanged
+            """
+            value = float(input())
+            print(value)
+            """,
+        ],
+    ),
+    "range_check": (
+        """
+        n = int(input())
+        print("야옹~" if 1 <= n <= 100 else "상자 밖!")
+        """,
+        [
+            # excludes 1 and 100 themselves
+            """
+            n = int(input())
+            print("야옹~" if 1 < n < 100 else "상자 밖!")
+            """,
+            # or instead of and, so every number passes
+            """
+            n = int(input())
+            print("야옹~" if n >= 1 or n <= 100 else "상자 밖!")
+            """,
+            # the two messages are the wrong way round
+            """
+            n = int(input())
+            print("상자 밖!" if 1 <= n <= 100 else "야옹~")
+            """,
+        ],
+    ),
+    "even_square_sum": (
+        """
+        nums = list(map(int, input().split()))
+        print(sum(n ** 2 for n in nums if n % 2 == 0))
+        """,
+        [
+            # keeps the odd values instead of the even ones
+            """
+            nums = list(map(int, input().split()))
+            print(sum(n ** 2 for n in nums if n % 2 == 1))
+            """,
+            # doubles each value instead of squaring it
+            """
+            nums = list(map(int, input().split()))
+            print(sum(n * 2 for n in nums if n % 2 == 0))
+            """,
+            # squares the total instead of squaring each value
+            """
+            nums = list(map(int, input().split()))
+            print(sum(n for n in nums if n % 2 == 0) ** 2)
+            """,
+        ],
+    ),
+    "word_count": (
+        """
+        words = input().lower().split()
+        print(len(words))
+        """,
+        [
+            # counts characters instead of words
+            """
+            text = input().lower()
+            print(len(text))
+            """,
+            # splits on commas, so a space-separated line stays in one piece
+            """
+            words = input().lower().split(",")
+            print(len(words))
+            """,
+            # lower is never called, so split runs on a method object
+            """
+            words = input().lower.split()
+            print(len(words))
+            """,
+        ],
+    ),
+    "second_largest": (
+        """
+        nums = sorted(set(map(int, input().split())))
+        print(nums[-2])
+        """,
+        [
+            # duplicates are kept, so a repeated top score wins twice
+            """
+            nums = sorted(map(int, input().split()))
+            print(nums[-2])
+            """,
+            # second smallest instead of second largest
+            """
+            nums = sorted(set(map(int, input().split())))
+            print(nums[1])
+            """,
+            # the largest value, not the second largest
+            """
+            nums = sorted(set(map(int, input().split())))
+            print(nums[-1])
+            """,
+        ],
+    ),
+    "mode_char": (
+        """
+        text = input()
+        print(min(set(text), key=lambda c: (-text.count(c), c)))
+        """,
+        [
+            # picks the rarest character instead of the most frequent one
+            """
+            text = input()
+            print(min(set(text), key=lambda c: (text.count(c), c)))
+            """,
+            # prints how many times it appeared instead of the character
+            """
+            text = input()
+            print(max(text.count(c) for c in set(text)))
+            """,
+            # index() is where a character first appears, not how often it appears
+            """
+            text = input()
+            print(max(set(text), key=lambda c: text.index(c)))
+            """,
+        ],
+    ),
+    "divisor_count": (
+        """
+        n = int(input())
+        print(sum(1 for i in range(1, n + 1) if n % i == 0))
+        """,
+        [
+            # range stops before n, so N itself is never counted
+            """
+            n = int(input())
+            print(sum(1 for i in range(1, n) if n % i == 0))
+            """,
+            # starts at 0, so n % 0 raises ZeroDivisionError
+            """
+            n = int(input())
+            print(sum(1 for i in range(0, n + 1) if n % i == 0))
+            """,
+            # adds the divisors up instead of counting them
+            """
+            n = int(input())
+            print(sum(i for i in range(1, n + 1) if n % i == 0))
+            """,
+        ],
+    ),
+    "average": (
+        """
+        nums = list(map(int, input().split()))
+        print(f"{sum(nums) / len(nums):.2f}")
+        """,
+        [
+            # no formatting, so it prints 5.0 instead of 5.00
+            """
+            nums = list(map(int, input().split()))
+            print(sum(nums) / len(nums))
+            """,
+            # divides by one value too few
+            """
+            nums = list(map(int, input().split()))
+            print(f"{sum(nums) / (len(nums) - 1):.2f}")
+            """,
+            # no int(), so sum() is handed a list of text
+            """
+            nums = input().split()
+            print(f"{sum(nums) / len(nums):.2f}")
+            """,
+        ],
+    ),
+    "safe_div": (
+        """
+        a, b = map(int, input().split())
+        try:
+            print(a // b)
+        except ZeroDivisionError:
+            print("ZERO")
+        """,
+        [
+            # catches the wrong error, so dividing by 0 still crashes
+            """
+            a, b = map(int, input().split())
+            try:
+                print(a // b)
+            except ValueError:
+                print("ZERO")
+            """,
+            # / gives 3.0 where the problem asks for 3
+            """
+            a, b = map(int, input().split())
+            try:
+                print(a / b)
+            except ZeroDivisionError:
+                print("ZERO")
+            """,
+            # guards the wrong side of the division
+            """
+            a, b = map(int, input().split())
+            print("ZERO" if a == 0 else a // b)
+            """,
+        ],
+    ),
+    "intersection": (
+        """
+        first = set(map(int, input().split()))
+        second = set(map(int, input().split()))
+        print(" ".join(map(str, sorted(first & second))))
+        """,
+        [
+            # every value from both lines instead of the shared ones
+            """
+            first = set(map(int, input().split()))
+            second = set(map(int, input().split()))
+            print(" ".join(map(str, sorted(first | second))))
+            """,
+            # prints the list itself, brackets and commas included
+            """
+            first = set(map(int, input().split()))
+            second = set(map(int, input().split()))
+            print(sorted(first & second))
+            """,
+            # values only on the first line instead of the shared ones
+            """
+            first = set(map(int, input().split()))
+            second = set(map(int, input().split()))
+            print(" ".join(map(str, sorted(first - second))))
+            """,
+        ],
+    ),
+    "increasing_prefix": (
+        """
+        nums = list(map(int, input().split()))
+        count = 1
+        while count < len(nums) and nums[count] > nums[count - 1]:
+            count += 1
+        print(count)
+        """,
+        [
+            # starts counting at 0, so the first value is never counted
+            """
+            nums = list(map(int, input().split()))
+            count = 0
+            while count < len(nums) and nums[count] > nums[count - 1]:
+                count += 1
+            print(count)
+            """,
+            # compares the wrong way, measuring a decreasing run
+            """
+            nums = list(map(int, input().split()))
+            count = 1
+            while count < len(nums) and nums[count] < nums[count - 1]:
+                count += 1
+            print(count)
+            """,
+            # counts every rise in the list instead of stopping at the first drop
+            """
+            nums = list(map(int, input().split()))
+            print(sum(1 for i in range(1, len(nums)) if nums[i] > nums[i - 1]) + 1)
+            """,
+        ],
+    ),
+    "kv_sum": (
+        """
+        items = input().split()
+        print(sum(int(item.split(":", 1)[1]) for item in items))
+        """,
+        [
+            # takes the name on the left of the colon instead of the value
+            """
+            items = input().split()
+            print(sum(int(item.split(":", 1)[0]) for item in items))
+            """,
+            # no int(), so sum() is handed text
+            """
+            items = input().split()
+            print(sum(item.split(":", 1)[1] for item in items))
+            """,
+            # splits the whole line on ':' instead of each item separately
+            """
+            parts = input().split(":")
+            print(sum(int(p) for p in parts[1:]))
+            """,
+        ],
+    ),
+}
+
+CODE_OPTIONS: dict[str, tuple[str, list[str]]] = {
+    operation: (
+        textwrap.dedent(correct).strip(),
+        [textwrap.dedent(distractor).strip() for distractor in distractors],
+    )
+    for operation, (correct, distractors) in _RAW_CODE_OPTIONS.items()
+}
+
 CONCEPT_START_HINTS = {
     "basics": "`input()`으로 받은 값을 문제 순서대로 변수에 담고 필요한 숫자형으로 변환하세요.",
     "conditionals": "먼저 참과 거짓을 가르는 조건식을 한 줄로 적고 두 출력 경로를 나누세요.",
@@ -228,43 +726,20 @@ def _positioned_options(correct: str, distractors: list[str], seed: str) -> tupl
 
 
 def python_multiple_choice(spec: Spec, variant: int) -> tuple[str, dict[str, str], str]:
-    example = cases(spec.operation, variant)[0]
-    sample_input = example["input"].strip()
-    correct = example["expected_output"].strip()
-    distractors: list[str] = []
-    try:
-        number = int(correct)
-        candidates = [str(number + 1), str(number - 1), sample_input.split()[0], "0"]
-    except ValueError:
-        try:
-            number = float(correct)
-            candidates = [f"{number + 1:.2f}", f"{number - 1:.2f}", "0.00", sample_input]
-        except ValueError:
-            candidates = {
-                "even": ["야옹~", "갸우뚱...", "상자 밖!", "True"],
-                "range_check": ["야옹~", "갸우뚱...", "상자 밖!", "False"],
-                "safe_div": ["ZERO", "0", "오류", "나눌 수 없음"],
-                "palindrome": ["YES", "NO", "True", "회문"],
-                "balanced": ["YES", "NO", "0", "균형"],
-                "mode_char": ["a", "b", "n", "banana"],
-                "run_length": ["a3b2c1", "a3b2c", "abc", "3a2b1c"],
-            }.get(spec.operation, [correct[::-1], sample_input, "YES", "NO"])
-    for candidate in candidates:
-        if candidate != correct and candidate not in distractors:
-            distractors.append(candidate)
-    fallback = 1
-    while len(distractors) < 3:
-        candidate = f"{correct} ({fallback})"
-        if candidate != correct:
-            distractors.append(candidate)
-        fallback += 1
+    correct, distractors = CODE_OPTIONS[spec.operation]
+    if len({correct, *distractors}) != 4:
+        raise ValueError(f"code options for {spec.operation} are not four distinct snippets")
+    # Only the flavour text and the answer positions follow the variant; the code itself is the
+    # operation's logic, which every variant of the same task shares.
+    sample_input = cases(spec.operation, variant)[0]["input"].strip().replace("\n", "` / `")
     options, correct_option = _positioned_options(
-        correct, distractors, f"{spec.operation}:{variant}"
+        correct, list(distractors), f"{spec.operation}:{variant}"
     )
     prompt = (
         f"[도와주세요!] {VARIANTS[variant - 1][1]} {STORIES[spec.operation]}\n\n"
         f"[객관식 문제] {spec.prompt}\n"
-        f"예시 입력 `{sample_input}`을 위 방법대로 처리했을 때 출력은 무엇인가요?"
+        f"예시 입력은 `{sample_input}`이에요. "
+        "다음 중 이 문제를 올바르게 해결하는 코드는 무엇인가요?"
     )
     return prompt, options, correct_option
 
