@@ -1,6 +1,6 @@
 # Cat Game Backend 현재 ERD
 
-2026-09-13 기준 ORM 모델과 Alembic 단일 head `f2a3b4c5d6e7`을 반영한 22개 업무 테이블의 현재 구조다.
+2026-09-15 기준 ORM 모델과 Alembic 단일 head `1a2b3c4d5e6f`를 반영한 23개 업무 테이블의 현재 구조다.
 
 팀 기준 문서는 [Notion ERD - 현재 최종본](https://app.notion.com/p/ERD-03fdb49922e58311880781f373402039)이다.
 
@@ -24,6 +24,7 @@
 - `CATS.catalog_key`와 `ITEMS.catalog_key`는 배포 환경에 독립적인 카탈로그 식별자다.
 - 대표 고양이는 `USERS.active_cat_id`로 선택하며, 해당 고양이 자산은 `ASSETS.is_home`으로 홈 배치를 표시한다.
 - 학습 제출은 `TASK_ATTEMPTS.request_id`와 `request_hash`로 멱등성을 보장하고, `TASKS.reward_coins`와 `TASK_ATTEMPTS.coins_awarded`로 보상 기준과 실제 지급액을 기록한다.
+- `GAME_ACTIVITY_EVENTS`는 게임 진입 시각만 최소 수집하고, 문제 통계는 기존 `TASK_ATTEMPTS` 원본과 일별 통계 VIEW에서 계산한다.
 
 ## Mermaid ERD
 
@@ -277,6 +278,14 @@ erDiagram
         datetime updated_at
     }
 
+    GAME_ACTIVITY_EVENTS {
+        int id PK
+        uuid public_id UK "UUIDv4"
+        int user_id FK
+        string event_type "GAME_ENTERED"
+        datetime occurred_at
+    }
+
     USERS ||--o{ ATTENDANCES : checks_in
     ATTENDANCES ||--o{ ATTENDANCE_TASKS : assigns
     TASKS ||--o{ ATTENDANCE_TASKS : scheduled_as
@@ -316,6 +325,7 @@ erDiagram
     USERS ||--o{ GACHA_EXECUTIONS : executes
     USERS ||--o{ DAILY_REWARD_CLAIMS : claims
     USERS ||--o{ AUTH_SESSIONS : authenticates
+    USERS ||--o{ GAME_ACTIVITY_EVENTS : generates
     ASSETS ||--o{ CAT_MEMORIES : remembers
 ```
 

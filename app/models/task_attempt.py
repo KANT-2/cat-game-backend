@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     String,
     Text,
@@ -59,6 +60,8 @@ class TaskAttempt(Base):
     grading_lease_token: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     __table_args__ = (
+        Index("ix_task_attempts_attempted_at", "attempted_at"),
+        Index("ix_task_attempts_user_attempted_at", "user_id", "attempted_at"),
         ForeignKeyConstraint(
             ["attendance_task_id", "task_id"],
             ["attendance_tasks.id", "attendance_tasks.task_id"],

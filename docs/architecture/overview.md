@@ -24,5 +24,9 @@
 요청 헤더, 쿼리 값, 비밀번호, 세션 토큰과 제출 코드는 기록하지 않는다. 처리되지 않은 예외는 내부 문자열
 대신 `internal-server-error`와 요청 ID를 반환한다.
 
+게임 사용 통계는 일반 HTTP 로그가 아니라 보존되는 업무 원장을 기준으로 계산한다. 문제 풀이 지표는
+`TASK_ATTEMPTS`, 게임 진입은 개인정보를 복제하지 않는 `GAME_ACTIVITY_EVENTS`를 원본으로 사용하며,
+Asia/Seoul 날짜 기준 SQL VIEW를 팀 전용 통계 API에 제공한다.
+
 `GET /health`는 프로세스 liveness만 확인하고 `GET /ready`는 PostgreSQL 연결에서 `SELECT 1`이 성공해야
 ready를 반환한다. 컨테이너 오케스트레이터는 트래픽 연결 여부를 결정할 때 `/ready`를 사용한다.

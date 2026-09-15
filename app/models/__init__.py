@@ -9,6 +9,7 @@ from app.models.cat_memory import CatMemory
 from app.models.concept import Concept
 from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.gacha_execution import GachaExecution
+from app.models.game_activity_event import GameActivityEvent
 from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.room import Room
@@ -34,6 +35,7 @@ __all__ = [
     "Concept",
     "DailyRewardClaim",
     "GachaExecution",
+    "GameActivityEvent",
     "Item",
     "PlacedObject",
     "Room",

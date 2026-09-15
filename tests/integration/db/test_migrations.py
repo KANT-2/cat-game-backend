@@ -23,10 +23,40 @@ EXPECTED_TABLES = [
     "user_learning_tiers",
     "placed_objects",
     "gacha_executions",
-    "task_completions", "daily_reward_claims",
+    "task_completions",
+    "daily_reward_claims",
     "auth_sessions",
     "auth_rate_limits",
+    "game_activity_events",
 ]
+
+
+def test_statistics_table_and_views_are_available(engine):
+    with engine.connect() as connection:
+        views = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT table_name FROM information_schema.views "
+                    "WHERE table_schema = 'public'"
+                )
+            )
+        }
+        activity_columns = {
+            row[0]
+            for row in connection.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'game_activity_events'"
+                )
+            )
+        }
+
+    assert {"user_id", "event_type", "occurred_at"} <= activity_columns
+    assert {
+        "analytics_daily_game_statistics",
+        "analytics_user_daily_learning_statistics",
+    } <= views
 
 
 def test_pgcrypto_extension_enabled(engine):

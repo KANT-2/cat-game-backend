@@ -707,7 +707,19 @@ idempotency-conflict`다. 따라서 더블 클릭이나 네트워크 재전송�
 보존하고, 전송 결과가 불분명한 경우 같은 본문과 같은 UUID로 재전송한다. `202`에서 받은
 attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을 만들지 않는다.
 
-## 7. 현재 공개되지 않은 조회 API
+## 7. 게임 사용 통계 API
+
+게임 진입과 문제 풀이 원본을 날짜·사용자별로 집계하는 팀 전용 API다. 두 API 모두 `X-API-Key`가
+필요하고 `date_from`, `date_to`는 `YYYY-MM-DD`이며 최대 366일까지 조회할 수 있다.
+
+```http
+GET /api/v1/statistics/daily?date_from=2026-09-01&date_to=2026-09-30
+GET /api/v1/statistics/users/daily?date_from=2026-09-01&date_to=2026-09-30
+```
+
+전체 지표 정의와 원본 보존 정책은 [게임 사용 통계](../features/game-usage-statistics.md)를 따른다.
+
+## 8. 현재 공개되지 않은 조회 API
 
 다음 기능은 문서 누락이 아니라 현재 FastAPI 라우터 자체에 없다.
 
@@ -721,7 +733,7 @@ attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을
 
 프런트가 이 데이터를 정적 파일이나 다른 서버에서 받지 않는다면 별도의 읽기 API 계약과 구현이 필요하다.
 
-## 8. 정책 미확정 항목
+## 9. 정책 미확정 항목
 
 - 가챠 비용·확률·중복 마일리지: 운영 `GachaPolicy` 미설정, 기본 API `503`
 - 일일 미션 보상액: `DAILY_REWARD_BALANCE` 미설정 시 보상 API `503`
@@ -730,7 +742,7 @@ attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을
 
 값이 확정되기 전에는 임의 숫자를 클라이언트나 서버에 하드코딩하지 않는다.
 
-## 9. 상세 계약과 구현 근거
+## 10. 상세 계약과 구현 근거
 
 - [Part 2 상세 통합 계약](../features/part2-integration-contract.md)
 - [Part 2 구현 현황](../features/part2-status.md)
@@ -739,6 +751,7 @@ attempt `public_id`로 결과를 재조회하며 polling 중에는 새 제출을
 - [Part 3 상세 통합 계약](../architecture/part3-integration-contract.md)
 - [Part 3 구현 현황](../architecture/part3-status.md)
 - [고양이 생성형 AI 설계](../architecture/cat-ai-integration.md)
+- [게임 사용 통계](../features/game-usage-statistics.md)
 - [현재 ERD](../architecture/current-erd.md)
 
 코드 기준 라우터 등록 위치는 `app/api/router.py`이며 FastAPI 애플리케이션은 이를 `/api/v1` prefix로 등록한다.
