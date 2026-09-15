@@ -16,7 +16,9 @@ from scripts import seed_sql_tasks as sql_seed
 @pytest.mark.parametrize(
     ("seed", "digest"),
     [
-        (python_seed, "1635da3c880647f456ba5dea71dca13a08fbb9b7f81bc1f7083965a745a397e3"),
+        # Python options/correct_option moved from computed outputs to code snippets, so this
+        # digest was recomputed on purpose; the SQL one below must stay untouched.
+        (python_seed, "189996973a4514ba42d9e9dc18af45016690a07fa37a7dbc07dda0680b2ce310"),
         (sql_seed, "652bbc94c7361fc50f559d61f1a02cba9e7555226359c0c484deb4bf28dc6560"),
     ],
 )
@@ -104,7 +106,34 @@ def test_python_multiple_choice_prompt_has_one_clear_question() -> None:
     assert "[문제]" not in task["multiple_choice_prompt"]
     assert "[질문]" not in task["multiple_choice_prompt"]
     assert "`2 4`" in task["multiple_choice_prompt"]
-    assert task["options"][task["correct_option"]] == "6"
+    # The quiz asks which code solves the problem, never what a sample input would print, so a
+    # player has to read Python instead of doing the arithmetic in their head.
+    assert "올바르게 해결하는 코드" in task["multiple_choice_prompt"]
+    assert "출력은 무엇인가요" not in task["multiple_choice_prompt"]
+
+    # Every option is a runnable-looking snippet; only one of them actually adds the two numbers.
+    assert all("print(" in option for option in task["options"].values())
+    assert task["options"][task["correct_option"]] == (
+        "a, b = map(int, input().split())\nprint(a + b)"
+    )
+    assert [option.isdigit() for option in task["options"].values()] == [False] * 4
+
+
+def test_python_multiple_choice_options_are_code_snippets_for_every_quiz_task() -> None:
+    quizzes = [row for row in python_seed.build_tasks() if row["options"] is not None]
+
+    assert len(quizzes) == 100
+    assert {row["difficulty"] for row in quizzes} == {"BRONZE", "SILVER"}
+    for row in quizzes:
+        options = row["options"]
+        assert len(options) == len(set(options.values())) == 4
+        for option in options.values():
+            assert "print(" in option
+            assert 1 <= len(option.splitlines()) <= 5
+
+    # The snippets describe the operation's logic, so the five story variants of one operation
+    # reuse the same four options rather than one option set per sample input.
+    assert len({frozenset(row["options"].values()) for row in quizzes}) == 20
 
 
 def test_sql_hints_name_the_clauses_needed_for_each_problem_family() -> None:
