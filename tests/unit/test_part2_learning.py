@@ -238,7 +238,7 @@ def test_active_presentation_is_reused_without_rerolling_mode_or_options(monkeyp
     assert db.commits == 0
 
 
-def test_completion_identity_does_not_include_presentation_mode():
+def test_completion_identity_is_scoped_to_one_game_date_not_presentation_mode():
     from app.models.task_completion import TaskCompletion
 
     unique_columns = {
@@ -246,7 +246,7 @@ def test_completion_identity_does_not_include_presentation_mode():
         for constraint in TaskCompletion.__table__.constraints
         if constraint.__class__.__name__ == "UniqueConstraint"
     }
-    assert ("user_id", "task_id") in unique_columns
+    assert ("user_id", "task_id", "completion_date") in unique_columns
 
 
 def test_proficiency_and_weakness_policy():
