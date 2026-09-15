@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import settings
@@ -13,6 +13,7 @@ from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
 from app.modules.learning.proficiency import assess_concept, recommended_tasks, weak_concepts
 from app.modules.learning.tier import PROMOTION_POLICY, get_or_advance_tier, unlocked_difficulties
+from app.schemas.learning_stats import LearningDailyStatsRead
 from app.schemas.learning_tier import ConceptTierProgressRead, LearningTierRead
 from app.schemas.task import TaskRead, to_task_read
 from app.schemas.user_proficiency import ConceptProficiencyRead, WeakConceptRead
@@ -225,3 +226,44 @@ def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRe
             )
         )
     return rows
+
+
+@router.get("/stats/me", response_model=LearningDailyStatsRead)
+def my_daily_stats(db: DbSession, user: CurrentUser) -> LearningDailyStatsRead:
+    """Return the authenticated player's own submission activity for the current game day."""
+    today = game_today()
+    day_start, day_end = game_day_bounds(today)
+    row = db.execute(
+        select(
+            func.count(func.distinct(TaskAttempt.task_id)),
+            func.count(TaskAttempt.id),
+            func.count(TaskAttempt.id).filter(TaskAttempt.status == "COMPLETED"),
+            func.count(TaskAttempt.id).filter(TaskAttempt.is_correct.is_(True)),
+            func.count(TaskAttempt.id).filter(TaskAttempt.is_correct.is_(False)),
+            func.count(TaskAttempt.id).filter(TaskAttempt.used_hint.is_(True)),
+            func.coalesce(func.sum(TaskAttempt.coins_awarded), 0),
+        ).where(
+            TaskAttempt.user_id == user.id,
+            TaskAttempt.attempted_at >= day_start,
+            TaskAttempt.attempted_at < day_end,
+        )
+    ).one()
+    (
+        distinct_tasks_attempted,
+        attempts_submitted,
+        attempts_completed,
+        correct_attempts,
+        incorrect_attempts,
+        hints_used,
+        coins_awarded,
+    ) = row
+    return LearningDailyStatsRead(
+        game_date=today,
+        distinct_tasks_attempted=distinct_tasks_attempted,
+        attempts_submitted=attempts_submitted,
+        attempts_completed=attempts_completed,
+        correct_attempts=correct_attempts,
+        incorrect_attempts=incorrect_attempts,
+        hints_used=hints_used,
+        coins_awarded=coins_awarded,
+    )
