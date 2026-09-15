@@ -1,7 +1,10 @@
 import hashlib
+import hmac
 import secrets
 
 from pwdlib import PasswordHash
+
+from app.core.config import settings
 
 password_hash = PasswordHash.recommended()
 DUMMY_PASSWORD_HASH = password_hash.hash("not-a-real-user-password")
@@ -28,3 +31,9 @@ def new_token() -> str:
 def hash_token(token: str) -> str:
     """Create the non-reversible database representation of a random token."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def host_csrf_token(session_token: str) -> str:
+    """Bind a CSRF token to an authenticated host session without storing that session."""
+    message = f"host-csrf:{session_token}".encode()
+    return hmac.new(settings.auth_rate_limit_secret.encode(), message, hashlib.sha256).hexdigest()

@@ -32,6 +32,7 @@ from app.modules.identity.security import (
     DUMMY_PASSWORD_HASH,
     hash_password,
     hash_token,
+    host_csrf_token,
     new_token,
     verify_password,
 )
@@ -179,11 +180,33 @@ def logout(request: Request, response: Response, db: DbSession, user: CurrentUse
 
 
 @router.get("/me", response_model=SessionRead)
-def current_session(request: Request, user: CurrentUser, platform: Platform) -> SessionRead:
+def current_session(
+    request: Request,
+    response: Response,
+    user: CurrentUser,
+    platform: Platform,
+) -> SessionRead:
     """Return the public profile resolved by the active authentication adapter."""
+    _issue_host_csrf_cookie(request, response)
     return SessionRead(
         **UserRead.model_validate(user).model_dump(),
         platform=_session_platform_enrichment(request, user, platform),
+    )
+
+
+def _issue_host_csrf_cookie(request: Request, response: Response) -> None:
+    if not isinstance(getattr(request.state, "host_user", None), HostUser):
+        return
+    session_cookie = request.cookies.get(settings.ax_auth_session_cookie_name)
+    if session_cookie is None:
+        return
+    response.set_cookie(
+        "nyang_csrf",
+        host_csrf_token(session_cookie),
+        secure=settings.app_env == "production",
+        httponly=False,
+        samesite="lax",
+        path="/",
     )
 
 

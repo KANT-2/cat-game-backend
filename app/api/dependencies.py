@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.auth_session import AuthSession
 from app.models.user import User
-from app.modules.identity.security import hash_token
+from app.modules.identity.security import hash_token, host_csrf_token
 
 
 def get_db():
@@ -122,6 +122,8 @@ async def resolve_current_user(
             "Host authentication is temporarily unavailable",
         ) from exc
 
+    _validate_host_csrf(request, session_cookie)
+
     user = db.scalar(select(User).where(User.homepage_user_id == host_user.id))
     normalized_role = host_user.role.upper()
     if user is None:
@@ -144,11 +146,27 @@ async def resolve_current_user(
     return user
 
 
+def _validate_host_csrf(request: Request, session_cookie: str) -> None:
+    if request.method in {"GET", "HEAD", "OPTIONS"}:
+        return
+    header_token = request.headers.get("X-CSRF-Token")
+    cookie_token = request.cookies.get("nyang_csrf")
+    expected_token = host_csrf_token(session_cookie)
+    if (
+        header_token is None
+        or cookie_token is None
+        or not compare_digest(header_token, expected_token)
+        or not compare_digest(cookie_token, expected_token)
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="csrf-validation-failed")
+
+
 def _unauthorized() -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="authentication-required")
 
 
 CurrentUser = Annotated[User, Depends(resolve_current_user)]
+
 
 def verify_tasks_api_key(
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,

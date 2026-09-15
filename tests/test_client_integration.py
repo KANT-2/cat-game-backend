@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException, Request, Response
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import HostUser, get_current_user
 from app.core.config import Settings, settings
 from app.integrations.ax_platform import PlatformService
 from app.main import app
@@ -105,14 +105,39 @@ def test_development_session_reuses_public_user(monkeypatch) -> None:
 def test_current_session_exposes_only_public_user_fields() -> None:
     user = user_fixture()
     request = _request()
+    response = Response()
 
-    response = current_session(request, user, PlatformService(Settings(_env_file=None)))
+    session = current_session(request, response, user, PlatformService(Settings(_env_file=None)))
 
-    assert response.public_id == user.public_id
-    payload = response.model_dump()
+    assert session.public_id == user.public_id
+    payload = session.model_dump()
     assert "id" not in payload
     assert "homepage_user_id" not in payload
     assert payload["platform"] == {"status": "disabled", "profile": None}
+
+
+def test_current_host_session_issues_readable_csrf_cookie(monkeypatch) -> None:
+    user = user_fixture()
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"cookie", b"sessionid=host-session")],
+        }
+    )
+    request.state.host_user = HostUser(id=42, display_name="Player", role="student")
+    response = Response()
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "test-auth-rate-limit-secret")
+
+    current_session(request, response, user, PlatformService(Settings(_env_file=None)))
+
+    csrf_cookie = next(
+        value for value in response.headers.getlist("set-cookie") if value.startswith("nyang_csrf=")
+    )
+    assert "Secure" in csrf_cookie
+    assert "HttpOnly" not in csrf_cookie
 
 
 def test_development_session_is_hidden_in_production(monkeypatch) -> None:

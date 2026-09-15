@@ -12,6 +12,8 @@
 4. 홈페이지 Bridge API가 세션, `is_active`, `approval_status=approved`를 검증한다.
 5. 성공 응답의 `id`, `display_name`, `role`로 게임 사용자를 생성하거나 갱신하고,
    `profile_image`가 있으면 현재 프로필 이미지로 사용한다.
+6. 최초 `GET /session/me` 응답은 홈페이지 세션에 HMAC으로 결합된 `nyang_csrf` 쿠키를 발급한다.
+   이후 쓰기 요청은 이 쿠키와 `X-CSRF-Token` 헤더가 모두 일치해야 한다.
 
 권장 성공 응답은 다음과 같다.
 

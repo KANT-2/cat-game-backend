@@ -54,9 +54,19 @@ class DB:
         user.id = 1
 
 
-def request(cookie: str | None = None):
-    headers = [] if cookie is None else [(b"cookie", f"sessionid={cookie}".encode())]
-    return Request({"type": "http", "method": "GET", "path": "/", "headers": headers})
+def request(
+    cookie: str | None = None,
+    *,
+    method: str = "GET",
+    csrf_token: str | None = None,
+):
+    cookies = [] if cookie is None else [f"sessionid={cookie}"]
+    if csrf_token is not None:
+        cookies.append(f"nyang_csrf={csrf_token}")
+    headers = [] if not cookies else [(b"cookie", "; ".join(cookies).encode())]
+    if csrf_token is not None:
+        headers.append((b"x-csrf-token", csrf_token.encode()))
+    return Request({"type": "http", "method": method, "path": "/", "headers": headers})
 
 
 @pytest.mark.asyncio
@@ -80,3 +90,22 @@ async def test_host_session_cookie_is_required(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         await dependencies.resolve_current_user(request(), DB(), None)
     assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_host_session_mutation_requires_bound_csrf_token(monkeypatch):
+    monkeypatch.setattr(settings, "ax_auth_base_url", "http://host.test")
+    monkeypatch.setattr(settings, "auth_rate_limit_secret", "test-auth-rate-limit-secret")
+    monkeypatch.setattr(dependencies.httpx, "AsyncClient", Client)
+
+    with pytest.raises(HTTPException) as exc:
+        await dependencies.resolve_current_user(request("secret", method="POST"), DB(), None)
+    assert exc.value.status_code == 403
+
+    csrf_token = dependencies.host_csrf_token("secret")
+    user = await dependencies.resolve_current_user(
+        request("secret", method="POST", csrf_token=csrf_token),
+        DB(),
+        None,
+    )
+    assert user.homepage_user_id == 42
