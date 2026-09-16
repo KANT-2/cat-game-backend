@@ -30,7 +30,7 @@ from app.models.user_learning_tier import UserLearningTier
 from app.modules.battle.service import record_attempt_result
 from app.modules.grading.runners import TaskRunner, dispatcher
 from app.modules.grading.sandbox.runner import GradeResult, Verdict
-from app.modules.grading.test_cases import TestCaseSpecError
+from app.modules.grading.test_cases import TestCase, TestCaseSpecError, parse_test_cases
 from app.modules.learning.proficiency import update_proficiency
 from app.modules.learning.tier import get_or_advance_tier, unlocked_difficulties
 from app.schemas.task_attempt import CodeTestCreate, TaskAttemptCreate
@@ -330,8 +330,13 @@ def run_code_test(
     payload: CodeTestCreate,
     user: User,
     runner: TaskRunner | None = None,
-) -> GradeResult:
-    """Run a code presentation without creating attempts, rewards, or learning progress."""
+) -> tuple[GradeResult, TestCase | None]:
+    """Run a code presentation without creating attempts, rewards, or learning progress.
+
+    Returns the grading result alongside the task's public (first) test case, so a caller can
+    show the player their own program's actual output for that one case without exposing any
+    of the hidden cases used for real grading.
+    """
     task = _by_public_id(db, Task, payload.task_public_id)
     if task is None or not task.is_active or task.type != "CODE":
         raise SubmissionError("task not found")
@@ -360,7 +365,7 @@ def run_code_test(
             or presentation.presentation_type != "CODE"
         ):
             raise SubmissionError("code task presentation not found")
-    return _run_code_safely(
+    result = _run_code_safely(
         uuid.uuid4(),
         task,
         concept.domain,
@@ -368,6 +373,11 @@ def run_code_test(
         concept.name,
         runner,
     )
+    try:
+        sample_case = parse_test_cases(task.test_cases)[0]
+    except (TestCaseSpecError, IndexError, AttributeError, TypeError):
+        sample_case = None
+    return result, sample_case
 
 
 def _meets_python_concept_structure(submission: str, concept_name: str | None) -> bool | None:

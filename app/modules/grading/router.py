@@ -8,7 +8,6 @@ from app.core.exceptions import IdempotencyConflictError
 from app.models.task import Task
 from app.modules.grading.service import (
     SubmissionError,
-    _public_result,
     create_attempt,
     get_attempt,
     grade_attempt,
@@ -17,12 +16,14 @@ from app.modules.grading.service import (
 from app.modules.learning.presentation import start_task_presentation, to_presented_task
 from app.schemas.task_attempt import (
     CodeTestCreate,
+    CodeTestRunRead,
     GradingResultDetail,
     TaskAttemptAccepted,
     TaskAttemptCreate,
     TaskAttemptRead,
     TaskPresentationRead,
     TaskPresentationStart,
+    to_code_test_run_read,
     to_task_attempt_read,
 )
 
@@ -64,14 +65,14 @@ def submit(payload: TaskAttemptCreate, db: DbSession, user: CurrentUser):
     return TaskAttemptAccepted(public_id=attempt.public_id, status="PENDING")
 
 
-@router.post("/test", response_model=GradingResultDetail)
-def test_code(payload: CodeTestCreate, db: DbSession, user: CurrentUser) -> GradingResultDetail:
+@router.post("/test", response_model=CodeTestRunRead)
+def test_code(payload: CodeTestCreate, db: DbSession, user: CurrentUser) -> CodeTestRunRead:
     try:
-        result = run_code_test(db, payload, user)
+        result, sample_case = run_code_test(db, payload, user)
     except SubmissionError as exc:
         db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return GradingResultDetail.model_validate(_public_result(result))
+    return to_code_test_run_read(result, sample_case)
 
 
 @router.get("/{attempt_public_id}", response_model=TaskAttemptRead)
