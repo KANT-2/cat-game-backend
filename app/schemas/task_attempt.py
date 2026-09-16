@@ -7,6 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
+from app.modules.grading.sandbox.runner import GradeResult
+from app.modules.grading.test_cases import TestCase
 from app.schemas.base import ReadSchema
 from app.schemas.task import TaskRead
 
@@ -85,6 +87,37 @@ class GradingResultDetail(BaseModel):
     ]
     passed: int = Field(ge=0)
     total: int = Field(ge=0)
+
+
+class CodeTestRunRead(BaseModel):
+    verdict: Literal[
+        "ACCEPTED",
+        "WRONG_ANSWER",
+        "SYNTAX_ERROR",
+        "RUNTIME_ERROR",
+        "TIMEOUT",
+        "OUTPUT_LIMIT",
+        "MEMORY_LIMIT",
+        "SYSTEM_ERROR",
+    ]
+    passed: int = Field(ge=0)
+    total: int = Field(ge=0)
+    # The task's public (first) test case only - never one of the hidden cases used for real
+    # grading, so a player can see why their own code went wrong without the answer leaking.
+    sample_input: str | None = None
+    sample_expected_output: str | None = None
+    sample_actual_output: str | None = None
+
+
+def to_code_test_run_read(result: GradeResult, sample_case: TestCase | None) -> CodeTestRunRead:
+    return CodeTestRunRead(
+        verdict=str(result.verdict),
+        passed=result.passed,
+        total=result.total,
+        sample_input=sample_case.input if sample_case else None,
+        sample_expected_output=sample_case.expected_output if sample_case else None,
+        sample_actual_output=result.sample_actual,
+    )
 
 
 def _parse_result_detail(raw: str | None) -> GradingResultDetail | None:

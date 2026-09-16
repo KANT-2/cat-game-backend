@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import date
 from random import Random
@@ -114,7 +115,7 @@ def test_code_test_runs_owned_code_presentation_without_writes():
             assert submission == "print(1)"
             return GradeResult(Verdict.ACCEPTED, 2, 2)
 
-    result = run_code_test(
+    result, sample_case = run_code_test(
         ReadOnlySession(),
         CodeTestCreate(
             task_public_id=task_public_id,
@@ -126,6 +127,54 @@ def test_code_test_runs_owned_code_presentation_without_writes():
     )
 
     assert result == GradeResult(Verdict.ACCEPTED, 2, 2)
+    assert sample_case is None
+
+
+def test_code_test_returns_the_tasks_first_test_case_as_the_public_sample():
+    task_public_id = uuid.uuid4()
+    task = SimpleNamespace(
+        id=3,
+        public_id=task_public_id,
+        concept_id=4,
+        is_active=True,
+        type="CODE",
+        difficulty="BRONZE",
+        options=None,
+        test_cases=json.dumps(
+            [
+                {"input": "4\n", "expected_output": "야옹~\n"},
+                {"input": "5\n", "expected_output": "hidden\n"},
+            ],
+            ensure_ascii=False,
+        ),
+    )
+    concept = SimpleNamespace(id=4, domain="PYTHON", name="conditionals")
+    tier = SimpleNamespace(current_tier="BRONZE")
+
+    class ReadOnlySession:
+        def __init__(self):
+            self.scalar_values = [task, tier]
+
+        def scalar(self, _statement):
+            return self.scalar_values.pop(0)
+
+        def get(self, _model, _identifier):
+            return concept
+
+    class AcceptedRunner:
+        def grade(self, _task, _submission):
+            return GradeResult(Verdict.ACCEPTED, 1, 1)
+
+    _result, sample_case = run_code_test(
+        ReadOnlySession(),
+        CodeTestCreate(task_public_id=task_public_id, submitted_code="print('야옹~')"),
+        SimpleNamespace(id=5),
+        AcceptedRunner(),
+    )
+
+    assert sample_case is not None
+    assert sample_case.input == "4\n"
+    assert sample_case.expected_output == "야옹~\n"
 
 
 def test_code_test_rejects_locked_difficulty_before_running():

@@ -32,6 +32,10 @@ class GradeResult:
     passed: int = 0
     total: int = 0
     detail: str | None = None
+    # The first (public) test case's actual output, captured regardless of which case decided
+    # the verdict. Only a dry-run "test" response surfaces this; a persisted attempt's public
+    # result must never include it, or hidden test cases could be reconstructed from it.
+    sample_actual: str | None = None
 
     @property
     def is_system_failure(self) -> bool:
@@ -109,7 +113,11 @@ class DockerSandbox:
         try:
             data = json.loads(completed.stdout)
             return GradeResult(
-                Verdict(data["verdict"]), data.get("passed", 0), len(cases), data.get("detail")
+                Verdict(data["verdict"]),
+                data.get("passed", 0),
+                len(cases),
+                data.get("detail"),
+                data.get("sample_actual"),
             )
         except (KeyError, ValueError, json.JSONDecodeError) as exc:
             return GradeResult(

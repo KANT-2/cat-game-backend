@@ -38,7 +38,12 @@ def main():
         print(json.dumps({"verdict": "SYNTAX_ERROR", "detail": str(exc)}))
         return
     passed = 0
-    for case in payload["test_cases"]:
+    # The runner stops at the first failing case, so it may never reach later cases at all.
+    # Capture the first case's actual stdout once, up front, so callers that only care about
+    # showing the player their own output for the public sample case still get it regardless
+    # of which case (if any) ultimately determines the verdict.
+    sample_actual = None
+    for index, case in enumerate(payload["test_cases"]):
         with tempfile.TemporaryFile() as stdout_file, tempfile.TemporaryFile() as stderr_file:
             try:
                 run = subprocess.run(
@@ -51,28 +56,30 @@ def main():
                     preexec_fn=(lambda: _limit_output(output_limit)) if resource is not None else None,
                 )
             except subprocess.TimeoutExpired:
-                print(json.dumps({"verdict": "TIMEOUT", "passed": passed}))
+                print(json.dumps({"verdict": "TIMEOUT", "passed": passed, "sample_actual": sample_actual}))
                 return
             stdout = _read_output(stdout_file, output_limit)
             stderr = _read_output(stderr_file, output_limit)
+        if index == 0:
+            sample_actual = stdout[-2_000:]
         if (
             len(stdout.encode()) + len(stderr.encode()) >= output_limit
             or run.returncode == -getattr(signal, "SIGXFSZ", 25)
         ):
-            print(json.dumps({"verdict": "OUTPUT_LIMIT", "passed": passed}))
+            print(json.dumps({"verdict": "OUTPUT_LIMIT", "passed": passed, "sample_actual": sample_actual}))
             return
         if run.returncode == -getattr(signal, "SIGKILL", 9):
-            print(json.dumps({"verdict": "MEMORY_LIMIT", "passed": passed}))
+            print(json.dumps({"verdict": "MEMORY_LIMIT", "passed": passed, "sample_actual": sample_actual}))
             return
         if run.returncode:
             print(json.dumps({"verdict": "RUNTIME_ERROR", "passed": passed,
-                              "detail": stderr[-500:]}))
+                              "detail": stderr[-500:], "sample_actual": sample_actual}))
             return
         if stdout.rstrip() != case["expected_output"].rstrip():
-            print(json.dumps({"verdict": "WRONG_ANSWER", "passed": passed}))
+            print(json.dumps({"verdict": "WRONG_ANSWER", "passed": passed, "sample_actual": sample_actual}))
             return
         passed += 1
-    print(json.dumps({"verdict": "ACCEPTED", "passed": passed}))
+    print(json.dumps({"verdict": "ACCEPTED", "passed": passed, "sample_actual": sample_actual}))
 
 
 if __name__ == "__main__":
