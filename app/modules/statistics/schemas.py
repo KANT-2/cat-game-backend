@@ -30,3 +30,15 @@ class UserDailyLearningStatisticsRead(BaseModel):
     grading_failed_attempts: int
     hints_used: int
     coins_awarded: int
+
+
+class MyDailyLearningStatisticsRead(BaseModel):
+    game_date: date
+    distinct_tasks_attempted: int
+    attempts_submitted: int
+    attempts_completed: int
+    correct_attempts: int
+    incorrect_attempts: int
+    grading_failed_attempts: int
+    hints_used: int
+    coins_awarded: int

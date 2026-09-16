@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 from sqlalchemy import text
@@ -40,5 +41,22 @@ def user_daily_learning_statistics(db: Session, date_from: date, date_to: date) 
             "ORDER BY game_date, username, user_public_id"
         ),
         {"date_from": date_from, "date_to": date_to},
+    )
+    return [dict(row._mapping) for row in rows]
+
+
+def user_daily_learning_statistics_for_user(
+    db: Session, user_public_id: uuid.UUID, date_from: date, date_to: date
+) -> list[dict]:
+    rows = db.execute(
+        text(
+            "SELECT game_date, distinct_tasks_attempted, "
+            "attempts_submitted, attempts_completed, correct_attempts, incorrect_attempts, "
+            "grading_failed_attempts, hints_used, coins_awarded "
+            "FROM analytics_user_daily_learning_statistics "
+            "WHERE user_public_id = :user_public_id AND game_date BETWEEN :date_from AND :date_to "
+            "ORDER BY game_date"
+        ),
+        {"user_public_id": user_public_id, "date_from": date_from, "date_to": date_to},
     )
     return [dict(row._mapping) for row in rows]
