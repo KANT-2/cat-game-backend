@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import hashlib
+from datetime import date
 from random import SystemRandom
 from typing import Literal, Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.time import game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_presentation import TaskPresentation
@@ -18,6 +21,22 @@ MULTIPLE_CHOICE_PROBABILITY = {
     "SILVER": 0.2,
     "GOLD": 0.0,
 }
+
+
+def suggested_presentation_type(
+    task: Task,
+    user_id: int,
+    recommendation_date: date | None = None,
+) -> str:
+    """Return a stable daily preview that follows the task's difficulty policy."""
+    probability = MULTIPLE_CHOICE_PROBABILITY[task.difficulty]
+    has_multiple_choice = bool(task.options and task.correct_option in task.options)
+    if not has_multiple_choice or probability <= 0:
+        return "CODE"
+    selected_date = recommendation_date or game_today()
+    seed = f"{user_id}:{selected_date.isoformat()}:{task.public_id}".encode()
+    roll = int.from_bytes(hashlib.blake2b(seed, digest_size=8).digest()) / 2**64
+    return "MULTIPLE_CHOICE" if roll < probability else "CODE"
 
 
 class RandomSource(Protocol):

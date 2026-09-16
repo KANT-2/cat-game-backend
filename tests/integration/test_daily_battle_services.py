@@ -148,7 +148,74 @@ def test_proficiencies_include_zero_attempt_concepts_only_for_selected_domain(db
     assert {row.domain for row in rows} == {"SQL"}
     untried = next(row for row in rows if row.concept_public_id == sql_concept.public_id)
     assert untried.attempts == 0
+    assert untried.completed == 0
+    assert untried.total == 0
     assert untried.proficiency_level == 0
+
+
+def test_proficiencies_use_persistent_unique_correct_task_coverage(db_session):
+    current_user = user(db_session, "persistent-proficiency")
+    current_user.game_settings = {**current_user.game_settings, "learningDomain": "SQL"}
+    concept = Concept(domain="SQL", name=f"persistent-{id(db_session)}")
+    db_session.add(concept)
+    db_session.flush()
+    concept_tasks = []
+    for number in range(2):
+        task = Task(
+            concept_id=concept.id,
+            title=f"persistent task {number}",
+            type="CODE",
+            difficulty="BRONZE",
+            description="select",
+            template_code="",
+            test_cases="[]",
+            options=None,
+            correct_option=None,
+            is_active=True,
+        )
+        db_session.add(task)
+        concept_tasks.append(task)
+    db_session.flush()
+    yesterday = datetime.now(UTC) - timedelta(days=1)
+    db_session.add_all(
+        [
+            TaskAttempt(
+                user_id=current_user.id,
+                task_id=concept_tasks[0].id,
+                context_type="LEARNING",
+                submitted_code="SELECT 1",
+                status="COMPLETED",
+                is_correct=False,
+                attempted_at=yesterday,
+            ),
+            TaskAttempt(
+                user_id=current_user.id,
+                task_id=concept_tasks[0].id,
+                context_type="LEARNING",
+                submitted_code="SELECT 1",
+                status="COMPLETED",
+                is_correct=True,
+                attempted_at=yesterday,
+            ),
+            TaskAttempt(
+                user_id=current_user.id,
+                task_id=concept_tasks[1].id,
+                context_type="LEARNING",
+                submitted_code="SELECT 1",
+                status="COMPLETED",
+                is_correct=True,
+            ),
+        ]
+    )
+    db_session.flush()
+
+    rows = proficiencies(db_session, current_user)
+    result = next(row for row in rows if row.concept_public_id == concept.public_id)
+
+    assert result.attempts == 3
+    assert result.completed == 2
+    assert result.total == 2
+    assert result.proficiency_level == 100
 
 
 def test_battle_room_lifecycle_and_finish(db_session, monkeypatch):

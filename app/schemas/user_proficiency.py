@@ -13,6 +13,8 @@ class ConceptProficiencyRead(UserProficiencyRead):
     domain: Literal["PYTHON", "SQL"]
     name: str
     attempts: int
+    completed: int
+    total: int
 
 
 class WeakConceptRead(ConceptProficiencyRead):

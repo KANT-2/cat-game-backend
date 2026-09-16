@@ -19,6 +19,7 @@ from app.modules.learning.presentation import (
     choose_presentation_type,
     shuffled_options,
     start_task_presentation,
+    suggested_presentation_type,
 )
 from app.modules.learning.proficiency import (
     ConceptAssessment,
@@ -163,6 +164,24 @@ def test_presentation_choice_has_no_task_number_coupling():
     observed = [choose_presentation_type(task, Random(7)) for task in tasks]
     assert observed[0] == observed[1]
     assert tasks[0].id % 2 != tasks[1].id % 2
+
+
+def test_catalog_suggestions_make_the_full_bronze_pool_visible_as_a_balanced_mix():
+    selected_date = date(2026, 9, 16)
+    tasks = [
+        SimpleNamespace(
+            public_id=uuid.UUID(int=index + 1),
+            difficulty="BRONZE",
+            options={"A": "correct", "B": "wrong"},
+            correct_option="A",
+        )
+        for index in range(1000)
+    ]
+
+    suggestions = [suggested_presentation_type(task, 7, selected_date) for task in tasks]
+
+    assert 450 <= suggestions.count("MULTIPLE_CHOICE") <= 550
+    assert suggestions == [suggested_presentation_type(task, 7, selected_date) for task in tasks]
 
 
 def test_replay_can_preserve_supported_presentation_type():

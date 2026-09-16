@@ -11,7 +11,12 @@ from app.core.time import game_day_bounds, game_today
 from app.models.concept import Concept
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
-from app.modules.learning.proficiency import assess_concept, recommended_tasks, weak_concepts
+from app.modules.learning.presentation import suggested_presentation_type
+from app.modules.learning.proficiency import (
+    assess_concept_mastery,
+    recommended_tasks,
+    weak_concepts,
+)
 from app.modules.learning.tier import PROMOTION_POLICY, get_or_advance_tier, unlocked_difficulties
 from app.schemas.learning_tier import ConceptTierProgressRead, LearningTierRead
 from app.schemas.task import TaskRead, to_task_read
@@ -62,9 +67,14 @@ def _recommendation_date(test_date: date | None) -> date:
     return test_date
 
 
-def _task_payload(db: DbSession, task, *, completed: bool) -> TaskRead:
+def _task_payload(db: DbSession, task, user_id: int, *, completed: bool) -> TaskRead:
     concept = db.get(Concept, task.concept_id)
-    return to_task_read(task, concept, completed=completed)
+    return to_task_read(
+        task,
+        concept,
+        completed=completed,
+        suggested_presentation_type=suggested_presentation_type(task, user_id),
+    )
 
 
 def _learning_progress_start(learning_reset_at: datetime | None) -> datetime:
@@ -145,7 +155,7 @@ def list_tasks(
         [task.id for task in tasks],
         since=_learning_progress_start(user.learning_reset_at),
     )
-    return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
+    return [_task_payload(db, task, user.id, completed=task.id in completed_ids) for task in tasks]
 
 
 @router.get("/recommendations", response_model=list[TaskRead])
@@ -179,7 +189,7 @@ def recommendations(
         [task.id for task in tasks],
         since=_learning_progress_start(user.learning_reset_at),
     )
-    return [_task_payload(db, task, completed=task.id in completed_ids) for task in tasks]
+    return [_task_payload(db, task, user.id, completed=task.id in completed_ids) for task in tasks]
 
 
 @router.get("/weak-concepts", response_model=list[WeakConceptRead])
@@ -204,15 +214,18 @@ def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRe
     preferred_domain = user.game_settings.get("learningDomain", "PYTHON")
     if preferred_domain not in {"PYTHON", "SQL"}:
         preferred_domain = "PYTHON"
+    tier, _ = get_or_advance_tier(db, user, preferred_domain)
+    allowed_difficulties = unlocked_difficulties(tier.current_tier)
     concepts = db.scalars(
         select(Concept).where(Concept.domain == preferred_domain).order_by(Concept.name)
     ).all()
     rows = []
     for concept in concepts:
-        assessment = assess_concept(
+        assessment = assess_concept_mastery(
             db,
             user.id,
             concept.id,
+            allowed_difficulties,
             since=user.learning_reset_at,
         )
         rows.append(
@@ -222,6 +235,9 @@ def proficiencies(db: DbSession, user: CurrentUser) -> list[ConceptProficiencyRe
                 name=concept.name,
                 attempts=assessment.attempts,
                 proficiency_level=assessment.proficiency_level,
+                completed=assessment.completed,
+                total=assessment.total,
             )
         )
+    db.commit()
     return rows

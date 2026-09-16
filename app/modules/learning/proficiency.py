@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
 
-from sqlalchemy import case, select
+from sqlalchemy import case, distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.core.time import game_today
@@ -32,8 +32,54 @@ class ConceptAssessment:
         )
 
 
+@dataclass(frozen=True)
+class ConceptMastery:
+    concept_id: int
+    attempts: int
+    completed: int
+    total: int
+
+    @property
+    def proficiency_level(self) -> int:
+        return round(100 * self.completed / self.total) if self.total else 0
+
+
 def calculate_proficiency(results: list[bool]) -> int:
     return round(100 * sum(results) / len(results)) if results else 0
+
+
+def assess_concept_mastery(
+    db: Session,
+    user_id: int,
+    concept_id: int,
+    allowed_difficulties: tuple[str, ...],
+    since: datetime | None = None,
+) -> ConceptMastery:
+    """Measure persistent coverage of active, unlocked tasks for one concept."""
+    task_scope = (
+        Task.concept_id == concept_id,
+        Task.is_active.is_(True),
+        Task.difficulty.in_(allowed_difficulties),
+    )
+    total = db.scalar(select(func.count(Task.id)).where(*task_scope)) or 0
+    attempt_scope = [
+        TaskAttempt.user_id == user_id,
+        TaskAttempt.status == "COMPLETED",
+        *task_scope,
+    ]
+    if since is not None:
+        attempt_scope.append(TaskAttempt.attempted_at >= since)
+    attempts = db.scalar(
+        select(func.count(TaskAttempt.id))
+        .join(Task, Task.id == TaskAttempt.task_id)
+        .where(*attempt_scope)
+    ) or 0
+    completed = db.scalar(
+        select(func.count(distinct(TaskAttempt.task_id)))
+        .join(Task, Task.id == TaskAttempt.task_id)
+        .where(*attempt_scope, TaskAttempt.is_correct.is_(True))
+    ) or 0
+    return ConceptMastery(concept_id, attempts, completed, total)
 
 
 def assess_concept(

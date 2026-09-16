@@ -12,6 +12,7 @@ from app.schemas.base import ReadSchema
 class TaskRead(ReadSchema):
     presentation_public_id: uuid.UUID | None = None
     presentation_required: bool = False
+    suggested_presentation_type: Literal["CODE", "MULTIPLE_CHOICE"] | None = None
     concept_public_id: uuid.UUID
     concept_name: str
     title: str
@@ -113,6 +114,7 @@ def to_task_read(
     presentation_type: str | None = None,
     presentation_description: str | None = None,
     presentation_options: dict[str, str] | None = None,
+    suggested_presentation_type: str | None = None,
 ) -> TaskRead:
     resolved_type = presentation_type or task.type
     if presentation_type is None and task.type == "MULTIPLE_CHOICE":
@@ -125,6 +127,7 @@ def to_task_read(
         title=task.title,
         presentation_public_id=presentation_public_id,
         presentation_required=presentation_public_id is None and bool(task.options),
+        suggested_presentation_type=suggested_presentation_type,
         type=resolved_type,
         domain=concept.domain,
         difficulty=task.difficulty,
