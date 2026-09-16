@@ -3,7 +3,7 @@
 from collections import Counter
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.time import game_day_bounds, game_today
@@ -16,6 +16,7 @@ from app.models.item import Item
 from app.models.placed_object import PlacedObject
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
+from app.models.task_presentation import TaskPresentation
 from app.models.user import User
 from app.modules.game.bootstrap import bootstrap_starter_pack
 from app.modules.game.catalog import CATALOG_VERSION, ITEM_BY_KEY
@@ -62,8 +63,15 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
         day_start = user.learning_reset_at
     completed_rows = list(
         db.execute(
-            select(Task.public_id, Task.type)
+            select(
+                Task.public_id,
+                # Task.type is the base type ("CODE") even for tasks with a multiple-choice
+                # presentation, so the actual attempt must defer to its own presentation type
+                # to tell a code submission apart from a "pick the correct snippet" quiz.
+                func.coalesce(TaskPresentation.presentation_type, Task.type).label("effective_type"),
+            )
             .join(TaskAttempt, TaskAttempt.task_id == Task.id)
+            .outerjoin(TaskPresentation, TaskPresentation.id == TaskAttempt.presentation_id)
             .where(
                 TaskAttempt.user_id == user.id,
                 TaskAttempt.status == "COMPLETED",
@@ -124,7 +132,7 @@ def get_game_snapshot(db: Session, user: User) -> GameSnapshotRead:
         attendance_claimed_dates=[attendance.check_in_date.isoformat() for attendance in attendances],
         daily_quest_date=today.isoformat(),
         daily_completed_task_ids=[str(row.public_id) for row in completed_rows],
-        daily_has_code_completion=any(row.type == "CODE" for row in completed_rows),
+        daily_has_code_completion=any(row.effective_type == "CODE" for row in completed_rows),
         claimed_daily_quest_ids=[
             claim.reward_key for claim in daily_claims if claim.reward_key != "bonus"
         ],
