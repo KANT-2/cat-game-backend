@@ -18,7 +18,7 @@ Python 학습 문제 150개를 로컬 DB에 중복 없이 넣는 시드와 코�
 
 ## 객관식 저장과 채점
 
-`Task.type`은 `CODE` 또는 `MULTIPLE_CHOICE`다. 객관식 보기는 `options` JSON, 정답 키는 `correct_option`에 저장한다. 공개 `TaskRead`에는 보기만 들어가며 `correct_option`과 코드형 `test_cases`는 들어가지 않는다.
+`Task.type`은 `CODE` 또는 `MULTIPLE_CHOICE`다. 객관식 보기는 `options` JSON, 정답 키는 `correct_option`에 저장한다. 공개 `TaskRead`에는 보기만 들어가며 `correct_option`과 코드형 `test_cases`는 들어가지 않는다. SQL 구조화 채점 케이스는 첫 케이스의 setup SQL만 `public_example.input`으로 제공해 테이블 구조와 샘플 행 안내에 사용한다. `reference_query`, 검증 쿼리와 기대 결과는 계속 숨긴다.
 
 기존 `POST /api/v1/attempts`에 코드형은 `submitted_code`, 객관식은 `selected_option` 하나만 보낸다. 서버는 실제 보기 키인지 확인한다. 객관식 runner는 키를 직접 비교해 Docker를 실행하지 않는다. 시도 저장, 상태 변경, 결과 조회, DAILY 완료는 코드형과 같은 흐름이다.
 

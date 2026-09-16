@@ -75,8 +75,8 @@ def _public_example(task: Task) -> dict[str, str] | None:
     @remarks Only index 0 is ever disclosed; the remaining grading cases stay private.
     @remarks SQL tasks (see scripts/seed_sql_tasks.py) store structured grading metadata in
         ``expected_output`` -- a JSON object with a "mode" key ("QUERY"/"MUTATION"/"SCHEMA") that
-        can embed the reference SQL answer itself. That is never literal stdout, so any case whose
-        expected_output parses as such an object is skipped entirely rather than disclosed.
+        can embed the reference SQL answer itself. For those cases only the safe setup SQL is
+        disclosed; the structured expected output remains hidden.
     """
     test_cases = getattr(task, "test_cases", None)
     if task.type != "CODE" or not test_cases:
@@ -96,9 +96,10 @@ def _public_example(task: Task) -> dict[str, str] | None:
     except (TypeError, ValueError):
         structured = None
     if isinstance(structured, dict) and "mode" in structured:
-        # Structured grading metadata (currently: SQL tasks) -- would either show unreadable
-        # JSON or leak the reference query as the "answer". Hide the example entirely instead.
-        return None
+        return {
+            "input": str(first.get("input", "")).rstrip("\n"),
+            "output": "",
+        }
     return {
         "input": str(first.get("input", "")).rstrip("\n"),
         "output": str(expected_output).rstrip("\n"),

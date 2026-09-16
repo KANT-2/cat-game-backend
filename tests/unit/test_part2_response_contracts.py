@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
@@ -36,6 +37,41 @@ def test_task_converter_exposes_only_public_relationship_ids():
     assert payload["concept_public_id"] == concept.public_id
     assert payload["domain"] == "SQL"
     assert "id" not in payload and "concept_id" not in payload and "test_cases" not in payload
+
+
+def test_sql_public_example_exposes_setup_without_reference_answer():
+    setup_sql = "CREATE TABLE cats (id int, name text); INSERT INTO cats VALUES (1,'Miso');"
+    reference = "SELECT name FROM cats"
+    task = SimpleNamespace(
+        id=12,
+        public_id=uuid.uuid4(),
+        concept_id=3,
+        title="SQL select",
+        type="CODE",
+        difficulty="BRONZE",
+        description="desc",
+        template_code="SELECT ",
+        options=None,
+        hint_text=None,
+        is_active=True,
+        reward_coins=30,
+        test_cases=json.dumps(
+            [
+                {
+                    "input": setup_sql,
+                    "expected_output": json.dumps(
+                        {"mode": "QUERY", "reference_query": reference}
+                    ),
+                }
+            ]
+        ),
+    )
+    concept = SimpleNamespace(id=3, public_id=uuid.uuid4(), domain="SQL", name="basics")
+
+    payload = to_task_read(task, concept).model_dump()
+
+    assert payload["public_example"] == {"input": setup_sql, "output": ""}
+    assert reference not in str(payload["public_example"])
 
 
 def test_attempt_converter_does_not_expose_internal_ids_or_submission():
