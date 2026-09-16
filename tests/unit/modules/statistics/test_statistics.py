@@ -1,13 +1,20 @@
+import uuid
 from datetime import date
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
+from app.core.time import game_today
 from app.main import app
 from app.models.game_activity_event import GameActivityEvent
 from app.models.user import User
-from app.modules.statistics.router import _validate_range
-from app.modules.statistics.service import GAME_ENTERED, record_game_entry
+from app.modules.statistics.router import _resolve_range, _validate_range
+from app.modules.statistics.service import (
+    GAME_ENTERED,
+    record_game_entry,
+    user_daily_learning_statistics_for_user,
+)
 
 
 class _RecordingSession:
@@ -64,3 +71,55 @@ def test_statistics_api_is_team_key_protected_without_member_login() -> None:
         }
         assert "X-API-Key" in headers
         assert "X-User-Public-ID" not in headers
+
+
+def test_player_statistics_api_requires_login_not_team_key() -> None:
+    paths = app.openapi()["paths"]
+
+    for path in ("/api/v1/statistics/public/daily", "/api/v1/statistics/me/daily"):
+        headers = {
+            parameter["name"]
+            for parameter in paths[path]["get"]["parameters"]
+            if parameter["in"] == "header"
+        }
+        assert "X-API-Key" not in headers
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/api/v1/statistics/public/daily", "/api/v1/statistics/me/daily"],
+)
+def test_player_statistics_api_rejects_unauthenticated_requests(path: str) -> None:
+    response = TestClient(app).get(path)
+
+    assert response.status_code == 401
+
+
+def test_resolve_range_defaults_to_recent_lookback_window() -> None:
+    date_from, date_to = _resolve_range(None, None)
+
+    assert date_to == game_today()
+    assert (date_to - date_from).days == 13
+
+
+class _RecordingQuerySession:
+    def __init__(self) -> None:
+        self.executed: tuple[object, dict] | None = None
+
+    def execute(self, statement: object, params: dict | None = None) -> list:
+        self.executed = (statement, params or {})
+        return []
+
+
+def test_my_daily_statistics_query_is_scoped_to_one_user() -> None:
+    db = _RecordingQuerySession()
+    target_user = uuid.uuid4()
+
+    rows = user_daily_learning_statistics_for_user(db, target_user, date(2026, 9, 1), date(2026, 9, 14))  # type: ignore[arg-type]
+
+    assert rows == []
+    assert db.executed is not None
+    statement, params = db.executed
+    assert "user_public_id = :user_public_id" in str(statement)
+    assert "username" not in str(statement)
+    assert params["user_public_id"] == target_user
