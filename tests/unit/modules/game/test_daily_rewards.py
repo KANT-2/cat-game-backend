@@ -14,7 +14,7 @@ def test_claim_daily_reward_awards_completed_code_quest() -> None:
     user = User(id=1, balance=500, state_version=8)
     db = MagicMock()
     db.scalar.side_effect = [user, None]
-    db.execute.return_value.all.return_value = [SimpleNamespace(type="CODE")]
+    db.execute.return_value.all.return_value = [SimpleNamespace(effective_type="CODE")]
 
     result = claim_daily_reward(db, user, "finish-code", today=date(2026, 9, 5))
 
@@ -33,8 +33,8 @@ def test_claim_daily_reward_rejects_incomplete_quest_without_reward() -> None:
     db = MagicMock()
     db.scalar.side_effect = [user, None]
     db.execute.return_value.all.return_value = [
-        SimpleNamespace(type="MULTIPLE_CHOICE"),
-        SimpleNamespace(type="CODE"),
+        SimpleNamespace(effective_type="MULTIPLE_CHOICE"),
+        SimpleNamespace(effective_type="CODE"),
     ]
 
     with pytest.raises(RewardNotReadyError):

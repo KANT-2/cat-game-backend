@@ -2,7 +2,7 @@
 
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -19,6 +19,7 @@ from app.models.cat_memory import CatMemory
 from app.models.daily_reward_claim import DailyRewardClaim
 from app.models.task import Task
 from app.models.task_attempt import TaskAttempt
+from app.models.task_presentation import TaskPresentation
 from app.models.user import User
 from app.models.user_learning_tier import UserLearningTier
 from app.models.user_proficiency import UserProficiency
@@ -216,8 +217,15 @@ def _daily_completion_progress(
     if learning_reset_at is not None and learning_reset_at > day_start:
         day_start = learning_reset_at
     rows = db.execute(
-        select(TaskAttempt.task_id, Task.type)
+        select(
+            TaskAttempt.task_id,
+            # A task's base type stays "CODE" even when this particular attempt was solved
+            # through its multiple-choice presentation, so defer to the attempt's own
+            # presentation type when it has one.
+            func.coalesce(TaskPresentation.presentation_type, Task.type).label("effective_type"),
+        )
         .join(Task, Task.id == TaskAttempt.task_id)
+        .outerjoin(TaskPresentation, TaskPresentation.id == TaskAttempt.presentation_id)
         .where(
             TaskAttempt.user_id == user_id,
             TaskAttempt.status == "COMPLETED",
@@ -227,7 +235,7 @@ def _daily_completion_progress(
         )
         .distinct()
     ).all()
-    return len(rows), any(row.type == "CODE" for row in rows)
+    return len(rows), any(row.effective_type == "CODE" for row in rows)
 
 
 def reset_learning_progress(db: Session, user: User) -> dict[str, object]:
