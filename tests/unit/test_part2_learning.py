@@ -14,7 +14,7 @@ from app.modules.grading.runners import (
     RunnerDispatcher,
     Verdict,
 )
-from app.modules.grading.service import _run_safely
+from app.modules.grading.service import SubmissionError, _run_safely, run_code_test
 from app.modules.learning.presentation import (
     choose_presentation_type,
     shuffled_options,
@@ -36,7 +36,7 @@ from app.modules.learning.tier import (
     unlocked_difficulties,
 )
 from app.schemas.task import TaskRead
-from app.schemas.task_attempt import TaskAttemptCreate
+from app.schemas.task_attempt import CodeTestCreate, TaskAttemptCreate
 from scripts.seed_learning_tasks import build_tasks
 from scripts.seed_sql_tasks import build_tasks as build_sql_tasks
 
@@ -56,6 +56,111 @@ def test_submission_requires_exactly_one_answer_shape():
     submission(selected_option="A")
     with pytest.raises(ValidationError): submission()
     with pytest.raises(ValidationError): submission(submitted_code="x", selected_option="A")
+
+
+def test_code_test_rejects_blank_code():
+    with pytest.raises(ValidationError):
+        CodeTestCreate(
+            task_public_id=uuid.uuid4(),
+            presentation_public_id=uuid.uuid4(),
+            submitted_code="   ",
+        )
+
+
+def test_code_test_runs_owned_code_presentation_without_writes():
+    task_public_id = uuid.uuid4()
+    presentation_public_id = uuid.uuid4()
+    task = SimpleNamespace(
+        id=3,
+        public_id=task_public_id,
+        concept_id=4,
+        is_active=True,
+        type="CODE",
+        difficulty="BRONZE",
+        options={"A": "answer"},
+    )
+    concept = SimpleNamespace(id=4, domain="PYTHON", name="basics")
+    tier = SimpleNamespace(current_tier="BRONZE")
+    presentation = SimpleNamespace(
+        user_id=5,
+        task_id=3,
+        context_type="LEARNING",
+        status="ACTIVE",
+        presentation_type="CODE",
+    )
+
+    class ReadOnlySession:
+        def __init__(self):
+            self.scalar_values = [task, tier, presentation]
+
+        def scalar(self, _statement):
+            return self.scalar_values.pop(0)
+
+        def get(self, _model, _identifier):
+            return concept
+
+        def add(self, _value):
+            raise AssertionError("test runs must not add database rows")
+
+        def flush(self):
+            raise AssertionError("test runs must not flush database writes")
+
+        def commit(self):
+            raise AssertionError("test runs must not commit database writes")
+
+    class AcceptedRunner:
+        def grade(self, actual_task, submission):
+            assert actual_task is task
+            assert submission == "print(1)"
+            return GradeResult(Verdict.ACCEPTED, 2, 2)
+
+    result = run_code_test(
+        ReadOnlySession(),
+        CodeTestCreate(
+            task_public_id=task_public_id,
+            presentation_public_id=presentation_public_id,
+            submitted_code="print(1)",
+        ),
+        SimpleNamespace(id=5),
+        AcceptedRunner(),
+    )
+
+    assert result == GradeResult(Verdict.ACCEPTED, 2, 2)
+
+
+def test_code_test_rejects_locked_difficulty_before_running():
+    task = SimpleNamespace(
+        id=3,
+        public_id=uuid.uuid4(),
+        concept_id=4,
+        is_active=True,
+        type="CODE",
+        difficulty="SILVER",
+        options=None,
+    )
+    concept = SimpleNamespace(id=4, domain="SQL", name="joins")
+
+    class LockedSession:
+        def __init__(self):
+            self.scalar_values = [task, SimpleNamespace(current_tier="BRONZE")]
+
+        def scalar(self, _statement):
+            return self.scalar_values.pop(0)
+
+        def get(self, _model, _identifier):
+            return concept
+
+    class RunnerThatMustNotRun:
+        def grade(self, _task, _submission):
+            raise AssertionError("locked tasks must not run")
+
+    with pytest.raises(SubmissionError, match="locked"):
+        run_code_test(
+            LockedSession(),
+            CodeTestCreate(task_public_id=task.public_id, submitted_code="SELECT 1"),
+            SimpleNamespace(id=5),
+            RunnerThatMustNotRun(),
+        )
 
 
 def test_multiple_choice_is_graded_without_python_sandbox():

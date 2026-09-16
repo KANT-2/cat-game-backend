@@ -58,6 +58,20 @@ class TaskAttemptAccepted(BaseModel):
     status: Literal["PENDING"]
 
 
+class CodeTestCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_public_id: uuid.UUID
+    presentation_public_id: uuid.UUID | None = None
+    submitted_code: str = Field(min_length=1, max_length=32_768)
+
+    @model_validator(mode="after")
+    def validate_code(self):
+        if not self.submitted_code.strip():
+            raise ValueError("submitted_code must not be blank")
+        return self
+
+
 class GradingResultDetail(BaseModel):
     verdict: Literal[
         "ACCEPTED",

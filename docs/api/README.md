@@ -68,6 +68,7 @@
 | `DELETE` | `/api/v1/tasks/{task_public_id}` | `204` | 팀 키로 문제 비활성화 |
 | `PATCH` | `/api/v1/game/settings` | `200` | 사운드·접근성·선택 학습 과목 저장 |
 | `POST` | `/api/v1/attempts` | `202` | 코드 또는 객관식 답안 제출 |
+| `POST` | `/api/v1/attempts/test` | `200` | 코드 샌드박스 테스트 실행(진도·보상 미반영) |
 | `GET` | `/api/v1/attempts/{attempt_public_id}` | `200` | 채점 상태·결과 조회 |
 | `GET` | `/api/v1/daily/today` | `200` | 오늘 출석과 일일 문제 조회·생성 |
 | `POST` | `/api/v1/daily/{attendance_public_id}/reward` | `200` | 일일 미션 보상 1회 수령 |
@@ -241,6 +242,29 @@ BRONZE 50%, SILVER 20%, GOLD 0% 정책으로 표시 방식을 한 번 결정한�
 취약 개념은 최근 완료 시도 기준 최소 3회이면서 숙련도 50 이하인 개념이다.
 
 ### 4.2 답안 제출과 polling
+
+#### `POST /api/v1/attempts/test`
+
+현재 사용자의 코드형 presentation을 격리 샌드박스에서 동기 실행한다. 이 요청은 `task_attempts`,
+숙련도, 완료 원장, 일일 퀘스트와 코인을 변경하지 않는다.
+
+```json
+{
+  "task_public_id": "93235fd9-5afc-42ec-8e19-4512e1173964",
+  "presentation_public_id": "f3101edc-07b4-46bd-b747-6b3a59ee7452",
+  "submitted_code": "print('hello')"
+}
+```
+
+응답은 공개 verdict와 통과 수만 포함한다. 제출 코드, 테스트 케이스와 stderr는 반환하지 않는다.
+
+```json
+{
+  "verdict": "ACCEPTED",
+  "passed": 3,
+  "total": 3
+}
+```
 
 #### `POST /api/v1/attempts`
 

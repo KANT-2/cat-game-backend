@@ -26,13 +26,14 @@ from app.models.task_attempt import TaskAttempt
 from app.models.task_completion import TaskCompletion
 from app.models.task_presentation import TaskPresentation
 from app.models.user import User
+from app.models.user_learning_tier import UserLearningTier
 from app.modules.battle.service import record_attempt_result
 from app.modules.grading.runners import TaskRunner, dispatcher
 from app.modules.grading.sandbox.runner import GradeResult, Verdict
 from app.modules.grading.test_cases import TestCaseSpecError
 from app.modules.learning.proficiency import update_proficiency
 from app.modules.learning.tier import get_or_advance_tier, unlocked_difficulties
-from app.schemas.task_attempt import TaskAttemptCreate
+from app.schemas.task_attempt import CodeTestCreate, TaskAttemptCreate
 
 logger = logging.getLogger(__name__)
 _OPERATION_TYPE = "TASK_ATTEMPT"
@@ -288,19 +289,85 @@ def _run_safely(
                 int(correct),
                 1,
             )
-        if domain == "PYTHON" and task.type == "CODE":
-            meets_requirement = _meets_python_concept_structure(
-                attempt.submitted_code,
-                concept_name,
-            )
-            if meets_requirement is False:
-                return GradeResult(Verdict.WRONG_ANSWER)
-        return (runner or dispatcher.for_task(task, domain)).grade(task, attempt.submitted_code)
+        return _run_code_safely(
+            attempt_public_id,
+            task,
+            domain,
+            attempt.submitted_code,
+            concept_name,
+            runner,
+        )
     except TestCaseSpecError:
         return GradeResult(Verdict.SYSTEM_ERROR)
     except Exception:  # noqa: BLE001 - worker boundary converts failures to a safe verdict
         logger.error("grading runner failed for attempt %s", attempt_public_id)
         return GradeResult(Verdict.SYSTEM_ERROR)
+
+
+def _run_code_safely(
+    operation_public_id: uuid.UUID,
+    task: Task,
+    domain: str,
+    submission: str,
+    concept_name: str | None = None,
+    runner: TaskRunner | None = None,
+) -> GradeResult:
+    try:
+        if domain == "PYTHON" and task.type == "CODE":
+            meets_requirement = _meets_python_concept_structure(submission, concept_name)
+            if meets_requirement is False:
+                return GradeResult(Verdict.WRONG_ANSWER)
+        return (runner or dispatcher.for_task(task, domain)).grade(task, submission)
+    except TestCaseSpecError:
+        return GradeResult(Verdict.SYSTEM_ERROR)
+    except Exception:  # noqa: BLE001 - sandbox failures become a stable public verdict
+        logger.error("grading runner failed for operation %s", operation_public_id)
+        return GradeResult(Verdict.SYSTEM_ERROR)
+
+
+def run_code_test(
+    db: Session,
+    payload: CodeTestCreate,
+    user: User,
+    runner: TaskRunner | None = None,
+) -> GradeResult:
+    """Run a code presentation without creating attempts, rewards, or learning progress."""
+    task = _by_public_id(db, Task, payload.task_public_id)
+    if task is None or not task.is_active or task.type != "CODE":
+        raise SubmissionError("task not found")
+    concept = db.get(Concept, task.concept_id)
+    if concept is None:
+        raise SubmissionError("task concept not found")
+    tier = db.scalar(
+        select(UserLearningTier).where(
+            UserLearningTier.user_id == user.id,
+            UserLearningTier.domain == concept.domain,
+        )
+    )
+    current_tier = tier.current_tier if tier is not None else "BRONZE"
+    if task.difficulty not in unlocked_difficulties(current_tier):
+        raise SubmissionError("task difficulty is locked")
+    if task.options and payload.presentation_public_id is None:
+        raise SubmissionError("task presentation is required")
+    if payload.presentation_public_id is not None:
+        presentation = _by_public_id(db, TaskPresentation, payload.presentation_public_id)
+        if (
+            presentation is None
+            or presentation.user_id != user.id
+            or presentation.task_id != task.id
+            or presentation.context_type != "LEARNING"
+            or presentation.status not in {"ACTIVE", "COMPLETED"}
+            or presentation.presentation_type != "CODE"
+        ):
+            raise SubmissionError("code task presentation not found")
+    return _run_code_safely(
+        uuid.uuid4(),
+        task,
+        concept.domain,
+        payload.submitted_code,
+        concept.name,
+        runner,
+    )
 
 
 def _meets_python_concept_structure(submission: str, concept_name: str | None) -> bool | None:

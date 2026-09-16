@@ -6,9 +6,17 @@ from fastapi import APIRouter, HTTPException, status
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.exceptions import IdempotencyConflictError
 from app.models.task import Task
-from app.modules.grading.service import SubmissionError, create_attempt, get_attempt, grade_attempt
+from app.modules.grading.service import (
+    SubmissionError,
+    _public_result,
+    create_attempt,
+    get_attempt,
+    grade_attempt,
+    run_code_test,
+)
 from app.modules.learning.presentation import start_task_presentation, to_presented_task
 from app.schemas.task_attempt import (
+    CodeTestCreate,
     GradingResultDetail,
     TaskAttemptAccepted,
     TaskAttemptCreate,
@@ -54,6 +62,16 @@ def submit(payload: TaskAttemptCreate, db: DbSession, user: CurrentUser):
     if payload.context_type == "LEARNING" and payload.selected_option is not None:
         grade_attempt(attempt.public_id)
     return TaskAttemptAccepted(public_id=attempt.public_id, status="PENDING")
+
+
+@router.post("/test", response_model=GradingResultDetail)
+def test_code(payload: CodeTestCreate, db: DbSession, user: CurrentUser) -> GradingResultDetail:
+    try:
+        result = run_code_test(db, payload, user)
+    except SubmissionError as exc:
+        db.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return GradingResultDetail.model_validate(_public_result(result))
 
 
 @router.get("/{attempt_public_id}", response_model=TaskAttemptRead)
